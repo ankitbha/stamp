@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
+
+# In[ ]:
+
+
+#!/usr/bin/env python
+# coding: utf-8
 """
 sim/swesim.py
 
@@ -52,6 +58,9 @@ from contextlib import nullcontext
 import torch
 
 
+# In[ ]:
+
+
 # =============================================================================
 # Grid / params containers
 # =============================================================================
@@ -97,6 +106,9 @@ class SWEParams:
     h_floor: float = 1e-4
 
 
+# In[ ]:
+
+
 # =============================================================================
 # Grid construction
 # =============================================================================
@@ -139,6 +151,9 @@ def make_grid(
     return SWEGrid(x=x, y=y, dx=dx, dy=dy, X=X, Y=Y, zb=zb, cf_basis=cf_basis)
 
 
+# In[ ]:
+
+
 # =============================================================================
 # Periodic derivatives (for bathymetry slopes)
 # =============================================================================
@@ -150,6 +165,9 @@ def ddx_periodic(f: torch.Tensor, dx: float) -> torch.Tensor:
 def ddy_periodic(f: torch.Tensor, dy: float) -> torch.Tensor:
     """Central difference ∂y with periodic wrap. f: [..., Nx, Ny]."""
     return (torch.roll(f, shifts=-1, dims=-1) - torch.roll(f, shifts=1, dims=-1)) / (2.0 * dy)
+
+
+# In[ ]:
 
 
 # =============================================================================
@@ -251,6 +269,9 @@ def make_cf_field(params: SWEParams, grid: SWEGrid, batch_shape: Tuple[int, ...]
     raise ValueError(f"Unknown cf_mode: {params.cf_mode}")
 
 
+# In[ ]:
+
+
 # =============================================================================
 # CFL check (for explicit Rusanov update)
 # =============================================================================
@@ -283,6 +304,9 @@ def check_cfl_explicit(q: torch.Tensor, grid: SWEGrid, params: SWEParams, dt: fl
     dt_max = cfl * min(grid.dx, grid.dy) / amax
     if dt > dt_max:
         raise ValueError(f"CFL violation: dt={dt:.3e} > dt_max={dt_max:.3e} (amax={amax:.3e}).")
+
+
+# In[ ]:
 
 
 # =============================================================================
@@ -401,6 +425,10 @@ def step_swe_rusanov(
     return q_next
 
 
+
+# In[ ]:
+
+
 # =============================================================================
 # Convenience: build conservative state from eta,u,v and mean depth H
 # =============================================================================
@@ -421,6 +449,9 @@ def build_state_from_eta_uv(
     hu = h * u
     hv = h * v
     return torch.stack([h, hu, hv], dim=-3)
+
+
+# In[ ]:
 
 
 # =============================================================================
@@ -505,6 +536,9 @@ def rollout_swe(
     return out
 
 
+# In[ ]:
+
+
 # =============================================================================
 # Self-test / example
 # =============================================================================
@@ -566,5 +600,16 @@ def _self_test() -> None:
     h = out["h"]  # [T,B,Nx,Ny]
     print("OK:", h.shape, "h range", float(h.min()), float(h.max()), "cf mean", float(out["cf"].mean()))
 
+
+# In[ ]:
+
+
 if __name__ == "__main__":
     _self_test()
+
+
+# In[ ]:
+
+
+
+
