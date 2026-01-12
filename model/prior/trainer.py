@@ -57,12 +57,17 @@ from model.prior.schedule import scheduled_sampling_prob
 # =============================================================================
 
 SRC_DIR = "/scratch/ab9738/stamp"
-DEFAULT_DATA_PATH = os.path.join(SRC_DIR, "data", "heat_periodic_dataset.npz")
 
 CHECKPOINTS_DIR = os.path.join(SRC_DIR, "checkpoints")
 LOGS_DIR = os.path.join(SRC_DIR, "logs")
-LOG_PATH = os.path.join(LOGS_DIR, "mprnn_heat.log")
-CKPT_BEST_PATH = os.path.join(CHECKPOINTS_DIR, "mprnn_heat_best.pt")
+
+exp_code = int(sys.argv[1])
+# exp_code = 2
+exp = ['heat', 'swe', 'pol'][exp_code]
+
+DEFAULT_DATA_PATH = os.path.join(SRC_DIR, "data", "{}_dataset.npz".format(exp))
+LOG_PATH = os.path.join(LOGS_DIR, "mprnn_{}.log".format(exp))
+CKPT_BEST_PATH = os.path.join(CHECKPOINTS_DIR, "mprnn_{}_best.pt".format(exp))
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DTYPE = torch.float32
