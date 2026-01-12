@@ -16,7 +16,7 @@ import torch
 # Config (edit here)
 # -----------------------------
 SRC_DIR = os.path.abspath("..")          # project root (adjust if needed)
-OUT_PATH = os.path.join(SRC_DIR, "data", "pollution_stamp_dataset.npz")
+OUT_PATH = os.path.join(SRC_DIR, "data", "pol_dataset.npz")
 SIM_DIR = os.path.join(SRC_DIR, "sim")
 
 SEED = 0

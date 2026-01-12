@@ -107,7 +107,7 @@ DEVICE = "cpu"
 DTYPE = torch.float32
 
 # saving
-SAVE_PATH = "swe_periodic_dataset.npz"
+SAVE_PATH = "swe_dataset.npz"
 SAVE_FIELD = False         # if True, save full h field over time (can be big)
 SAVE_BASIS = True          # save cf_basis in npz (handy for debugging / baselines)
 SAVE_BATHY = True          # save zb if used

@@ -52,7 +52,7 @@ MISALIGN_EPS_IDX = 0.3
 MISALIGN_MODE = "uniform"
 
 # saving
-SAVE_PATH = "heat_periodic_dataset.npz"
+SAVE_PATH = "heat_dataset.npz"
 
 # torch
 DEVICE = "cpu"       # "cpu" for determinism; "cuda" ok if you want speed
