@@ -5,10 +5,10 @@ import os
 # Logging
 # =============================================================================
 
-def setup_logger(log_path: str) -> logging.Logger:
+def setup_logger(log_path: str, name='tuner_pol') -> logging.Logger:
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
-    logger = logging.getLogger("mprnn_heat")
+    logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
     logger.propagate = False
 

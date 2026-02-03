@@ -73,11 +73,15 @@ def build_edge_features(
     dy = xy[src, 1] - xy[dst, 1]
     r = np.sqrt(dx * dx + dy * dy) + 1e-12
     invr = 1.0 / (r + float(edge_eps))
+    invr = np.clip(invr, 0.0, 20.0)
 
     feats = [dx.astype(np.float32), dy.astype(np.float32), r.astype(np.float32), invr.astype(np.float32)]
     edge_attr = np.stack(feats, axis=1)
 
     if use_rbf:
         edge_attr = np.concatenate([edge_attr, rbf_encode(r, num=rbf_num, rmax=rbf_rmax)], axis=1)
+
+    edge_attr = (edge_attr - edge_attr.mean(0)) / (edge_attr.std(0) + 1e-6)
+
 
     return edge_attr.astype(np.float32)
