@@ -252,19 +252,26 @@ def compute_total_objective(
     else:
         raise ValueError(f"Unknown data_kind: {cfg.data_kind}")
 
+    if not torch.isfinite(L_data):
+        raise RuntimeError("Non-finite loss_data")
     loss = cfg.lambda_data * L_data
+    
     logs["loss_data"] = float(L_data.detach().cpu().item())
     logs["lambda_data"] = float(cfg.lambda_data)
 
     # TV / Laplacian regularizers
     if reg_field is not None and cfg.lambda_tv > 0.0:
         L_tv = tv_loss_2d(reg_field)
+        if not torch.isfinite(L_tv):
+            raise RuntimeError("Non-finite loss_tv")
         loss = loss + cfg.lambda_tv * L_tv
         logs["loss_tv"] = float(L_tv.detach().cpu().item())
         logs["lambda_tv"] = float(cfg.lambda_tv)
 
     if reg_field is not None and cfg.lambda_lap > 0.0:
         L_lap = laplacian_smoothness_2d(reg_field)
+        if not torch.isfinite(L_lap):
+            raise RuntimeError("Non-finite loss_laplacian")
         loss = loss + cfg.lambda_lap * L_lap
         logs["loss_lap"] = float(L_lap.detach().cpu().item())
         logs["lambda_lap"] = float(cfg.lambda_lap)
@@ -273,6 +280,8 @@ def compute_total_objective(
     rt = reg_tensor if reg_tensor is not None else reg_field
     if rt is not None and cfg.lambda_l2 > 0.0:
         L_l2 = l2_loss(rt)
+        if not torch.isfinite(L_l2):
+            raise RuntimeError("Non-finite loss_l2")
         loss = loss + cfg.lambda_l2 * L_l2
         logs["loss_l2"] = float(L_l2.detach().cpu().item())
         logs["lambda_l2"] = float(cfg.lambda_l2)

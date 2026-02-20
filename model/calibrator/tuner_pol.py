@@ -23,11 +23,13 @@ from __future__ import annotations
 
 import argparse
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
+import sys
+sys.path.append(os.path.abspath("../../"))
 
 # Your project utilities
 from model.utils.io import load_npz
@@ -45,7 +47,6 @@ from model.calibrator.objectives import ObjectiveConfig, compute_total_objective
 
 # Simulator
 import sim.polsim as polsim
-
 
 # =============================================================================
 # Helpers: data parsing
@@ -120,7 +121,6 @@ def _time_split(series_st: np.ndarray, val_frac: float) -> Tuple[np.ndarray, np.
     t0 = max(2, min(T - 2, t0))
     return series_st[:, :t0], series_st[:, t0:]
 
-
 # =============================================================================
 # Placeholders: STAMP (to fill later)
 # =============================================================================
@@ -128,7 +128,6 @@ def _time_split(series_st: np.ndarray, val_frac: float) -> Tuple[np.ndarray, np.
 def stamp_dyn_loss_placeholder(*args, **kwargs) -> torch.Tensor:
     # Later: compute consistency between sim-predicted sensor series and MPRNN prior predictions
     return torch.tensor(0.0, device=kwargs.get("device", None) or torch.device("cpu"))
-
 
 # =============================================================================
 # Tuning configuration
@@ -157,7 +156,7 @@ class TunerConfig:
     unknown_softplus_beta: float = 1.0
 
     # Regularization
-    obj: ObjectiveConfig = ObjectiveConfig(
+    obj: ObjectiveConfig = field(default_factory=lambda: ObjectiveConfig(
         data_kind="mse",
         lambda_data=1.0,
         lambda_tv=0.0,
@@ -166,7 +165,7 @@ class TunerConfig:
         lambda_box=0.0,
         box_lo=None,
         box_hi=None,
-    )
+    ))
     reg_tv_on_unknown: bool = False  # if True, reg_field = S_unknown
 
     # STAMP flag (placeholder only for now)
@@ -182,87 +181,58 @@ class TunerConfig:
     steps: int = 200
     save_every: int = 1
 
+# =============================================================================
+# Config
+# =============================================================================
+
+CFG = TunerConfig(
+    npz_path="/scratch/ab9738/stamp/data/pol_dataset.npz",   # <-- change
+    out_dir="/scratch/ab9738/stamp/logs/calib_pol_run1",            # <-- change
+    traj=0,
+
+    epochs=300,
+    lr=3e-4,
+    wd=1e-4,
+    grad_clip=1.0,
+
+    use_noisy=True,
+    val_frac=0.3,
+
+    unknown_hw=10,
+    unknown_nonneg=True,
+    unknown_init=0.0,
+
+    # regularizers (edit these as needed)
+    reg_tv_on_unknown=True,
+)
+# You can also set objective weights here:
+CFG.obj.lambda_tv = 1e-4
+CFG.obj.lambda_lap = 0.0
+CFG.obj.lambda_l2 = 0.0
+
+# STAMP placeholder controls
+CFG.use_stamp = False
+CFG.lambda_stamp = 0.0
 
 # =============================================================================
 # Main
 # =============================================================================
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--npz", required=True, help="Path to pollution dataset npz")
-    ap.add_argument("--out_dir", required=True, help="Output directory for logs/checkpoints")
-    ap.add_argument("--traj", type=int, default=0, help="Trajectory index if NPZ stores multiple")
-
-    ap.add_argument("--epochs", type=int, default=300)
-    ap.add_argument("--lr", type=float, default=3e-4)
-    ap.add_argument("--wd", type=float, default=1e-4)
-    ap.add_argument("--grad_clip", type=float, default=1.0)
-    ap.add_argument("--val_frac", type=float, default=0.3)
-    ap.add_argument("--use_clean", action="store_true", help="Use sensor_clean instead of sensor_noisy")
-
-    ap.add_argument("--unknown_hw", type=int, default=10, help="Coarse unknown source grid size (H=W)")
-    ap.add_argument("--unknown_nonneg", action="store_true", help="Enforce nonnegativity via softplus")
-    ap.add_argument("--unknown_init", type=float, default=0.0)
-
-    ap.add_argument("--lambda_tv", type=float, default=0.0)
-    ap.add_argument("--lambda_lap", type=float, default=0.0)
-    ap.add_argument("--lambda_l2", type=float, default=0.0)
-    ap.add_argument("--reg_tv_on_unknown", action="store_true")
-
-    ap.add_argument("--use_stamp", action="store_true", help="Enable STAMP term (placeholder for now)")
-    ap.add_argument("--lambda_stamp", type=float, default=0.0)
-
-    ap.add_argument("--device", type=str, default=("cuda" if torch.cuda.is_available() else "cpu"))
-    ap.add_argument("--seed", type=int, default=0)
-
-    ap.add_argument("--dt", type=float, default=1.0)
-    ap.add_argument("--steps", type=int, default=200)
-    ap.add_argument("--save_every", type=int, default=1)
-
-    args = ap.parse_args()
-
-    cfg = TunerConfig(
-        npz_path=args.npz,
-        out_dir=args.out_dir,
-        traj=args.traj,
-        lr=args.lr,
-        wd=args.wd,
-        epochs=args.epochs,
-        grad_clip=args.grad_clip,
-        use_noisy=(not args.use_clean),
-        val_frac=args.val_frac,
-        unknown_hw=args.unknown_hw,
-        unknown_nonneg=args.unknown_nonneg,
-        unknown_init=args.unknown_init,
-        reg_tv_on_unknown=args.reg_tv_on_unknown,
-        use_stamp=args.use_stamp,
-        lambda_stamp=args.lambda_stamp,
-        device=args.device,
-        seed=args.seed,
-        dt=args.dt,
-        steps=args.steps,
-        save_every=args.save_every,
-    )
-
-    # objectives config
-    cfg.obj.lambda_tv = float(args.lambda_tv)
-    cfg.obj.lambda_lap = float(args.lambda_lap)
-    cfg.obj.lambda_l2 = float(args.lambda_l2)
-
-    os.makedirs(cfg.out_dir, exist_ok=True)
-    log_path = os.path.join(cfg.out_dir, "tuner_pol.log")
+    os.makedirs(CFG.out_dir, exist_ok=True)
+    log_path = os.path.join(CFG.out_dir, "tuner_pol.log")
     logger = setup_logger(log_path, name="tuner_pol")
-    logger.info(f"Loading NPZ: {cfg.npz_path}")
+    logger.info(f"Loading NPZ: {CFG.npz_path}")
 
-    torch.manual_seed(cfg.seed)
-    np.random.seed(cfg.seed)
+    torch.manual_seed(CFG.seed)
+    np.random.seed(CFG.seed)
 
-    device = torch.device(cfg.device)
+    device = torch.device(CFG.device)
 
-    npz = load_npz(cfg.npz_path)
+    npz = load_npz(CFG.npz_path)
 
     # Load series + sensors
-    series_st = _extract_sensor_series(npz, traj=cfg.traj, use_noisy=cfg.use_noisy)  # [S,T]
+    series_st = _extract_sensor_series(npz, traj=CFG.traj, use_noisy=CFG.use_noisy)  # [S,T]
     sensors_idx, sensors_xy = _extract_sensors(npz)
     H, W = _infer_grid_hw(npz, sensors_idx, default_hw=40)
 
@@ -273,7 +243,7 @@ def main():
         logger.info(f"sensors_xy shape={sensors_xy.shape}")
 
     # Train/val time split (for calibration and monitoring)
-    train_st, val_st = _time_split(series_st, val_frac=cfg.val_frac)
+    train_st, val_st = _time_split(series_st, val_frac=CFG.val_frac)
     train = torch.from_numpy(train_st).to(device)
     val = torch.from_numpy(val_st).to(device)
 
@@ -291,8 +261,35 @@ def main():
 
     # Build simulator grid/params
     # NOTE: PolGrid/PolParams construction details may differ; we keep it minimal and rely on defaults.
-    grid = polsim.PolGrid(N=H) if hasattr(polsim, "PolGrid") else None
-    params = polsim.PolParams() if hasattr(polsim, "PolParams") else None
+    # Build simulator grid/params (pollution)
+    # PolGrid needs Nx, Ny and (optionally) src_dir for loading known sources / U0 internally.
+        # Build simulator grid/params (match data/poldata.py behavior)
+    # Infer SIM_DIR from the NPZ location: <root>/data/*.npz -> <root>/sim
+    root_dir = os.path.abspath(os.path.join(os.path.dirname(CFG.npz_path), ".."))
+    sim_dir = os.path.join(root_dir, "sim")
+
+    grid = polsim.make_grid(
+        Nx=H,
+        Ny=W,
+        src_dir=sim_dir,
+        device=device,
+        dtype=torch.float32,
+        load_sources=True,
+    )
+
+    # If dataset stored S_known explicitly, prefer it (guarantees exact consistency)
+    if "S_known" in npz:
+        grid.S_known = torch.from_numpy(_to_numpy(npz["S_known"]).astype(np.float32)).to(device)
+
+    # Params (use defaults, but move k to correct device if you implemented PolParams.to())
+    params = polsim.PolParams()
+    if hasattr(params, "to"):
+        params = params.to(device)
+
+    # If dataset stored U0 explicitly, prefer it; otherwise let polsim build internally if needed
+    if "U0" in npz:
+        grid.U0 = torch.from_numpy(_to_numpy(npz["U0"]).astype(np.float32)).to(device)
+
 
     # Try to load params if saved
     if "param_names" in npz and "params" in npz:
@@ -303,7 +300,7 @@ def main():
                 pmap = {names[i]: float(vals[i]) for i in range(min(len(names), len(vals)))}
             else:
                 # If multiple trajectories, pick traj
-                pmap = {names[i]: float(vals[cfg.traj, i]) for i in range(min(len(names), vals.shape[1]))}
+                pmap = {names[i]: float(vals[CFG.traj, i]) for i in range(min(len(names), vals.shape[1]))}
             logger.info(f"Found saved params: {pmap}")
             # If your PolParams supports setting attributes, do it
             if params is not None:
@@ -317,9 +314,9 @@ def main():
     params_md = torch.nn.ModuleDict()
     params_md["S_unknown"] = LearnableField2D(
         name="S_unknown",
-        shape_hw=(cfg.unknown_hw, cfg.unknown_hw),
-        init=cfg.unknown_init,
-        nonneg=cfg.unknown_nonneg,
+        shape_hw=(CFG.unknown_hw, CFG.unknown_hw),
+        init=CFG.unknown_init,
+        nonneg=CFG.unknown_nonneg,
         clamp=None,
         softplus_beta=1.0,
         device=device,
@@ -334,25 +331,25 @@ def main():
 
     calib = Calibrator(sim=sim, observer=observer, params=params_md).to(device)
 
-    opt = torch.optim.AdamW(calib.parameters(), lr=cfg.lr, weight_decay=cfg.wd)
+    opt = torch.optim.AdamW(calib.parameters(), lr=CFG.lr, weight_decay=CFG.wd)
 
     best_val = float("inf")
     best_state = None
 
     logger.info(
         "Begin SimGrad tuning | "
-        f"epochs={cfg.epochs} lr={cfg.lr} wd={cfg.wd} clip={cfg.grad_clip} "
-        f"val_frac={cfg.val_frac} unknown_hw={cfg.unknown_hw} nonneg={cfg.unknown_nonneg} "
-        f"stamp={cfg.use_stamp} lambda_stamp={cfg.lambda_stamp}"
+        f"epochs={CFG.epochs} lr={CFG.lr} wd={CFG.wd} clip={CFG.grad_clip} "
+        f"val_frac={CFG.val_frac} unknown_hw={CFG.unknown_hw} nonneg={CFG.unknown_nonneg} "
+        f"stamp={CFG.use_stamp} lambda_stamp={CFG.lambda_stamp}"
     )
 
     # Fixed kwargs for polsim.rollout_pollution
     fixed_sim_kwargs: Dict[str, Any] = {
         "grid": grid,
         "params": params,
-        "dt": float(_to_numpy(npz["dt"])) if "dt" in npz else cfg.dt,
-        "steps": int(_to_numpy(npz["steps"])) if "steps" in npz else cfg.steps,
-        "save_every": int(_to_numpy(npz["save_every"])) if "save_every" in npz else cfg.save_every,
+        "dt": float(_to_numpy(npz["dt"])) if "dt" in npz else CFG.dt,
+        "steps": int(_to_numpy(npz["steps"])) if "steps" in npz else CFG.steps,
+        "save_every": int(_to_numpy(npz["save_every"])) if "save_every" in npz else CFG.save_every,
     }
 
     # Some datasets may store U0; polsim may or may not accept it (defensive)
@@ -363,7 +360,7 @@ def main():
     patience = 30
     bad = 0
 
-    for epoch in range(1, cfg.epochs + 1):
+    for epoch in range(1, CFG.epochs + 1):
         calib.train()
         opt.zero_grad(set_to_none=True)
 
@@ -379,7 +376,7 @@ def main():
         if pred_full.shape[1] < (T_train + T_val):
             # If sim produces fewer steps than observation, trim obs
             T_avail = pred_full.shape[1]
-            T_train = min(T_train, max(2, int((1.0 - cfg.val_frac) * T_avail)))
+            T_train = min(T_train, max(2, int((1.0 - CFG.val_frac) * T_avail)))
             T_val = min(T_val, T_avail - T_train)
             train_use = train[:, :T_train]
             val_use = val[:, :T_val]
@@ -391,13 +388,13 @@ def main():
             pred_train = pred_full[:, :T_train]
             pred_val = pred_full[:, T_train:T_train + T_val]
 
-        reg_field = out.theta["S_unknown"] if (cfg.reg_tv_on_unknown or cfg.obj.lambda_tv > 0.0 or cfg.obj.lambda_lap > 0.0) else None
-        reg_tensor = out.theta["S_unknown"] if (cfg.obj.lambda_l2 > 0.0) else None
+        reg_field = out.theta["S_unknown"] if (CFG.reg_tv_on_unknown or CFG.obj.lambda_tv > 0.0 or CFG.obj.lambda_lap > 0.0) else None
+        reg_tensor = out.theta["S_unknown"] if (CFG.obj.lambda_l2 > 0.0) else None
 
         loss_train, logs = compute_total_objective(
             pred_sensor=pred_train,
             obs_sensor=train_use,
-            cfg=cfg.obj,
+            cfg=CFG.obj,
             sigma=sigma,
             mask=mask,
             reg_field=reg_field,
@@ -405,15 +402,15 @@ def main():
         )
 
         # Optional STAMP term (placeholder)
-        if cfg.use_stamp and cfg.lambda_stamp > 0.0:
+        if CFG.use_stamp and CFG.lambda_stamp > 0.0:
             L_stamp = stamp_dyn_loss_placeholder(device=device)
-            loss_train = loss_train + cfg.lambda_stamp * L_stamp
+            loss_train = loss_train + CFG.lambda_stamp * L_stamp
             logs["loss_stamp"] = float(L_stamp.detach().cpu().item())
-            logs["lambda_stamp"] = float(cfg.lambda_stamp)
+            logs["lambda_stamp"] = float(CFG.lambda_stamp)
 
         loss_train.backward()
-        if cfg.grad_clip is not None and cfg.grad_clip > 0:
-            torch.nn.utils.clip_grad_norm_(calib.parameters(), cfg.grad_clip)
+        if CFG.grad_clip is not None and CFG.grad_clip > 0:
+            torch.nn.utils.clip_grad_norm_(calib.parameters(), CFG.grad_clip)
         opt.step()
 
         # Validation
@@ -447,10 +444,10 @@ def main():
                 break
 
     # Save outputs
-    save_path = os.path.join(cfg.out_dir, "calib_pol_best.npz")
+    save_path = os.path.join(CFG.out_dir, "calib_pol_best.npz")
     to_save: Dict[str, Any] = {
         "best_val_mse": np.array([best_val], dtype=np.float32),
-        "traj": np.array([cfg.traj], dtype=np.int32),
+        "traj": np.array([CFG.traj], dtype=np.int32),
     }
     if best_state is not None:
         for k, v in best_state.items():

@@ -55,10 +55,14 @@ class LearnableScalar(nn.Module):
 
 class LearnableField2D(nn.Module):
     """
-    A learnable 2D field (H,W) with optional nonnegativity + clamp.
+    A learnable 2D field (H,W) with optional nonnegativity, output clamp, and output scaling.
 
+    - raw is always an nn.Parameter
     - If nonneg=True: value = softplus(raw, beta)
+    - value is then multiplied by `scale`
     - If clamp=(lo,hi): value = clamp(value, lo, hi)
+
+    Note: scaling is applied BEFORE clamp so clamp bounds are in the physical units.
     """
     def __init__(
         self,
@@ -68,6 +72,7 @@ class LearnableField2D(nn.Module):
         nonneg: bool = False,
         clamp: Optional[Tuple[float, float]] = None,
         softplus_beta: float = 1.0,
+        scale: float = 1.0,                      # <-- NEW
         device: Optional[torch.device] = None,
         dtype: torch.dtype = torch.float32,
     ):
@@ -77,6 +82,9 @@ class LearnableField2D(nn.Module):
         self.nonneg = bool(nonneg)
         self.clamp = clamp
         self.softplus_beta = float(softplus_beta)
+
+        # Store scale as a buffer so it moves with .to(device) and matches dtype
+        self.register_buffer("scale", torch.tensor(float(scale), device=device, dtype=dtype))
 
         if isinstance(init, torch.Tensor):
             init_t = init.to(device=device, dtype=dtype)
@@ -91,13 +99,20 @@ class LearnableField2D(nn.Module):
         x = self.raw
         if self.nonneg:
             x = F.softplus(x, beta=self.softplus_beta)
+
+        # Apply physical scale (main stabilization knob)
+        x = x * self.scale
+
         if self.clamp is not None:
             lo, hi = self.clamp
             x = torch.clamp(x, lo, hi)
         return x
 
     def extra_repr(self) -> str:
-        return f"name={self.name}, shape={self.shape_hw}, nonneg={self.nonneg}, clamp={self.clamp}"
+        return (
+            f"name={self.name}, shape={self.shape_hw}, nonneg={self.nonneg}, "
+            f"scale={float(self.scale.item()):g}, clamp={self.clamp}"
+        )
 
 
 # =============================================================================

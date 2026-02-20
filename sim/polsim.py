@@ -54,6 +54,9 @@ import torch.nn.functional as F
 # Grid / Params
 # =============================================================================
 
+DEFAULT_DIFFUSIVITY = 3e-4  # same value you were already using
+DEFAULT_DTYPE = torch.float32
+
 @dataclass
 class PolGrid:
     Nx: int
@@ -80,8 +83,8 @@ class PolGrid:
 
 @dataclass
 class PolParams:
-    # diffusivity (scalar tensor)
-    k: torch.Tensor
+    # diffusivity (scalar tensor, fixed)
+    k: torch.Tensor = torch.tensor(DEFAULT_DIFFUSIVITY, dtype=DEFAULT_DTYPE)
 
     # Base winds (scalars)
     Vx0: float = 1.12
