@@ -609,6 +609,23 @@ def rollout_pollution(
             grid.U0 = U0_built
         U0 = grid.U0.to(device=device, dtype=dtype)
 
+    # ---- Batch-broadcast U0 to match S_unknown leading dims ----
+    # S_unknown: [...,10,10]
+    batch_shape = tuple(S_unknown.shape[:-2])  # () if unbatched, (B,) if batched
+    if batch_shape:
+        # U0 is expected to be [...,Nx,Ny] or [Nx,Ny]
+        if U0.ndim == 2:
+            # [Nx,Ny] -> [...,Nx,Ny]
+            U0 = U0.expand(*batch_shape, *U0.shape).contiguous()
+        elif U0.ndim == 2 + len(batch_shape):
+            # already batched correctly
+            pass
+        else:
+            raise RuntimeError(
+                f"U0 has shape {tuple(U0.shape)} but expected [Nx,Ny] or {batch_shape}+[Nx,Ny]"
+            )
+    # ----------------------------------------------------------
+
     # Time vector for wind model
     t_full = torch.arange(0, steps, device=device, dtype=dtype) * float(dt)
     Vx_steps, Vy_steps = monsoon_wind_series(

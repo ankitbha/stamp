@@ -108,26 +108,44 @@ class LearnableField2D(nn.Module):
             x = torch.clamp(x, lo, hi)
         return x
 
+    def forward(self) -> Tensor:
+        return self.value()
+
     def extra_repr(self) -> str:
         return (
             f"name={self.name}, shape={self.shape_hw}, nonneg={self.nonneg}, "
             f"scale={float(self.scale.item()):g}, clamp={self.clamp}"
         )
 
+class BatchedLearnableField2D(torch.nn.Module):
+    """
+    Holds B independent LearnableField2D modules and stacks them into [B,H,W].
+    """
+    def __init__(self, B: int, **lf_kwargs):
+        super().__init__()
+        self.B = B
+        self.fields = torch.nn.ModuleList()
+        for b in range(B):
+            self.fields.append(LearnableField2D(**lf_kwargs))
+
+    def forward(self):
+        xs = [f() for f in self.fields]  # each [H,W]
+        return torch.stack(xs, dim=0)    # [B,H,W
+
+    def value(self):
+        return self.forward()
+
+    @property
+    def raws(self):
+        # list of raw parameters (for clamping etc.)
+        return [f.raw for f in self.fields]
+
 
 # =============================================================================
-# Observation operators: field[t,...] -> sensor[t,s]
+# Observation operators: field[...,H,W,T] -> sensor[...,S,T]
 # =============================================================================
 
 class IndexObserver(nn.Module):
-    """
-    Observe at integer grid indices.
-
-    Inputs:
-      field: [T,H,W] or [T,C,H,W]  (if [T,C,H,W], uses channel=channel_index)
-    Returns:
-      pred_sensor: [S,T]
-    """
     def __init__(self, sensors_idx: Tensor, channel_index: int = 0):
         super().__init__()
         if sensors_idx.ndim != 2 or sensors_idx.shape[1] != 2:
@@ -136,31 +154,31 @@ class IndexObserver(nn.Module):
         self.channel_index = int(channel_index)
 
     def forward(self, field: Tensor) -> Tensor:
-        if field.ndim == 4:  # [T,C,H,W]
-            field = field[:, self.channel_index, :, :]
-        if field.ndim != 3:
-            raise ValueError(f"Expected field [T,H,W] or [T,C,H,W], got {tuple(field.shape)}")
+        if field.ndim >= 5 and field.shape[-1] > 1:
+            field = field[..., self.channel_index]  # [...,H,W,T]
+        if field.ndim < 3:
+            raise ValueError(f"Expected field [...,H,W,T], got {tuple(field.shape)}")
 
-        T, H, W = field.shape
+        H, W, T = field.shape[-3], field.shape[-2], field.shape[-1]
         idx = self.sensors_idx
-        i = idx[:, 0].clamp(0, H - 1)
-        j = idx[:, 1].clamp(0, W - 1)
+        iy = idx[:, 0].clamp(0, W - 1)  # careful: iy indexes SECOND spatial dim
+        ix = idx[:, 1].clamp(0, H - 1)  # ix indexes FIRST spatial dim
 
-        # field[:, i, j] returns [T,S]
-        pred_ts = field[:, i, j]
-        return pred_ts.transpose(0, 1).contiguous()  # [S,T]
-
+        # Match dataset: U[ix, iy, :]
+        pred = field[..., ix, iy, :]  # [...,S,T]
+        return pred.contiguous()
 
 class BilinearObserver(nn.Module):
     """
-    Bilinear sampling at continuous coordinates sensors_xy in [0,1]x[0,1].
+    Bilinear sampling at continuous coordinates sensors_xy in [0,1]x[0,1],
+    consistent with dataset convention where U is indexed as U[ix, iy, t]
+    for U shaped [Nx, Ny, T].
 
-    Convention:
-      sensors_xy[:,0] = x (W axis), sensors_xy[:,1] = y (H axis)
     Inputs:
-      field: [T,H,W] or [T,C,H,W] (uses channel_index if C present)
+      field: [..., Nx, Ny, T]  (time-last)
+        Optionally: [..., Nx, Ny, T, C] with channel_index selecting last dim.
     Returns:
-      pred_sensor: [S,T]
+      pred_sensor: [..., S, T]
     """
     def __init__(self, sensors_xy: Tensor, channel_index: int = 0, align_corners: bool = True):
         super().__init__()
@@ -171,26 +189,60 @@ class BilinearObserver(nn.Module):
         self.align_corners = bool(align_corners)
 
     def forward(self, field: Tensor) -> Tensor:
-        if field.ndim == 3:
-            field = field[:, None, :, :]  # [T,1,H,W]
-        if field.ndim != 4:
-            raise ValueError(f"Expected field [T,H,W] or [T,C,H,W], got {tuple(field.shape)}")
+        # Optional channel-last: [...,Nx,Ny,T,C] -> [...,Nx,Ny,T]
+        if field.ndim >= 5 and field.shape[-1] > 1:
+            field = field[..., self.channel_index]  # [...,Nx,Ny,T]
 
-        T, C, H, W = field.shape
-        xyc = self.sensors_xy.clamp(0.0, 1.0)
+        if field.ndim < 3:
+            raise ValueError(f"Expected field [...,Nx,Ny,T], got {tuple(field.shape)}")
 
-        gx = 2.0 * xyc[:, 0] - 1.0
-        gy = 2.0 * xyc[:, 1] - 1.0
-        grid = torch.stack([gx, gy], dim=-1)  # [S,2]
-        grid = grid[None, None, :, :]         # [1,1,S,2]
-        grid = grid.expand(T, 1, -1, -1)      # [T,1,S,2]
+        *batch, Nx, Ny, T = field.shape
+        device = field.device
+        dtype = field.dtype
 
-        # Select channel
-        f = field[:, self.channel_index:self.channel_index + 1, :, :]  # [T,1,H,W]
-        out = F.grid_sample(f, grid, mode="bilinear", align_corners=self.align_corners)  # [T,1,1,S]
-        pred = out[:, 0, 0, :]  # [T,S]
-        return pred.transpose(0, 1).contiguous()  # [S,T]
+        # grid_sample expects input [N, C, H, W] where H=height (y axis), W=width (x axis).
+        # Our field is [Nx, Ny, T] with first axis = x, second axis = y.
+        # So we must transpose spatial dims to make H=Ny, W=Nx.
+        #
+        # For each time t:
+        #   slice = field[..., :, :, t] -> [...,Nx,Ny]
+        #   transpose -> [...,Ny,Nx] to be (H,W)
+        #
+        # Then sample at (x,y) using normalized grid in (W,H) order.
 
+        # Flatten batch -> N
+        N = 1
+        for d in batch:
+            N *= int(d)
+
+        # Reshape to [N, Nx, Ny, T]
+        f = field.reshape(N, Nx, Ny, T)
+
+        # Build normalized sampling grid for grid_sample:
+        # grid_sample uses grid[...,0]=x in [-1,1] over width (W=Nx),
+        # and grid[...,1]=y in [-1,1] over height (H=Ny).
+        xyc = self.sensors_xy.clamp(0.0, 1.0)  # [S,2]
+        gx = 2.0 * xyc[:, 0] - 1.0  # x -> width axis (Nx)
+        gy = 2.0 * xyc[:, 1] - 1.0  # y -> height axis (Ny)
+
+        # Want output shape [N, S, 1, 2] so grid_sample returns [N,1,S,1]
+        grid = torch.stack([gx, gy], dim=-1).to(device=device, dtype=dtype)  # [S,2]
+        grid = grid[None, :, None, :]                                       # [1,S,1,2]
+        grid = grid.expand(N, -1, -1, -1).contiguous()                      # [N,S,1,2]
+
+        preds = []
+        for t in range(T):
+            # slice: [N, Nx, Ny] -> transpose to [N, Ny, Nx]
+            ft = f[..., t].transpose(1, 2).contiguous()  # [N, Ny, Nx]
+            ft = ft[:, None, :, :]                       # [N,1,Ny,Nx]
+            out = F.grid_sample(
+                ft, grid, mode="bilinear", align_corners=self.align_corners
+            )                                            # [N,1,S,1]
+            preds.append(out[:, 0, :, 0])                # [N,S]
+
+        pred = torch.stack(preds, dim=-1)                # [N,S,T]
+        pred = pred.reshape(*batch, pred.shape[-2], pred.shape[-1])  # [...,S,T]
+        return pred.contiguous()
 
 # =============================================================================
 # Simulator adapter + Calibrator core
