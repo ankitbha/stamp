@@ -40,15 +40,109 @@ from model.calibrator.calibrator import (
     Calibrator,
     SimulatorAdapter,
     LearnableField2D,
-    BatchedLearnableField2D,
     IndexObserver,
     BilinearObserver,
 )
-from model.calibrator.objectives import ObjectiveConfig, compute_total_objective
-from model.calibrator.objectives import tv_loss_2d, laplacian_smoothness_2d, l2_loss
+from model.calibrator.objectives import ObjectiveConfig, compute_total_objective, compute_total_objective_batched, softmin_aggregate
 
 # Simulator
 import sim.polsim as polsim
+
+
+# =============================================================================
+# Strategy modules (optional)
+# =============================================================================
+
+class ShiftedSoftplusField2D(torch.nn.Module):
+    """
+    Nonnegative field with shifted softplus so raw=0 maps to 0 (not softplus(0)).
+    Keeps gradients smooth while avoiding the 0.693 offset.
+    """
+    def __init__(
+        self,
+        name: str,
+        shape_hw: Tuple[int, int],
+        init: float,
+        softplus_beta: float,
+        scale: float,
+        clamp: Optional[Tuple[float, float]],
+        device: torch.device,
+        dtype: torch.dtype = torch.float32,
+    ):
+        super().__init__()
+        self.name = name
+        self.shape_hw = tuple(shape_hw)
+        self.softplus_beta = float(softplus_beta)
+        self.scale = float(scale)
+        self.clamp = clamp
+        self.raw = torch.nn.Parameter(torch.full(self.shape_hw, float(init), device=device, dtype=dtype))
+
+    def value(self) -> torch.Tensor:
+        x = torch.nn.functional.softplus(self.raw, beta=self.softplus_beta)
+        x = x - torch.nn.functional.softplus(torch.zeros_like(self.raw), beta=self.softplus_beta)
+        x = torch.clamp(x, min=0.0)
+        x = x * self.scale
+        if self.clamp is not None:
+            lo, hi = self.clamp
+            x = torch.clamp(x, lo, hi)
+        return x
+
+
+class FactorizedUnknownField2D(torch.nn.Module):
+    """
+    S_unknown = amp * base, with both nonnegative.
+    Stage A: optimize amp only (freeze base)
+    Stage B: unfreeze base to learn spatial detail
+    """
+    def __init__(
+        self,
+        name: str,
+        shape_hw: Tuple[int, int],
+        amp_init: float,
+        base_init: float,
+        amp_softplus_beta: float,
+        base_softplus_beta: float,
+        amp_scale: float,
+        device: torch.device,
+        dtype: torch.dtype = torch.float32,
+        use_shifted_softplus_base: bool = False,
+    ):
+        super().__init__()
+        self.name = name
+        self.shape_hw = tuple(shape_hw)
+        self.amp = torch.nn.Parameter(torch.full((), float(amp_init), device=device, dtype=dtype))
+        self.base_raw = torch.nn.Parameter(torch.full(self.shape_hw, float(base_init), device=device, dtype=dtype))
+        self.amp_softplus_beta = float(amp_softplus_beta)
+        self.base_softplus_beta = float(base_softplus_beta)
+        self.amp_scale = float(amp_scale)
+        self.use_shifted_softplus_base = bool(use_shifted_softplus_base)
+
+    def set_base_trainable(self, trainable: bool) -> None:
+        self.base_raw.requires_grad_(trainable)
+
+    def value(self) -> torch.Tensor:
+        amp = torch.nn.functional.softplus(self.amp, beta=self.amp_softplus_beta) * self.amp_scale
+        base = torch.nn.functional.softplus(self.base_raw, beta=self.base_softplus_beta)
+        if self.use_shifted_softplus_base:
+            base = base - torch.nn.functional.softplus(torch.zeros_like(self.base_raw), beta=self.base_softplus_beta)
+            base = torch.clamp(base, min=0.0)
+        return amp * base
+
+class BatchedUnknownField2D(torch.nn.Module):
+    """Wrap multiple independent unknown-source fields for batched rollouts."""
+    def __init__(self, fields: List[torch.nn.Module]):
+        super().__init__()
+        self.fields = torch.nn.ModuleList(list(fields))
+
+    def set_base_trainable(self, trainable: bool) -> None:
+        # Propagate to factorized fields if present
+        for f in self.fields:
+            if hasattr(f, "set_base_trainable"):
+                f.set_base_trainable(trainable)
+
+    def value(self) -> torch.Tensor:
+        vals = [f.value() if hasattr(f, "value") else f() for f in self.fields]
+        return torch.stack(vals, dim=0)
 
 # =============================================================================
 # Helpers: data parsing
@@ -144,7 +238,7 @@ class TunerConfig:
     # SimGrad (calibration) knobs
     lr: float = 3e-4
     wd: float = 1e-4
-    epochs: int = 300
+    epochs: int = 2000
     grad_clip: float = 1.0
 
     # Data usage
@@ -156,15 +250,46 @@ class TunerConfig:
     unknown_nonneg: bool = True
     unknown_init: float = 0.0
     unknown_softplus_beta: float = 1.0
+    unknown_scale: float = 1.0
+
+    # Optional optimization strategies (all toggled by one flag)
+    enable_strategies: bool = True
+
+    # (3) Batch softmin/mean across candidates (only used if batch_size > 1)
+    batch_size: int = 64
+    softmin_tau: float = 10.0  # 0 => mean across batch; >0 => softmin weighting
+
+    # (2) Time-horizon curriculum
+    curriculum_epochs: int = 50
+    curriculum_min_frac: float = 0.1  # start using this fraction of the train horizon
+
+    # (4) Adaptive LR schedule (ReduceLROnPlateau on val)
+    lr_plateau_patience: int = 10
+    lr_plateau_factor: float = 0.5
+    lr_plateau_min: float = 1e-6
+
+    # (5) Block optimization: amplitude warmup then spatial detail
+    amp_warmup_epochs: int = 20
+    base_init: float = 0.5413248546129181  # inv_softplus(1.0)
+
+    # (6) Mean-drift penalty (strong early, decays to 0)
+    lambda_drift_i: float = 20.0
+    lambda_drift_f: float = 1.0
+    drift_decay_epochs: int = 200
+
+    # (1) Reparameterization choice for the base field (shifted softplus to remove 0.693 offset)
+    use_shifted_softplus: bool = True
+
+
 
     # Regularization
     obj: ObjectiveConfig = field(default_factory=lambda: ObjectiveConfig(
         data_kind="mse",
         lambda_data=1.0,
-        lambda_tv=0.0,
-        lambda_lap=0.0,
-        lambda_l2=0.0,
-        lambda_box=0.0,
+        lambda_tv=1e-3,
+        lambda_lap=1e-2,
+        lambda_l2=1e-4,
+        lambda_box=1.0,
         box_lo=None,
         box_hi=None,
     ))
@@ -177,8 +302,6 @@ class TunerConfig:
     # Runtime
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
     seed: int = 0
-    batch: int = 8
-    batch_seed_offset: int = 1000
 
     # Rollout controls (fallbacks if not stored in npz)
     dt: float = 1.0
@@ -204,20 +327,20 @@ CFG = TunerConfig(
 
     unknown_hw=10,
     unknown_nonneg=True,
-    unknown_init= -4.0,
+    unknown_init=0.0,
 
     # regularizers (edit these as needed)
     reg_tv_on_unknown=True,
 )
 # You can also set objective weights here:
-CFG.obj.lambda_tv = 1e-4
-CFG.obj.lambda_lap = 0.0
-CFG.obj.lambda_l2 = 0.0
+# CFG.obj.lambda_tv = 1e-4
+# CFG.obj.lambda_lap = 0.0
+# CFG.obj.lambda_l2 = 0.0
 
 # STAMP placeholder controls
 CFG.use_stamp = False
 CFG.lambda_stamp = 0.0
-CFG.unknown_scale = 0.2
+CFG.unknown_scale = 1
 
 # =============================================================================
 # Main
@@ -280,6 +403,8 @@ def main():
     
     logger.info(f"Using rollout controls: dt={CFG.dt:.3e}, steps={CFG.steps}, save_every={CFG.save_every}")
 
+    
+
     # Sigma weighting (optional). For now: None (you can pass your learned/estimated sigma later).
     sigma = None
     mask = None
@@ -292,6 +417,11 @@ def main():
     else:
         raise ValueError("Need either sensors_idx or sensors_xy in NPZ for observation.")
 
+    # Build simulator grid/params
+    # NOTE: PolGrid/PolParams construction details may differ; we keep it minimal and rely on defaults.
+    # Build simulator grid/params (pollution)
+    # PolGrid needs Nx, Ny and (optionally) src_dir for loading known sources / U0 internally.
+        # Build simulator grid/params (match data/poldata.py behavior)
     # Infer SIM_DIR from the NPZ location: <root>/data/*.npz -> <root>/sim
     root_dir = os.path.abspath(os.path.join(os.path.dirname(CFG.npz_path), ".."))
     sim_dir = os.path.join(root_dir, "sim")
@@ -309,14 +439,15 @@ def main():
     if "S_known" in npz:
         grid.S_known = torch.from_numpy(_to_numpy(npz["S_known"]).astype(np.float32)).to(device)
 
-    S_known = grid.S_known
-    rms_known = torch.sqrt(torch.mean(S_known**2))
-    logger.info(f"RMS(S_known) = {rms_known.item():.6f}")
-
     # Params (use defaults, but move k to correct device if you implemented PolParams.to())
     params = polsim.PolParams()
     if hasattr(params, "to"):
         params = params.to(device)
+
+    # If dataset stored U0 explicitly, prefer it; otherwise let polsim build internally if needed
+    if "U0" in npz:
+        grid.U0 = torch.from_numpy(_to_numpy(npz["U0"]).astype(np.float32)).to(device)
+
 
     # Try to load params if saved
     if "param_names" in npz and "params" in npz:
@@ -339,19 +470,73 @@ def main():
 
     # Learnable unknown source on coarse grid (polsim internally upsamples/smooths)
     params_md = torch.nn.ModuleDict()
-    # Batched multi-start: B independent S_unknown candidates optimized in parallel.
-    params_md["S_unknown"] = BatchedLearnableField2D(
-        B=CFG.batch,
-        name="S_unknown",
-        shape_hw=(CFG.unknown_hw, CFG.unknown_hw),
-        init=CFG.unknown_init,
-        nonneg=CFG.unknown_nonneg,
-        clamp=None,
-        softplus_beta=CFG.unknown_softplus_beta,
-        scale=CFG.unknown_scale,
-        device=device,
-        dtype=torch.float32,
-    )
+
+    if CFG.enable_strategies:
+        # (5) Factorized parameterization: amp first, then spatial detail
+        if CFG.batch_size > 1:
+            fields = [
+                FactorizedUnknownField2D(
+                    name="S_unknown",
+                    shape_hw=(CFG.unknown_hw, CFG.unknown_hw),
+                    amp_init=CFG.unknown_init,
+                    base_init=CFG.base_init,
+                    amp_softplus_beta=CFG.unknown_softplus_beta,
+                    base_softplus_beta=CFG.unknown_softplus_beta,
+                    amp_scale=CFG.unknown_scale,
+                    device=device,
+                    dtype=torch.float32,
+                    use_shifted_softplus_base=CFG.use_shifted_softplus,
+                )
+                for _ in range(int(CFG.batch_size))
+            ]
+            su = BatchedUnknownField2D(fields)
+            # Start with base frozen (amp-only warmup). We'll unfreeze later.
+            su.set_base_trainable(False)
+        else:
+            su = FactorizedUnknownField2D(
+                name="S_unknown",
+                shape_hw=(CFG.unknown_hw, CFG.unknown_hw),
+                amp_init=CFG.unknown_init,
+                base_init=CFG.base_init,
+                amp_softplus_beta=CFG.unknown_softplus_beta,
+                base_softplus_beta=CFG.unknown_softplus_beta,
+                amp_scale=CFG.unknown_scale,
+                device=device,
+                dtype=torch.float32,
+                use_shifted_softplus_base=CFG.use_shifted_softplus,
+            )
+            # Start with base frozen (amp-only warmup). We'll unfreeze later.
+            su.set_base_trainable(False)
+        params_md["S_unknown"] = su
+    else:
+        if CFG.batch_size > 1:
+            fields = [
+                LearnableField2D(
+                    name="S_unknown",
+                    shape_hw=(CFG.unknown_hw, CFG.unknown_hw),
+                    init=CFG.unknown_init,
+                    nonneg=CFG.unknown_nonneg,
+                    clamp=None,
+                    softplus_beta=CFG.unknown_softplus_beta,
+                    scale=CFG.unknown_scale,
+                    device=device,
+                    dtype=torch.float32,
+                )
+                for _ in range(int(CFG.batch_size))
+            ]
+            params_md["S_unknown"] = BatchedUnknownField2D(fields)
+        else:
+            params_md["S_unknown"] = LearnableField2D(
+                name="S_unknown",
+                shape_hw=(CFG.unknown_hw, CFG.unknown_hw),
+                init=CFG.unknown_init,
+                nonneg=CFG.unknown_nonneg,
+                clamp=None,
+                softplus_beta=CFG.unknown_softplus_beta,
+                scale=CFG.unknown_scale,
+                device=device,
+                dtype=torch.float32,
+            )
 
     # Simulator adapter: field key in polsim output is assumed "U" (per your prior context).
     sim = SimulatorAdapter(
@@ -361,27 +546,26 @@ def main():
 
     calib = Calibrator(sim=sim, observer=observer, params=params_md).to(device)
 
-    # Optional: diversify initializations across batch (multi-start)
-    # (Safe even if BatchedLearnableField2D already randomizes internally.)
-    with torch.no_grad():
-        su = calib.params.S_unknown
-        if hasattr(su, "raws") and isinstance(getattr(su, "raws"), (list, tuple)):
-            for b, r in enumerate(su.raws):
-                cuda_devs = [torch.cuda.current_device()] if device.type == "cuda" else []
-                with torch.random.fork_rng(devices=cuda_devs):
-                    torch.manual_seed(CFG.seed + CFG.batch_seed_offset + b)
-                    r.add_(0.01 * torch.randn_like(r))
-        elif hasattr(su, "raw"):
-            su.raw.add_(0.01 * torch.randn_like(su.raw))
-
     opt = torch.optim.AdamW(calib.parameters(), lr=CFG.lr, weight_decay=CFG.wd)
 
+
+    scheduler = None
+    if CFG.enable_strategies:
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            opt,
+            mode="min",
+            factor=CFG.lr_plateau_factor,
+            patience=CFG.lr_plateau_patience,
+            min_lr=CFG.lr_plateau_min,
+            verbose=False,
+        )
     n_params = sum(p.numel() for p in calib.parameters())
     n_trainable = sum(p.numel() for p in calib.parameters() if p.requires_grad)
-    logger.info(f"params: total={n_params} trainable={n_trainable}")
+    # logger.info(f"params: total={n_params} trainable={n_trainable}")
 
-    for name, p in calib.named_parameters():
-        logger.info(f"param {name}: shape={tuple(p.shape)} requires_grad={p.requires_grad}")
+    # for name, p in calib.named_parameters():
+    #     logger.info(f"param {name}: shape={tuple(p.shape)} requires_grad={p.requires_grad}")
+
 
     best_val = float("inf")
     best_state = None
@@ -403,83 +587,215 @@ def main():
         "enforce_cfl": True,
     }
 
-    # with torch.no_grad():
-    #     Su0 = torch.zeros((CFG.batch, CFG.unknown_hw, CFG.unknown_hw), device=device)
-    #     out0 = polsim.rollout_pollution(S_unknown=Su0, **fixed_sim_kwargs)  # dict with "U"
-    #     U0snap = out0["U"]  # [B,Nx,Ny,T]
-    #     pred0 = observer(U0snap)  # should be [B,S,T]
-    #     # compare to obs (train+val concatenated)
-    #     obs = torch.cat([train, val], dim=1).unsqueeze(0).expand(CFG.batch, -1, -1)  # [B,S,T]
-    #     print("obs mean/std", obs.mean().item(), obs.std().item())
-    #     print("pred0 mean/std", pred0.mean().item(), pred0.std().item())
-    #     print("ratio mean", (pred0.mean()/obs.mean()).item())
+    # Some datasets may store U0; polsim may or may not accept it (defensive)
+    if "U0" in npz:
+        fixed_sim_kwargs["U0"] = torch.from_numpy(_to_numpy(npz["U0"]).astype(np.float32)).to(device)
 
     # Training loop
     patience = 30
     bad = 0
 
+
+    # ------------------------------------------------------------------
+    # Regularization schedules (fast early, stable later)
+    # We keep CFG.obj as the "target" (final) weights and create an
+    # epoch-specific ObjectiveConfig that we pass into compute_total_objective.
+    #   - box: strong early, decays to 0 over drift_decay_epochs
+    #   - tv/lap: off during early warmup, then ramp up to target by drift_decay_epochs
+    #   - l2: constant (as in CFG.obj)
+    # ------------------------------------------------------------------
+    obj_target = CFG.obj
+    tv_target = float(obj_target.lambda_tv)
+    lap_target = float(obj_target.lambda_lap)
+    l2_target = float(obj_target.lambda_l2)
+    box_target = float(obj_target.lambda_box)
+
+    # Use a small warmup before turning on spatial smoothness; tie to amp warmup if available.
+    reg_warmup_epochs = int(min(10, max(0, CFG.amp_warmup_epochs)))
+
+    def _clone_objective_cfg(cfg: ObjectiveConfig) -> ObjectiveConfig:
+        return ObjectiveConfig(
+            data_kind=cfg.data_kind,
+            huber_delta=cfg.huber_delta,
+            lambda_data=cfg.lambda_data,
+            lambda_tv=cfg.lambda_tv,
+            lambda_lap=cfg.lambda_lap,
+            lambda_l2=cfg.lambda_l2,
+            lambda_box=cfg.lambda_box,
+            box_lo=cfg.box_lo,
+            box_hi=cfg.box_hi,
+        )
+
+    def _lin_01(epoch_i: int, total_epochs: int) -> float:
+        if total_epochs <= 1:
+            return 1.0
+        return min(1.0, max(0.0, float(epoch_i) / float(total_epochs - 1)))
+
     for epoch in range(1, CFG.epochs + 1):
         calib.train()
         opt.zero_grad(set_to_none=True)
 
+        # (5) Block optimization: amp warmup then spatial detail
+        if CFG.enable_strategies:
+            su_mod = None
+            if hasattr(calib, "params") and isinstance(calib.params, torch.nn.ModuleDict):
+                if "S_unknown" in calib.params:
+                    su_mod = calib.params["S_unknown"]
+            if isinstance(su_mod, FactorizedUnknownField2D):
+                su_mod.set_base_trainable(epoch > CFG.amp_warmup_epochs)
+            elif hasattr(su_mod, "fields"):
+                # Batched factorized fields
+                su_mod.set_base_trainable(epoch > CFG.amp_warmup_epochs)
+
         # Forward sim on full horizon; then slice to train/val portions
         out = calib(return_field=False, **fixed_sim_kwargs)
-        pred_full = out.pred_sensor  # [B,S,T_full]
+        pred_full = out.pred_sensor  # [S,T_full] or [B,S,T_full]
+        is_batched = (pred_full.dim() == 3)
 
         # Align pred to observed train/val lengths
         # We assume the dataset's sensor series length equals simulator snapshot count.
         T_train = train.shape[1]
         T_val = val.shape[1]
-        
-        if pred_full.shape[-1] < (T_train + T_val):
+
+        if (pred_full.shape[2] if is_batched else pred_full.shape[1]) < (T_train + T_val):
             # If sim produces fewer steps than observation, trim obs
-            T_avail = pred_full.shape[-1]
+            T_avail = pred_full.shape[2] if is_batched else pred_full.shape[1]
             T_train = min(T_train, max(2, int((1.0 - CFG.val_frac) * T_avail)))
             T_val = min(T_val, T_avail - T_train)
-            B = pred_full.shape[0]
-            train_use = train[:, :T_train].unsqueeze(0).expand(B, -1, -1)  # [B,S,T_train]
-            val_use = val[:, :T_val].unsqueeze(0).expand(B, -1, -1)        # [B,S,T_val]
-            pred_train = pred_full[:, :, :T_train]                         # [B,S,T_train]
-            pred_val = pred_full[:, :, T_train:T_train + T_val]
+            train_use = train[:, :T_train]
+            val_use = val[:, :T_val]
+            pred_train = pred_full[:, :, :T_train] if is_batched else pred_full[:, :T_train]
+            pred_val = pred_full[:, :, T_train:T_train + T_val] if is_batched else pred_full[:, T_train:T_train + T_val]
         else:
-            B = pred_full.shape[0]
-            train_use = train.unsqueeze(0).expand(B, -1, -1)               # [B,S,T_train]
-            val_use = val.unsqueeze(0).expand(B, -1, -1)                   # [B,S,T_val]
-            pred_train = pred_full[:, :, :T_train]                         # [B,S,T_train]
-            pred_val = pred_full[:, :, T_train:T_train + T_val]
+            train_use = train
+            val_use = val
+            pred_train = pred_full[:, :, :T_train] if is_batched else pred_full[:, :T_train]
+            pred_val = pred_full[:, :, T_train:T_train + T_val] if is_batched else pred_full[:, T_train:T_train + T_val]
 
-        reg_field = out.theta["S_unknown"] if (CFG.reg_tv_on_unknown or CFG.obj.lambda_tv > 0.0 or CFG.obj.lambda_lap > 0.0) else None
-        reg_tensor = out.theta["S_unknown"] if (CFG.obj.lambda_l2 > 0.0) else None
+
+        # (2) Time-horizon curriculum: use only an early prefix of the train window initially
+        train_cur = train_use
+        pred_train_cur = pred_train
+        if CFG.enable_strategies:
+            frac = CFG.curriculum_min_frac
+            if CFG.curriculum_epochs > 1:
+                t = min(1.0, float(epoch - 1) / float(CFG.curriculum_epochs - 1))
+                frac = CFG.curriculum_min_frac + (1.0 - CFG.curriculum_min_frac) * t
+            T_eff = max(2, int(round(frac * train_use.shape[1])))
+            train_cur = train_use[:, :T_eff]
+            pred_train_cur = pred_train[..., :T_eff]
+
+        # print("train_use:", train_use.shape)
+        # print("pred_train:", pred_train.shape)
+        # print("train_cur:", train_cur.shape)
+        # print("pred_train_cur:", pred_train_cur.shape)
+
+        # Build epoch-specific objective (scheduled regularization weights)
+        obj_epoch = _clone_objective_cfg(obj_target)
+
+        # Schedule: box decays to 0 over drift_decay_epochs (guardrail early)
+        if box_target > 0.0:
+            t_box = _lin_01(epoch - 1, int(CFG.drift_decay_epochs))
+            obj_epoch.lambda_box = box_target * (1.0 - t_box)
+
+        # Schedule: TV/Laplacian ramp up after warmup to their target by drift_decay_epochs
+        if tv_target > 0.0:
+            if epoch <= reg_warmup_epochs:
+                obj_epoch.lambda_tv = 0.0
+            else:
+                denom = max(2, int(CFG.drift_decay_epochs) - reg_warmup_epochs)
+                t_tv = _lin_01(epoch - reg_warmup_epochs - 1, denom)
+                obj_epoch.lambda_tv = tv_target * t_tv
+
+        if lap_target > 0.0:
+            if epoch <= reg_warmup_epochs:
+                obj_epoch.lambda_lap = 0.0
+            else:
+                denom = max(2, int(CFG.drift_decay_epochs) - reg_warmup_epochs)
+                t_lap = _lin_01(epoch - reg_warmup_epochs - 1, denom)
+                obj_epoch.lambda_lap = lap_target * t_lap
+
+        # L2 stays constant (tie-breaker / stability)
+        obj_epoch.lambda_l2 = l2_target
+
+        # Decide what to regularize this epoch. For field regularizers (TV/Lap) we use reg_field.
+        # For tensor regularizers (L2/box) we use reg_tensor (defaults to reg_field if not provided in objectives.py).
+        any_field_reg = (obj_epoch.lambda_tv > 0.0) or (obj_epoch.lambda_lap > 0.0)
+        any_tensor_reg = (obj_epoch.lambda_l2 > 0.0) or ((obj_epoch.lambda_box > 0.0) and (obj_epoch.box_lo is not None or obj_epoch.box_hi is not None))
+
+        reg_field = out.theta["S_unknown"] if (CFG.reg_tv_on_unknown or any_field_reg) else None
+        reg_tensor = out.theta["S_unknown"] if (any_tensor_reg) else None
 
         Su = out.theta["S_unknown"]
         logger.info(
             f"S_unknown finite={torch.isfinite(Su).all().item()} "
             f"min={Su.min().item():.3e} max={Su.max().item():.3e}"
-            f"S_unknown RMS = {Su.pow(2).mean().sqrt().item():.6f}"
         )
 
-        # logger.info(f"obs finite={torch.isfinite(train_use).all().item()} pred finite={torch.isfinite(pred_train).all().item()}")
-        # logger.info(f"pred_full shape = {tuple(pred_full.shape)}")
-        # logger.info(f"train_use shape {train_use.shape} val_use shape {val_use.shape}")
-        # logger.info(f"pred_train shape {pred_train.shape} pred_val shape {pred_val.shape}")
-        # logger.info(f"T_train={T_train} T_val={T_val}")
+        logger.info(f"obs finite={torch.isfinite(train_use).all().item()} pred finite={torch.isfinite(pred_train).all().item()}")
         logger.info(f"obs train mean/std = {train_use.mean().item():.3e} / {train_use.std().item():.3e}")
         logger.info(f"pred train mean/std = {pred_train.mean().item():.3e} / {pred_train.std().item():.3e}")
 
+        # ---- sanity checks right before objective ----
+        def _stats(tag, x):
+            return (f"{tag}: finite={torch.isfinite(x).all().item()} "
+                    f"min={x.min().item():.3e} max={x.max().item():.3e}")
 
-        diff = pred_train - train_use                       # [B,S,T]
-        loss_data_b = diff.pow(2).mean(dim=(1, 2))          # [B]
-        b = loss_data_b.argmin().item()
-        loss_train, logs = compute_total_objective(
-            pred_sensor=pred_train,
-            obs_sensor=train_use,
-            cfg=CFG.obj,
-            sigma=sigma,
-            mask=mask,
-            reg_field=reg_field,
-            reg_tensor=reg_tensor,
-        )
+        if is_batched:
+            # Vectorized objective over candidate batch (no Python loop)
+            base_loss_b, logs = compute_total_objective_batched(
+                pred_sensor=pred_train_cur,
+                obs_sensor=train_cur,
+                cfg=obj_epoch,
+                sigma=sigma,
+                mask=mask,
+                reg_field=reg_field,
+                reg_tensor=reg_tensor,
+            )
 
+            total_b = base_loss_b
+
+            # (6) Mean-drift penalty (early), applied per candidate before aggregation
+            if CFG.enable_strategies and CFG.lambda_drift_i > 0.0:
+                t = 0.0
+                if CFG.drift_decay_epochs > 1:
+                    t = min(1.0, float(epoch - 1) / float(CFG.drift_decay_epochs - 1))
+                lam = max(float(CFG.lambda_drift_i) * (1.0 - t), CFG.lambda_drift_f)
+                if lam > 0.0:
+                    drift_err_b = pred_train_cur.mean(dim=(1, 2)) - train_cur.mean()
+                    drift_b = drift_err_b * drift_err_b
+                    total_b = total_b + lam * drift_b
+                    logs["loss_drift"] = float(drift_b.mean().detach().cpu().item())
+                    logs["lambda_drift"] = float(lam)
+
+            # Aggregate across candidates: mean (tau<=0) or softmin (tau>0)
+            loss_train, w = softmin_aggregate(total_b, tau=CFG.softmin_tau)
+            logs["batch_tau"] = float(CFG.softmin_tau)
+            # Effective number of candidates (1 / sum w^2); useful to monitor collapse
+            logs["batch_eff"] = float((1.0 / (w.pow(2).sum().clamp_min(1e-12))).detach().cpu().item())
+
+        else:
+            loss_train, logs = compute_total_objective(
+                pred_sensor=pred_train_cur,
+                obs_sensor=train_cur,
+                cfg=obj_epoch,
+                sigma=sigma,
+                mask=mask,
+                reg_field=reg_field,
+                reg_tensor=reg_tensor,
+            )
+
+            # (6) Mean-drift penalty (early), helps prevent long-horizon upward drift
+            if CFG.enable_strategies and CFG.lambda_drift_i > 0.0:
+                t = 0.0
+                if CFG.drift_decay_epochs > 1:
+                    t = min(1.0, float(epoch - 1) / float(CFG.drift_decay_epochs - 1))
+                lam = max(float(CFG.lambda_drift_i) * (1.0 - t), CFG.lambda_drift_f)
+                if lam > 0.0:
+                    drift_err = (pred_train_cur.mean() - train_cur.mean())
+                    loss_train = loss_train + lam * (drift_err * drift_err)
+                    logs["loss_drift"] = float((drift_err * drift_err).detach().cpu().item())
+                    logs["lambda_drift"] = float(lam)
         if not torch.isfinite(loss_train):
             raise RuntimeError("Non-finite loss_total")
 
@@ -503,61 +819,52 @@ def main():
         opt.step()
 
         with torch.no_grad():
-            su = calib.params.S_unknown
-            if hasattr(su, "raws") and isinstance(getattr(su, "raws"), (list, tuple)):
-                for r in su.raws:
-                    r.clamp_(-10.0, 10.0)
-            elif hasattr(su, "raw"):
-                su.raw.clamp_(-10.0, 10.0)
+            su_mod = calib.params["S_unknown"] if (hasattr(calib, "params") and isinstance(calib.params, torch.nn.ModuleDict) and "S_unknown" in calib.params) else None
+            if hasattr(su_mod, "fields"):
+                for f in su_mod.fields:
+                    if hasattr(f, "raw"):
+                        f.raw.clamp_(-1.0, 1.0)
+                    if isinstance(f, FactorizedUnknownField2D):
+                        f.amp.clamp_(-1.0, 1.0)
+                        f.base_raw.clamp_(-1.0, 1.0)
+            else:
+                if hasattr(su_mod, "raw"):
+                    su_mod.raw.clamp_(-1.0, 1.0)
+                if isinstance(su_mod, FactorizedUnknownField2D):
+                    su_mod.amp.clamp_(-1.0, 1.0)
+                    su_mod.base_raw.clamp_(-1.0, 1.0)
 
         # Validation
         calib.eval()
         with torch.no_grad():
             out2 = calib(return_field=False, **fixed_sim_kwargs)
             pred_full2 = out2.pred_sensor
-
-            if pred_full2.shape[-1] >= (T_train + T_val):
-                pred_val2 = pred_full2[:, :, T_train:T_train + T_val]  # [B,S,T_val]
+            is_batched2 = (pred_full2.dim() == 3)
+            if is_batched2:
+                pred_val2 = pred_full2[:, :, T_train:T_train + T_val] if pred_full2.shape[2] >= (T_train + T_val) else pred_full2[:, :, -T_val:]
             else:
-                pred_val2 = pred_full2[:, :, -T_val:]                   # [B,S,T_val]
+                pred_val2 = pred_full2[:, T_train:T_train + T_val] if pred_full2.shape[1] >= (T_train + T_val) else pred_full2[:, -T_val:]
+            val_loss = (pred_val2 - (val_use.unsqueeze(0) if is_batched2 else val_use)).pow(2).mean().item()
 
-            # Per-candidate validation MSE, then select the best candidate.
-            val_loss_b = (pred_val2 - val_use).pow(2).mean(dim=(1, 2))  # [B]
-            best_b = int(val_loss_b.argmin().item())
-            val_loss = float(val_loss_b.mean().item())
+        if scheduler is not None:
+            # (4) Adaptive LR schedule on validation loss
+            scheduler.step(val_loss)
 
         logs["train_total"] = float(loss_train.detach().cpu().item())
         logs["val_mse"] = float(val_loss)
-        logs["val_mse_mean"] = float(val_loss_b.mean().item())
-        logs["val_mse_min"] = float(val_loss_b.min().item())
-        logs["best_b"] = float(best_b)
 
+        # Logging
+        # if epoch == 1 or epoch % 5 == 0:
         logger.info(
-            f"epoch={epoch:04d} "
-            f"train={logs['train_total']:.6f} "
-            f"val={logs['val_mse']:.6f} "
-            f"val_mean={logs['val_mse_mean']:.6f} "
-            f"val_min={logs['val_mse_min']:.6f} "
-            f"best_b={int(logs['best_b'])} "
-            f"loss_data={logs.get('loss_data', float('nan')):.6g} "
-            f"loss_tv={logs.get('loss_tv', float('nan')):.6g} "
-            f"loss_lap={logs.get('loss_lap', float('nan')):.6g} "
-            f"loss_l2={logs.get('loss_l2', float('nan')):.6g} "
-            f"loss_box={logs.get('loss_box', float('nan')):.6g} "
-            f"loss_total={logs.get('loss_total', float('nan')):.6g}"
+            f"epoch={epoch:04d} train={logs['train_total']:.6f} val={logs['val_mse']:.6f} "
+            + " ".join([f"{k}={v:.4g}" for k, v in logs.items() if k.startswith("loss_") and k not in ("loss_total",)])
         )
 
         # Early stopping on val
         if val_loss < best_val - 1e-6:
             best_val = val_loss
             bad = 0
-            # Save ONLY the best candidate's parameters (no batch dim)
-            best_state = {}
-            for k, v in out2.theta.items():
-                if isinstance(v, torch.Tensor) and v.ndim >= 1 and v.shape[0] == val_loss_b.shape[0]:
-                    best_state[k] = v[best_b].detach().cpu().clone()
-                else:
-                    best_state[k] = v.detach().cpu().clone() if isinstance(v, torch.Tensor) else v
+            best_state = {k: v.detach().cpu().clone() for k, v in out2.theta.items()}
             logger.info(f"  BEST val={best_val:.6f}")
         else:
             bad += 1
@@ -573,8 +880,7 @@ def main():
     }
     if best_state is not None:
         for k, v in best_state.items():
-            if isinstance(v, torch.Tensor):
-                to_save[k] = v.numpy()
+            to_save[k] = v.numpy()
 
     np.savez_compressed(save_path, **to_save)
     logger.info(f"Saved best calibration to: {save_path}")

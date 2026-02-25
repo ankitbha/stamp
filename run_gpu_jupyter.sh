@@ -34,7 +34,7 @@ echo "[info] using port: ${PORT}"
 # Jupyter with overlay read-only; all in-container writes go to tmpfs
 "$SING_BIN" exec --nv \
   --fakeroot \
-  --overlay "${OVERLAY}:rw" \
+  --overlay "${OVERLAY}:ro" \
   "${SIF}" \
   /bin/bash -lc "
     set -e
