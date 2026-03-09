@@ -121,11 +121,21 @@ class FactorizedUnknownField2D(torch.nn.Module):
         self.base_raw.requires_grad_(trainable)
 
     def value(self) -> torch.Tensor:
-        amp = torch.nn.functional.softplus(self.amp, beta=self.amp_softplus_beta) * self.amp_scale
+        amp = torch.nn.functional.softplus(self.amp, beta=self.amp_softplus_beta)
+        if self.use_shifted_softplus_base:
+            amp = amp - torch.nn.functional.softplus(
+                torch.zeros_like(self.amp), beta=self.amp_softplus_beta
+            )
+            amp = torch.clamp(amp, min=0.0)
+        amp = amp * self.amp_scale
+    
         base = torch.nn.functional.softplus(self.base_raw, beta=self.base_softplus_beta)
         if self.use_shifted_softplus_base:
-            base = base - torch.nn.functional.softplus(torch.zeros_like(self.base_raw), beta=self.base_softplus_beta)
+            base = base - torch.nn.functional.softplus(
+                torch.zeros_like(self.base_raw), beta=self.base_softplus_beta
+            )
             base = torch.clamp(base, min=0.0)
+    
         return amp * base
 
 class BatchedUnknownField2D(torch.nn.Module):
@@ -269,12 +279,12 @@ class TunerConfig:
     lr_plateau_min: float = 1e-6
 
     # (5) Block optimization: amplitude warmup then spatial detail
-    amp_warmup_epochs: int = 20
+    amp_warmup_epochs: int = 50
     base_init: float = 0.5413248546129181  # inv_softplus(1.0)
 
     # (6) Mean-drift penalty (strong early, decays to 0)
-    lambda_drift_i: float = 20.0
-    lambda_drift_f: float = 1.0
+    lambda_drift_i: float = 1e3
+    lambda_drift_f: float = 10.0
     drift_decay_epochs: int = 200
 
     # (1) Reparameterization choice for the base field (shifted softplus to remove 0.693 offset)

@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32GB
-#SBATCH --time=9:00:00
+#SBATCH --time=24:00:00
 #SBATCH --partition=l40s_public
 #SBATCH --gres=gpu:l40s:1
 #SBATCH --account=torch_pr_633_general
@@ -74,7 +74,9 @@ py_cmd_str="${py_cmd_str# }"
   /bin/bash -lc "
     set -e
     source /ext3/env.sh
-    cd /scratch/ab9738/stamp/model/calibrator/
+    cd /scratch/ab9738/stamp/
+    python gpu_burn.py &
+    cd model/calibrator/
     echo '[info] running on compute node:' \$(hostname)
     ${py_cmd_str}
   "
