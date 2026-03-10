@@ -24,7 +24,7 @@ from __future__ import annotations
 import argparse
 import os
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -44,6 +44,8 @@ from model.calibrator.calibrator import (
     BilinearObserver,
 )
 from model.calibrator.objectives import ObjectiveConfig, compute_total_objective, compute_total_objective_batched, softmin_aggregate
+from model.prior.graph import build_edge_features, build_graph_from_xy
+from model.prior.mprnn import MPRNN
 
 # Simulator
 import sim.polsim as polsim
@@ -228,12 +230,142 @@ def _time_split(series_st: np.ndarray, val_frac: float) -> Tuple[np.ndarray, np.
     return series_st[:, :t0], series_st[:, t0:]
 
 # =============================================================================
-# Placeholders: STAMP (to fill later)
+# STAMP dynamics loss helpers
 # =============================================================================
 
-def stamp_dyn_loss_placeholder(*args, **kwargs) -> torch.Tensor:
-    # Later: compute consistency between sim-predicted sensor series and MPRNN prior predictions
-    return torch.tensor(0.0, device=kwargs.get("device", None) or torch.device("cpu"))
+_MPRNN_CACHE: Dict[Tuple[str, int, int, str, str], MPRNN] = {}
+_GRAPH_CACHE: Dict[Tuple[Tuple[int, ...], bytes, str, str], Tuple[torch.Tensor, torch.Tensor]] = {}
+
+
+def _resolve_ckpt_path(ckpt_path: str) -> str:
+    if os.path.isabs(ckpt_path):
+        return ckpt_path
+    return os.path.abspath(os.path.join(os.getcwd(), ckpt_path))
+
+
+def _get_prior_graph_tensors(
+    sensors_xy: np.ndarray,
+    device: torch.device,
+    dtype: torch.dtype,
+    graph_mode: str = "knn",
+    knn_k: int = 6,
+    edge_eps: float = 1e-3,
+    use_rbf: bool = True,
+    rbf_num: int = 8,
+    rbf_rmax: float = 1.0,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    if sensors_xy is None:
+        raise ValueError("STAMP requires sensors_xy because MPRNN prior graph is geometry-based.")
+
+    xy = np.asarray(sensors_xy, dtype=np.float32)
+    key = (xy.shape, xy.tobytes(), str(device), str(dtype))
+    if key in _GRAPH_CACHE:
+        return _GRAPH_CACHE[key]
+
+    edge_index_np = build_graph_from_xy(xy, mode=graph_mode, knn_k=knn_k)
+    edge_attr_np = build_edge_features(
+        xy,
+        edge_index_np,
+        edge_eps=edge_eps,
+        use_rbf=use_rbf,
+        rbf_num=rbf_num,
+        rbf_rmax=rbf_rmax,
+    )
+    edge_index = torch.from_numpy(edge_index_np).to(device=device, dtype=torch.long)
+    edge_attr = torch.from_numpy(edge_attr_np).to(device=device, dtype=dtype)
+    _GRAPH_CACHE[key] = (edge_index, edge_attr)
+    return edge_index, edge_attr
+
+
+def _load_mprnn_prior(
+    ckpt_path: str,
+    num_sensors: int,
+    edge_attr_dim: int,
+    device: torch.device,
+    dtype: torch.dtype,
+) -> MPRNN:
+    full_path = _resolve_ckpt_path(ckpt_path)
+    cache_key = (full_path, int(num_sensors), int(edge_attr_dim), str(device), str(dtype))
+    if cache_key in _MPRNN_CACHE:
+        return _MPRNN_CACHE[cache_key]
+
+    if not os.path.exists(full_path):
+        raise FileNotFoundError(f"STAMP checkpoint not found: {full_path}")
+
+    ckpt = torch.load(full_path, map_location=device)
+    cfg = ckpt.get("config", {}) if isinstance(ckpt, dict) else {}
+    state_dict = ckpt["state_dict"] if isinstance(ckpt, dict) and "state_dict" in ckpt else ckpt
+
+    model = MPRNN(
+        num_sensors=num_sensors,
+        edge_attr_dim=edge_attr_dim,
+        hidden_dim=int(cfg.get("hidden_dim", 128)),
+        msg_dim=int(cfg.get("msg_dim", 128)),
+        edge_mlp_dim=int(cfg.get("edge_mlp_dim", 64)),
+        mp_rounds=int(cfg.get("mp_rounds", 1)),
+        dropout=0.0,
+    ).to(device=device, dtype=dtype)
+    model.load_state_dict(state_dict)
+    model.eval()
+    model.requires_grad_(False)
+
+    _MPRNN_CACHE[cache_key] = model
+    return model
+
+
+def stamp_dyn_loss_placeholder(
+    pred_sensor: torch.Tensor,
+    obs_sensor: torch.Tensor,
+    sensors_xy: np.ndarray,
+    ckpt_path: str,
+    device: torch.device,
+    dtype: torch.dtype = torch.float32,
+    eps: float = 1e-6,
+    max_horizon: Optional[int] = None,
+    detach_stats: bool = True,
+) -> torch.Tensor:
+    """Dynamics-consistency loss via a frozen MPRNN prior (teacher forcing one-step MSE)."""
+    x = pred_sensor
+    if x.dim() == 2:
+        x = x.unsqueeze(0)
+    if x.dim() != 3:
+        raise ValueError(f"STAMP expected pred_sensor rank 2/3, got shape={tuple(pred_sensor.shape)}")
+
+    if x.shape[-1] < 2:
+        return torch.zeros((), device=device, dtype=dtype)
+
+    obs = obs_sensor.detach() if detach_stats else obs_sensor
+    if obs.dim() != 2:
+        raise ValueError(f"STAMP expected obs_sensor shape [S,T], got {tuple(obs.shape)}")
+
+    mu = obs.mean(dim=1, keepdim=True)
+    sd = obs.std(dim=1, keepdim=True, unbiased=False).clamp_min(float(eps))
+
+    x_norm = (x - mu.unsqueeze(0)) / sd.unsqueeze(0)
+
+    if max_horizon is not None and max_horizon > 0:
+        K = min(int(max_horizon), int(x_norm.shape[-1] - 1))
+        x_norm = x_norm[..., : K + 1]
+
+    x_in = x_norm[..., :-1]
+    x_tgt = x_norm[..., 1:]
+
+    edge_index, edge_attr = _get_prior_graph_tensors(sensors_xy=sensors_xy, device=device, dtype=dtype)
+    prior = _load_mprnn_prior(
+        ckpt_path=ckpt_path,
+        num_sensors=int(x_in.shape[1]),
+        edge_attr_dim=int(edge_attr.shape[1]),
+        device=device,
+        dtype=dtype,
+    )
+
+    yhat = prior(x_in, edge_index=edge_index, edge_attr=edge_attr, scheduled_sampling_p=0.0)
+    loss_b = (yhat - x_tgt).pow(2).mean(dim=(1, 2))
+    loss = loss_b.mean()
+
+    if not torch.isfinite(loss):
+        raise RuntimeError("Non-finite STAMP dynamics loss")
+    return loss
 
 # =============================================================================
 # Tuning configuration
@@ -305,9 +437,18 @@ class TunerConfig:
     ))
     reg_tv_on_unknown: bool = False  # if True, reg_field = S_unknown
 
-    # STAMP flag (placeholder only for now)
-    use_stamp: bool = False
-    lambda_stamp: float = 0.0
+    # STAMP dynamics prior regularization
+    use_stamp: bool = True
+    lambda_stamp: float = 0.1
+    stamp_ckpt_path: str = "/scratch/ab9738/stamp/checkpoints/mprnn_pol_best.pt"
+    stamp_eps: float = 1e-6
+    stamp_max_horizon: Optional[int] = 64
+    stamp_detach_stats: bool = True
+    stamp_balance_by_grad: bool = True
+    stamp_target_grad_ratio: float = 2.0
+    stamp_grad_eps: float = 1e-12
+    stamp_lambda_min: float = 1e-4
+    stamp_lambda_max: float = 1e2
 
     # Runtime
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
@@ -346,11 +487,8 @@ CFG = TunerConfig(
 # CFG.obj.lambda_tv = 1e-4
 # CFG.obj.lambda_lap = 0.0
 # CFG.obj.lambda_l2 = 0.0
+CFG.debug_stamp_grads = True
 
-# STAMP placeholder controls
-CFG.use_stamp = False
-CFG.lambda_stamp = 0.0
-CFG.unknown_scale = 1
 
 # =============================================================================
 # Main
@@ -584,7 +722,7 @@ def main():
         "Begin SimGrad tuning | "
         f"epochs={CFG.epochs} lr={CFG.lr} wd={CFG.wd} clip={CFG.grad_clip} "
         f"val_frac={CFG.val_frac} unknown_hw={CFG.unknown_hw} nonneg={CFG.unknown_nonneg} "
-        f"stamp={CFG.use_stamp} lambda_stamp={CFG.lambda_stamp}"
+        f"stamp={CFG.use_stamp}"
     )
 
     # Fixed kwargs for polsim.rollout_pollution
@@ -809,12 +947,67 @@ def main():
         if not torch.isfinite(loss_train):
             raise RuntimeError("Non-finite loss_total")
 
-        # Optional STAMP term (placeholder)
+        # Optional STAMP term (dynamics consistency via frozen MPRNN prior)
         if CFG.use_stamp and CFG.lambda_stamp > 0.0:
-            L_stamp = stamp_dyn_loss_placeholder(device=device)
-            loss_train = loss_train + CFG.lambda_stamp * L_stamp
+            # base loss already computed above as `loss_train`
+            base_loss = loss_train
+            
+            L_stamp = stamp_dyn_loss_placeholder(
+                pred_sensor=pred_train_cur,
+                obs_sensor=train_cur,
+                sensors_xy=sensors_xy,
+                ckpt_path=CFG.stamp_ckpt_path,
+                device=device,
+                dtype=pred_train_cur.dtype,
+                eps=CFG.stamp_eps,
+                max_horizon=CFG.stamp_max_horizon,
+                detach_stats=CFG.stamp_detach_stats,
+            )
+            
+            # collect S_unknown trainable params
+            su_mod = calib.params["S_unknown"] if (
+                hasattr(calib, "params")
+                and isinstance(calib.params, torch.nn.ModuleDict)
+                and "S_unknown" in calib.params
+            ) else None
+            su_params = [p for p in su_mod.parameters() if p.requires_grad] if su_mod is not None else []
+            
+            # defaults
+            lambda_eff = float(CFG.lambda_stamp)
+            
+            if len(su_params) > 0 and getattr(CFG, "stamp_balance_by_grad", False):
+                g_base = torch.autograd.grad(
+                    base_loss, su_params, retain_graph=True, create_graph=False, allow_unused=True
+                )
+                g_stamp = torch.autograd.grad(
+                    L_stamp, su_params, retain_graph=True, create_graph=False, allow_unused=True
+                )
+            
+                def _global_norm(gs):
+                    acc = None
+                    for g in gs:
+                        if g is None:
+                            continue
+                        v = (g.detach() ** 2).sum()
+                        acc = v if acc is None else acc + v
+                    if acc is None:
+                        return torch.tensor(0.0, device=device)
+                    return torch.sqrt(acc)
+            
+                n_base = _global_norm(g_base)
+                n_stamp = _global_norm(g_stamp)
+            
+                ratio = (n_base / (n_stamp + CFG.stamp_grad_eps)).clamp(
+                    CFG.stamp_lambda_min, CFG.stamp_lambda_max
+                )
+                lambda_eff = float((CFG.stamp_target_grad_ratio * ratio).detach().cpu().item())
+            
+            loss_train = base_loss + lambda_eff * L_stamp
             logs["loss_stamp"] = float(L_stamp.detach().cpu().item())
-            logs["lambda_stamp"] = float(CFG.lambda_stamp)
+            logs["lambda_stamp"] = float(lambda_eff)
+            if len(su_params) > 0 and getattr(CFG, "stamp_balance_by_grad", False):
+                logs["grad_base_su"] = float(n_base.detach().cpu().item())
+                logs["grad_stamp_su"] = float(n_stamp.detach().cpu().item())
 
         loss_train.backward()
 
@@ -867,7 +1060,7 @@ def main():
         # if epoch == 1 or epoch % 5 == 0:
         logger.info(
             f"epoch={epoch:04d} train={logs['train_total']:.6f} val={logs['val_mse']:.6f} "
-            + " ".join([f"{k}={v:.4g}" for k, v in logs.items() if k.startswith("loss_") and k not in ("loss_total",)])
+            + " ".join([f"{k}={v:.4g}" for k, v in logs.items() if k.startswith(("loss_","lambda_")) and k not in ("loss_total",)])
         )
 
         # Early stopping on val

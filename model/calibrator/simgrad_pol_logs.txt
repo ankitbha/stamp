@@ -1,0 +1,975 @@
+[info] job 3861285 on node(s):
+gl024
+[info] target: /scratch/ab9738/stamp/model/calibrator/tuner_pol.py
+INFO:    User not listed in /etc/subuid, trying root-mapped namespace
+INFO:    Using fakeroot command combined with root-mapped namespace
+INFO:    FUSE2FS (3): Warning: Mounting unchecked fs, running e2fsck is recommended.
+[info] running on compute node: gl024.hpc.nyu.edu
+2026-03-09 18:31:26,111 | INFO | Loading NPZ: /scratch/ab9738/stamp/data/pol_dataset.npz
+2026-03-09 18:31:26,737 | INFO | series shape [S,T]=(32, 10000), grid inferred [H,W]=(40,40)
+2026-03-09 18:31:26,737 | INFO | sensors_idx shape=(32, 2)
+2026-03-09 18:31:26,737 | INFO | sensors_xy shape=(32, 2)
+2026-03-09 18:31:26,983 | INFO | Using rollout controls: dt=2.000e-03, steps=9999, save_every=1
+/ext3/miniforge3/lib/python3.12/site-packages/torch/optim/lr_scheduler.py:62: UserWarning: The verbose parameter is deprecated. Please use get_last_lr() to access the learning rate.
+  warnings.warn(
+2026-03-09 18:31:41,177 | INFO | Begin SimGrad tuning | epochs=300 lr=0.0003 wd=0.0001 clip=1.0 val_frac=0.3 unknown_hw=10 nonneg=True stamp=False lambda_stamp=0.0
+/scratch/ab9738/stamp/sim/polsim.py:241: UserWarning: Could not infer format, so each element will be parsed individually, falling back to `dateutil`. To ensure parsing is consistent and as-expected, please specify a format.
+  raw = pd.read_csv(filepath_data_gov, index_col=[0, 1], parse_dates=True)[sensor]
+2026-03-09 18:32:11,269 | INFO | S_unknown finite=True min=0.000e+00 max=0.000e+00
+2026-03-09 18:32:11,274 | INFO | obs finite=True pred finite=True
+2026-03-09 18:32:11,352 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:32:11,352 | INFO | pred train mean/std = 1.085e+00 / 1.238e-01
+2026-03-09 18:32:47,238 | INFO | epoch=0001 train=0.186034 val=0.044127 loss_data=0.03127 loss_l2=0 loss_drift=0.0001548
+2026-03-09 18:32:47,241 | INFO |   BEST val=0.044127
+2026-03-09 18:33:03,965 | INFO | S_unknown finite=True min=4.604e-05 max=4.604e-05
+2026-03-09 18:33:03,972 | INFO | obs finite=True pred finite=True
+2026-03-09 18:33:03,974 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:33:03,974 | INFO | pred train mean/std = 1.085e+00 / 1.239e-01
+2026-03-09 18:33:39,965 | INFO | epoch=0002 train=0.199722 val=0.043954 loss_data=0.03096 loss_l2=2.119e-09 loss_drift=0.0001696
+2026-03-09 18:33:39,969 | INFO |   BEST val=0.043954
+2026-03-09 18:33:57,041 | INFO | S_unknown finite=True min=9.207e-05 max=9.207e-05
+2026-03-09 18:33:57,045 | INFO | obs finite=True pred finite=True
+2026-03-09 18:33:57,046 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:33:57,046 | INFO | pred train mean/std = 1.086e+00 / 1.241e-01
+2026-03-09 18:34:33,432 | INFO | epoch=0003 train=0.219716 val=0.043771 loss_data=0.03102 loss_l2=8.477e-09 loss_drift=0.0001906
+2026-03-09 18:34:33,435 | INFO |   BEST val=0.043771
+2026-03-09 18:34:50,502 | INFO | S_unknown finite=True min=1.381e-04 max=1.381e-04
+2026-03-09 18:34:50,503 | INFO | obs finite=True pred finite=True
+2026-03-09 18:34:50,503 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:34:50,504 | INFO | pred train mean/std = 1.086e+00 / 1.243e-01
+2026-03-09 18:35:27,092 | INFO | epoch=0004 train=0.253588 val=0.043577 loss_data=0.03105 loss_l2=1.908e-08 loss_drift=0.0002259
+2026-03-09 18:35:27,095 | INFO |   BEST val=0.043577
+2026-03-09 18:35:44,345 | INFO | S_unknown finite=True min=1.843e-04 max=1.843e-04
+2026-03-09 18:35:44,347 | INFO | obs finite=True pred finite=True
+2026-03-09 18:35:44,348 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:35:44,348 | INFO | pred train mean/std = 1.086e+00 / 1.245e-01
+2026-03-09 18:36:21,030 | INFO | epoch=0005 train=0.283863 val=0.043402 loss_data=0.0311 loss_l2=3.395e-08 loss_drift=0.000258
+2026-03-09 18:36:21,033 | INFO |   BEST val=0.043402
+2026-03-09 18:36:38,215 | INFO | S_unknown finite=True min=2.304e-04 max=2.304e-04
+2026-03-09 18:36:38,220 | INFO | obs finite=True pred finite=True
+2026-03-09 18:36:38,225 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:36:38,227 | INFO | pred train mean/std = 1.087e+00 / 1.247e-01
+2026-03-09 18:37:15,249 | INFO | epoch=0006 train=0.295858 val=0.043242 loss_data=0.03119 loss_l2=5.31e-08 loss_drift=0.0002715
+2026-03-09 18:37:15,253 | INFO |   BEST val=0.043242
+2026-03-09 18:37:32,508 | INFO | S_unknown finite=True min=2.769e-04 max=2.769e-04
+2026-03-09 18:37:32,510 | INFO | obs finite=True pred finite=True
+2026-03-09 18:37:32,511 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:37:32,511 | INFO | pred train mean/std = 1.087e+00 / 1.248e-01
+2026-03-09 18:38:09,264 | INFO | epoch=0007 train=0.294491 val=0.043066 loss_data=0.0313 loss_l2=7.667e-08 loss_drift=0.0002714
+2026-03-09 18:38:09,268 | INFO |   BEST val=0.043066
+2026-03-09 18:38:26,457 | INFO | S_unknown finite=True min=3.237e-04 max=3.237e-04
+2026-03-09 18:38:26,459 | INFO | obs finite=True pred finite=True
+2026-03-09 18:38:26,464 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:38:26,469 | INFO | pred train mean/std = 1.087e+00 / 1.250e-01
+2026-03-09 18:39:03,495 | INFO | epoch=0008 train=0.313880 val=0.042877 loss_data=0.03132 loss_l2=1.048e-07 loss_drift=0.0002929
+2026-03-09 18:39:03,498 | INFO |   BEST val=0.042877
+2026-03-09 18:39:20,788 | INFO | S_unknown finite=True min=3.708e-04 max=3.708e-04
+2026-03-09 18:39:20,790 | INFO | obs finite=True pred finite=True
+2026-03-09 18:39:20,790 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:39:20,790 | INFO | pred train mean/std = 1.088e+00 / 1.252e-01
+2026-03-09 18:39:57,900 | INFO | epoch=0009 train=0.332061 val=0.042688 loss_data=0.0313 loss_l2=1.375e-07 loss_drift=0.0003134
+2026-03-09 18:39:57,906 | INFO |   BEST val=0.042688
+2026-03-09 18:40:15,185 | INFO | S_unknown finite=True min=4.183e-04 max=4.183e-04
+2026-03-09 18:40:15,187 | INFO | obs finite=True pred finite=True
+2026-03-09 18:40:15,188 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:40:15,188 | INFO | pred train mean/std = 1.088e+00 / 1.254e-01
+2026-03-09 18:40:52,198 | INFO | epoch=0010 train=0.381665 val=0.042524 loss_data=0.03142 loss_l2=1.75e-07 loss_drift=0.0003668
+2026-03-09 18:40:52,201 | INFO |   BEST val=0.042524
+2026-03-09 18:41:09,503 | INFO | S_unknown finite=True min=4.662e-04 max=4.662e-04
+2026-03-09 18:41:09,504 | INFO | obs finite=True pred finite=True
+2026-03-09 18:41:09,509 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:41:09,514 | INFO | pred train mean/std = 1.088e+00 / 1.256e-01
+2026-03-09 18:41:46,465 | INFO | epoch=0011 train=0.448324 val=0.042358 loss_data=0.03145 loss_l2=2.173e-07 loss_drift=0.0004389
+2026-03-09 18:41:46,468 | INFO |   BEST val=0.042358
+2026-03-09 18:42:03,762 | INFO | S_unknown finite=True min=5.143e-04 max=5.143e-04
+2026-03-09 18:42:03,767 | INFO | obs finite=True pred finite=True
+2026-03-09 18:42:03,767 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:42:03,767 | INFO | pred train mean/std = 1.089e+00 / 1.257e-01
+2026-03-09 18:42:40,888 | INFO | epoch=0012 train=0.484525 val=0.042183 loss_data=0.03157 loss_tv=0.001 loss_lap=1.269e-07 loss_l2=2.645e-07 loss_drift=0.0004795
+2026-03-09 18:42:40,892 | INFO |   BEST val=0.042183
+2026-03-09 18:42:58,141 | INFO | S_unknown finite=True min=5.626e-04 max=5.626e-04
+2026-03-09 18:42:58,147 | INFO | obs finite=True pred finite=True
+2026-03-09 18:42:58,149 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:42:58,149 | INFO | pred train mean/std = 1.089e+00 / 1.259e-01
+2026-03-09 18:43:35,323 | INFO | epoch=0013 train=0.564315 val=0.041997 loss_data=0.03175 loss_tv=0.001 loss_lap=1.519e-07 loss_l2=3.165e-07 loss_drift=0.0005667
+2026-03-09 18:43:35,326 | INFO |   BEST val=0.041997
+2026-03-09 18:43:52,550 | INFO | S_unknown finite=True min=6.111e-04 max=6.111e-04
+2026-03-09 18:43:52,555 | INFO | obs finite=True pred finite=True
+2026-03-09 18:43:52,560 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:43:52,561 | INFO | pred train mean/std = 1.089e+00 / 1.261e-01
+2026-03-09 18:44:29,740 | INFO | epoch=0014 train=0.636320 val=0.041812 loss_data=0.03188 loss_tv=0.001 loss_lap=1.792e-07 loss_l2=3.734e-07 loss_drift=0.0006467
+2026-03-09 18:44:29,748 | INFO |   BEST val=0.041812
+2026-03-09 18:44:47,101 | INFO | S_unknown finite=True min=6.597e-04 max=6.597e-04
+2026-03-09 18:44:47,103 | INFO | obs finite=True pred finite=True
+2026-03-09 18:44:47,103 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:44:47,104 | INFO | pred train mean/std = 1.090e+00 / 1.263e-01
+2026-03-09 18:45:24,194 | INFO | epoch=0015 train=0.686845 val=0.041640 loss_data=0.03189 loss_tv=0.001 loss_lap=2.089e-07 loss_l2=4.352e-07 loss_drift=0.0007045
+2026-03-09 18:45:24,198 | INFO |   BEST val=0.041640
+2026-03-09 18:45:41,501 | INFO | S_unknown finite=True min=7.085e-04 max=7.085e-04
+2026-03-09 18:45:41,503 | INFO | obs finite=True pred finite=True
+2026-03-09 18:45:41,504 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:45:41,504 | INFO | pred train mean/std = 1.090e+00 / 1.265e-01
+2026-03-09 18:46:18,535 | INFO | epoch=0016 train=0.720432 val=0.041482 loss_data=0.03191 loss_tv=0.001 loss_lap=2.409e-07 loss_l2=5.019e-07 loss_drift=0.0007446
+2026-03-09 18:46:18,539 | INFO |   BEST val=0.041482
+2026-03-09 18:46:35,782 | INFO | S_unknown finite=True min=7.573e-04 max=7.573e-04
+2026-03-09 18:46:35,784 | INFO | obs finite=True pred finite=True
+2026-03-09 18:46:35,785 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:46:35,785 | INFO | pred train mean/std = 1.090e+00 / 1.267e-01
+2026-03-09 18:47:12,950 | INFO | epoch=0017 train=0.737386 val=0.041316 loss_data=0.03188 loss_tv=0.001 loss_lap=2.753e-07 loss_l2=5.735e-07 loss_drift=0.0007672
+2026-03-09 18:47:12,953 | INFO |   BEST val=0.041316
+2026-03-09 18:47:30,211 | INFO | S_unknown finite=True min=8.062e-04 max=8.062e-04
+2026-03-09 18:47:30,213 | INFO | obs finite=True pred finite=True
+2026-03-09 18:47:30,214 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:47:30,217 | INFO | pred train mean/std = 1.091e+00 / 1.269e-01
+2026-03-09 18:48:07,355 | INFO | epoch=0018 train=0.752364 val=0.041142 loss_data=0.03186 loss_tv=0.001 loss_lap=3.12e-07 loss_l2=6.5e-07 loss_drift=0.0007878
+2026-03-09 18:48:07,359 | INFO |   BEST val=0.041142
+2026-03-09 18:48:24,680 | INFO | S_unknown finite=True min=8.551e-04 max=8.551e-04
+2026-03-09 18:48:24,682 | INFO | obs finite=True pred finite=True
+2026-03-09 18:48:24,683 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:48:24,684 | INFO | pred train mean/std = 1.091e+00 / 1.271e-01
+2026-03-09 18:49:01,882 | INFO | epoch=0019 train=0.766839 val=0.040963 loss_data=0.03189 loss_tv=0.001 loss_lap=3.51e-07 loss_l2=7.313e-07 loss_drift=0.000808
+2026-03-09 18:49:01,885 | INFO |   BEST val=0.040963
+2026-03-09 18:49:19,175 | INFO | S_unknown finite=True min=9.041e-04 max=9.041e-04
+2026-03-09 18:49:19,180 | INFO | obs finite=True pred finite=True
+2026-03-09 18:49:19,183 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:49:19,184 | INFO | pred train mean/std = 1.091e+00 / 1.273e-01
+2026-03-09 18:49:56,293 | INFO | epoch=0020 train=0.784114 val=0.040786 loss_data=0.03187 loss_tv=0.001 loss_lap=3.924e-07 loss_l2=8.174e-07 loss_drift=0.0008316
+2026-03-09 18:49:56,296 | INFO |   BEST val=0.040786
+2026-03-09 18:50:13,533 | INFO | S_unknown finite=True min=9.531e-04 max=9.531e-04
+2026-03-09 18:50:13,535 | INFO | obs finite=True pred finite=True
+2026-03-09 18:50:13,536 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:50:13,536 | INFO | pred train mean/std = 1.092e+00 / 1.275e-01
+2026-03-09 18:50:50,723 | INFO | epoch=0021 train=0.804642 val=0.040634 loss_data=0.03186 loss_tv=0.001 loss_lap=4.36e-07 loss_l2=9.084e-07 loss_drift=0.0008591
+2026-03-09 18:50:50,726 | INFO |   BEST val=0.040634
+2026-03-09 18:51:08,020 | INFO | S_unknown finite=True min=1.002e-03 max=1.002e-03
+2026-03-09 18:51:08,025 | INFO | obs finite=True pred finite=True
+2026-03-09 18:51:08,030 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:51:08,034 | INFO | pred train mean/std = 1.092e+00 / 1.276e-01
+2026-03-09 18:51:45,171 | INFO | epoch=0022 train=0.814390 val=0.040478 loss_data=0.03189 loss_tv=0.001 loss_lap=4.82e-07 loss_l2=1.004e-06 loss_drift=0.0008748
+2026-03-09 18:51:45,174 | INFO |   BEST val=0.040478
+2026-03-09 18:52:02,458 | INFO | S_unknown finite=True min=1.051e-03 max=1.051e-03
+2026-03-09 18:52:02,460 | INFO | obs finite=True pred finite=True
+2026-03-09 18:52:02,461 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:52:02,461 | INFO | pred train mean/std = 1.092e+00 / 1.278e-01
+2026-03-09 18:52:39,593 | INFO | epoch=0023 train=0.828831 val=0.040316 loss_data=0.03188 loss_tv=0.001 loss_lap=5.303e-07 loss_l2=1.105e-06 loss_drift=0.000896
+2026-03-09 18:52:39,598 | INFO |   BEST val=0.040316
+2026-03-09 18:52:56,942 | INFO | S_unknown finite=True min=1.100e-03 max=1.100e-03
+2026-03-09 18:52:56,946 | INFO | obs finite=True pred finite=True
+2026-03-09 18:52:56,947 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:52:56,947 | INFO | pred train mean/std = 1.093e+00 / 1.280e-01
+2026-03-09 18:53:34,079 | INFO | epoch=0024 train=0.854319 val=0.040147 loss_data=0.03193 loss_tv=0.001 loss_lap=5.809e-07 loss_l2=1.21e-06 loss_drift=0.0009299
+2026-03-09 18:53:34,083 | INFO |   BEST val=0.040147
+2026-03-09 18:53:51,395 | INFO | S_unknown finite=True min=1.149e-03 max=1.149e-03
+2026-03-09 18:53:51,400 | INFO | obs finite=True pred finite=True
+2026-03-09 18:53:51,401 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:53:51,401 | INFO | pred train mean/std = 1.093e+00 / 1.282e-01
+2026-03-09 18:54:28,414 | INFO | epoch=0025 train=0.869253 val=0.039977 loss_data=0.03193 loss_tv=0.001 loss_lap=6.338e-07 loss_l2=1.32e-06 loss_drift=0.0009522
+2026-03-09 18:54:28,417 | INFO |   BEST val=0.039977
+2026-03-09 18:54:45,728 | INFO | S_unknown finite=True min=1.198e-03 max=1.198e-03
+2026-03-09 18:54:45,733 | INFO | obs finite=True pred finite=True
+2026-03-09 18:54:45,734 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:54:45,734 | INFO | pred train mean/std = 1.094e+00 / 1.284e-01
+2026-03-09 18:55:22,776 | INFO | epoch=0026 train=0.876162 val=0.039814 loss_data=0.03192 loss_tv=0.001 loss_lap=6.89e-07 loss_l2=1.435e-06 loss_drift=0.0009655
+2026-03-09 18:55:22,780 | INFO |   BEST val=0.039814
+2026-03-09 18:55:40,183 | INFO | S_unknown finite=True min=1.247e-03 max=1.247e-03
+2026-03-09 18:55:40,185 | INFO | obs finite=True pred finite=True
+2026-03-09 18:55:40,186 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:55:40,186 | INFO | pred train mean/std = 1.094e+00 / 1.286e-01
+2026-03-09 18:56:17,309 | INFO | epoch=0027 train=0.883476 val=0.039671 loss_data=0.03191 loss_tv=0.001 loss_lap=7.464e-07 loss_l2=1.555e-06 loss_drift=0.0009796
+2026-03-09 18:56:17,313 | INFO |   BEST val=0.039671
+2026-03-09 18:56:34,600 | INFO | S_unknown finite=True min=1.296e-03 max=1.296e-03
+2026-03-09 18:56:34,605 | INFO | obs finite=True pred finite=True
+2026-03-09 18:56:34,609 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:56:34,609 | INFO | pred train mean/std = 1.094e+00 / 1.288e-01
+2026-03-09 18:57:11,731 | INFO | epoch=0028 train=0.901621 val=0.039522 loss_data=0.03193 loss_tv=0.001 loss_lap=8.061e-07 loss_l2=1.679e-06 loss_drift=0.001006
+2026-03-09 18:57:11,734 | INFO |   BEST val=0.039522
+2026-03-09 18:57:29,038 | INFO | S_unknown finite=True min=1.345e-03 max=1.345e-03
+2026-03-09 18:57:29,040 | INFO | obs finite=True pred finite=True
+2026-03-09 18:57:29,041 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:57:29,041 | INFO | pred train mean/std = 1.095e+00 / 1.290e-01
+2026-03-09 18:58:06,134 | INFO | epoch=0029 train=0.939135 val=0.039365 loss_data=0.032 loss_tv=0.001 loss_lap=8.681e-07 loss_l2=1.809e-06 loss_drift=0.001056
+2026-03-09 18:58:06,137 | INFO |   BEST val=0.039365
+2026-03-09 18:58:23,507 | INFO | S_unknown finite=True min=1.394e-03 max=1.394e-03
+2026-03-09 18:58:23,509 | INFO | obs finite=True pred finite=True
+2026-03-09 18:58:23,509 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:58:23,509 | INFO | pred train mean/std = 1.095e+00 / 1.292e-01
+2026-03-09 18:59:00,657 | INFO | epoch=0030 train=0.980412 val=0.039203 loss_data=0.03212 loss_tv=0.001 loss_lap=9.324e-07 loss_l2=1.943e-06 loss_drift=0.00111
+2026-03-09 18:59:00,661 | INFO |   BEST val=0.039203
+2026-03-09 18:59:17,929 | INFO | S_unknown finite=True min=1.443e-03 max=1.443e-03
+2026-03-09 18:59:17,934 | INFO | obs finite=True pred finite=True
+2026-03-09 18:59:17,939 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 18:59:17,940 | INFO | pred train mean/std = 1.095e+00 / 1.294e-01
+2026-03-09 18:59:55,129 | INFO | epoch=0031 train=1.023297 val=0.039043 loss_data=0.0322 loss_tv=0.001 loss_lap=9.989e-07 loss_l2=2.081e-06 loss_drift=0.001167
+2026-03-09 18:59:55,133 | INFO |   BEST val=0.039043
+2026-03-09 19:00:12,424 | INFO | S_unknown finite=True min=1.491e-03 max=1.491e-03
+2026-03-09 19:00:12,428 | INFO | obs finite=True pred finite=True
+2026-03-09 19:00:12,433 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:00:12,434 | INFO | pred train mean/std = 1.096e+00 / 1.296e-01
+2026-03-09 19:00:49,482 | INFO | epoch=0032 train=1.053594 val=0.038900 loss_data=0.03223 loss_tv=0.001 loss_lap=1.068e-06 loss_l2=2.224e-06 loss_drift=0.00121
+2026-03-09 19:00:49,485 | INFO |   BEST val=0.038900
+2026-03-09 19:01:06,790 | INFO | S_unknown finite=True min=1.540e-03 max=1.540e-03
+2026-03-09 19:01:06,791 | INFO | obs finite=True pred finite=True
+2026-03-09 19:01:06,791 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:01:06,791 | INFO | pred train mean/std = 1.096e+00 / 1.297e-01
+2026-03-09 19:01:44,024 | INFO | epoch=0033 train=1.090125 val=0.038764 loss_data=0.03232 loss_tv=0.001 loss_lap=1.139e-06 loss_l2=2.372e-06 loss_drift=0.00126
+2026-03-09 19:01:44,029 | INFO |   BEST val=0.038764
+2026-03-09 19:02:01,347 | INFO | S_unknown finite=True min=1.589e-03 max=1.589e-03
+2026-03-09 19:02:01,351 | INFO | obs finite=True pred finite=True
+2026-03-09 19:02:01,351 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:02:01,351 | INFO | pred train mean/std = 1.096e+00 / 1.299e-01
+2026-03-09 19:02:38,515 | INFO | epoch=0034 train=1.106447 val=0.038618 loss_data=0.03235 loss_tv=0.001 loss_lap=1.212e-06 loss_l2=2.525e-06 loss_drift=0.001288
+2026-03-09 19:02:38,519 | INFO |   BEST val=0.038618
+2026-03-09 19:02:55,787 | INFO | S_unknown finite=True min=1.638e-03 max=1.638e-03
+2026-03-09 19:02:55,792 | INFO | obs finite=True pred finite=True
+2026-03-09 19:02:55,796 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:02:55,798 | INFO | pred train mean/std = 1.097e+00 / 1.301e-01
+2026-03-09 19:03:32,913 | INFO | epoch=0035 train=1.111411 val=0.038467 loss_data=0.03239 loss_tv=0.001 loss_lap=1.287e-06 loss_l2=2.682e-06 loss_drift=0.001301
+2026-03-09 19:03:32,916 | INFO |   BEST val=0.038467
+2026-03-09 19:03:50,302 | INFO | S_unknown finite=True min=1.686e-03 max=1.686e-03
+2026-03-09 19:03:50,304 | INFO | obs finite=True pred finite=True
+2026-03-09 19:03:50,305 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:03:50,305 | INFO | pred train mean/std = 1.097e+00 / 1.303e-01
+2026-03-09 19:04:27,528 | INFO | epoch=0036 train=1.117816 val=0.038313 loss_data=0.03241 loss_tv=0.001 loss_lap=1.365e-06 loss_l2=2.844e-06 loss_drift=0.001317
+2026-03-09 19:04:27,531 | INFO |   BEST val=0.038313
+2026-03-09 19:04:44,787 | INFO | S_unknown finite=True min=1.735e-03 max=1.735e-03
+2026-03-09 19:04:44,791 | INFO | obs finite=True pred finite=True
+2026-03-09 19:04:44,792 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:04:44,793 | INFO | pred train mean/std = 1.097e+00 / 1.305e-01
+2026-03-09 19:05:21,859 | INFO | epoch=0037 train=1.125107 val=0.038166 loss_data=0.03243 loss_tv=0.001 loss_lap=1.445e-06 loss_l2=3.01e-06 loss_drift=0.001334
+2026-03-09 19:05:21,863 | INFO |   BEST val=0.038166
+2026-03-09 19:05:39,114 | INFO | S_unknown finite=True min=1.784e-03 max=1.784e-03
+2026-03-09 19:05:39,116 | INFO | obs finite=True pred finite=True
+2026-03-09 19:05:39,117 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:05:39,117 | INFO | pred train mean/std = 1.098e+00 / 1.307e-01
+2026-03-09 19:06:16,314 | INFO | epoch=0038 train=1.129431 val=0.038039 loss_data=0.03245 loss_tv=0.001 loss_lap=1.527e-06 loss_l2=3.181e-06 loss_drift=0.001348
+2026-03-09 19:06:16,318 | INFO |   BEST val=0.038039
+2026-03-09 19:06:35,865 | INFO | S_unknown finite=True min=1.832e-03 max=1.832e-03
+2026-03-09 19:06:35,870 | INFO | obs finite=True pred finite=True
+2026-03-09 19:06:35,874 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:06:35,876 | INFO | pred train mean/std = 1.098e+00 / 1.309e-01
+2026-03-09 19:07:20,384 | INFO | epoch=0039 train=1.131925 val=0.037906 loss_data=0.03245 loss_tv=0.001 loss_lap=1.611e-06 loss_l2=3.357e-06 loss_drift=0.001359
+2026-03-09 19:07:20,388 | INFO |   BEST val=0.037906
+2026-03-09 19:07:40,227 | INFO | S_unknown finite=True min=1.881e-03 max=1.881e-03
+2026-03-09 19:07:40,232 | INFO | obs finite=True pred finite=True
+2026-03-09 19:07:40,237 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:07:40,241 | INFO | pred train mean/std = 1.098e+00 / 1.310e-01
+2026-03-09 19:08:25,700 | INFO | epoch=0040 train=1.129575 val=0.037765 loss_data=0.03245 loss_tv=0.001 loss_lap=1.698e-06 loss_l2=3.537e-06 loss_drift=0.001365
+2026-03-09 19:08:25,705 | INFO |   BEST val=0.037765
+2026-03-09 19:08:45,723 | INFO | S_unknown finite=True min=1.929e-03 max=1.929e-03
+2026-03-09 19:08:45,728 | INFO | obs finite=True pred finite=True
+2026-03-09 19:08:45,731 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:08:45,732 | INFO | pred train mean/std = 1.099e+00 / 1.312e-01
+2026-03-09 19:09:31,274 | INFO | epoch=0041 train=1.132750 val=0.037620 loss_data=0.03244 loss_tv=0.001 loss_lap=1.787e-06 loss_l2=3.722e-06 loss_drift=0.001377
+2026-03-09 19:09:31,279 | INFO |   BEST val=0.037620
+2026-03-09 19:09:51,304 | INFO | S_unknown finite=True min=1.978e-03 max=1.978e-03
+2026-03-09 19:09:51,309 | INFO | obs finite=True pred finite=True
+2026-03-09 19:09:51,314 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:09:51,318 | INFO | pred train mean/std = 1.099e+00 / 1.314e-01
+2026-03-09 19:10:36,707 | INFO | epoch=0042 train=1.135685 val=0.037476 loss_data=0.03246 loss_tv=0.001 loss_lap=1.878e-06 loss_l2=3.912e-06 loss_drift=0.00139
+2026-03-09 19:10:36,711 | INFO |   BEST val=0.037476
+2026-03-09 19:10:56,782 | INFO | S_unknown finite=True min=2.026e-03 max=2.026e-03
+2026-03-09 19:10:56,784 | INFO | obs finite=True pred finite=True
+2026-03-09 19:10:56,785 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:10:56,785 | INFO | pred train mean/std = 1.099e+00 / 1.316e-01
+2026-03-09 19:11:42,220 | INFO | epoch=0043 train=1.133299 val=0.037352 loss_data=0.03245 loss_tv=0.001 loss_lap=1.971e-06 loss_l2=4.106e-06 loss_drift=0.001395
+2026-03-09 19:11:42,225 | INFO |   BEST val=0.037352
+2026-03-09 19:12:02,245 | INFO | S_unknown finite=True min=2.075e-03 max=2.075e-03
+2026-03-09 19:12:02,249 | INFO | obs finite=True pred finite=True
+2026-03-09 19:12:02,250 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:12:02,250 | INFO | pred train mean/std = 1.100e+00 / 1.318e-01
+2026-03-09 19:12:47,550 | INFO | epoch=0044 train=1.133174 val=0.037229 loss_data=0.03247 loss_tv=0.001 loss_lap=2.066e-06 loss_l2=4.305e-06 loss_drift=0.001404
+2026-03-09 19:12:47,558 | INFO |   BEST val=0.037229
+2026-03-09 19:13:07,719 | INFO | S_unknown finite=True min=2.123e-03 max=2.123e-03
+2026-03-09 19:13:07,724 | INFO | obs finite=True pred finite=True
+2026-03-09 19:13:07,729 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:13:07,733 | INFO | pred train mean/std = 1.100e+00 / 1.320e-01
+2026-03-09 19:13:53,269 | INFO | epoch=0045 train=1.134532 val=0.037099 loss_data=0.03248 loss_tv=0.001 loss_lap=2.164e-06 loss_l2=4.508e-06 loss_drift=0.001415
+2026-03-09 19:13:53,273 | INFO |   BEST val=0.037099
+2026-03-09 19:14:13,465 | INFO | S_unknown finite=True min=2.172e-03 max=2.172e-03
+2026-03-09 19:14:13,467 | INFO | obs finite=True pred finite=True
+2026-03-09 19:14:13,468 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:14:13,469 | INFO | pred train mean/std = 1.100e+00 / 1.322e-01
+2026-03-09 19:14:58,922 | INFO | epoch=0046 train=1.136202 val=0.036961 loss_data=0.03249 loss_tv=0.001 loss_lap=2.263e-06 loss_l2=4.715e-06 loss_drift=0.001426
+2026-03-09 19:14:58,926 | INFO |   BEST val=0.036961
+2026-03-09 19:15:19,007 | INFO | S_unknown finite=True min=2.220e-03 max=2.220e-03
+2026-03-09 19:15:19,009 | INFO | obs finite=True pred finite=True
+2026-03-09 19:15:19,009 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:15:19,009 | INFO | pred train mean/std = 1.101e+00 / 1.324e-01
+2026-03-09 19:16:04,449 | INFO | epoch=0047 train=1.137637 val=0.036825 loss_data=0.0325 loss_tv=0.001 loss_lap=2.365e-06 loss_l2=4.928e-06 loss_drift=0.001437
+2026-03-09 19:16:04,453 | INFO |   BEST val=0.036825
+2026-03-09 19:16:24,577 | INFO | S_unknown finite=True min=2.268e-03 max=2.268e-03
+2026-03-09 19:16:24,582 | INFO | obs finite=True pred finite=True
+2026-03-09 19:16:24,587 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:16:24,591 | INFO | pred train mean/std = 1.101e+00 / 1.326e-01
+2026-03-09 19:17:10,106 | INFO | epoch=0048 train=1.147781 val=0.036701 loss_data=0.03254 loss_tv=0.001 loss_lap=2.47e-06 loss_l2=5.145e-06 loss_drift=0.00146
+2026-03-09 19:17:10,110 | INFO |   BEST val=0.036701
+2026-03-09 19:17:30,251 | INFO | S_unknown finite=True min=2.317e-03 max=2.317e-03
+2026-03-09 19:17:30,253 | INFO | obs finite=True pred finite=True
+2026-03-09 19:17:30,254 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:17:30,255 | INFO | pred train mean/std = 1.101e+00 / 1.328e-01
+2026-03-09 19:18:16,064 | INFO | epoch=0049 train=1.162561 val=0.036588 loss_data=0.03259 loss_tv=0.001 loss_lap=2.576e-06 loss_l2=5.366e-06 loss_drift=0.001489
+2026-03-09 19:18:16,068 | INFO |   BEST val=0.036588
+2026-03-09 19:18:36,330 | INFO | S_unknown finite=True min=2.365e-03 max=2.365e-03
+2026-03-09 19:18:36,332 | INFO | obs finite=True pred finite=True
+2026-03-09 19:18:36,333 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:18:36,333 | INFO | pred train mean/std = 1.102e+00 / 1.329e-01
+2026-03-09 19:19:22,011 | INFO | epoch=0050 train=1.177763 val=0.036467 loss_data=0.03267 loss_tv=0.001 loss_lap=2.684e-06 loss_l2=5.592e-06 loss_drift=0.001519
+2026-03-09 19:19:22,020 | INFO |   BEST val=0.036467
+2026-03-09 19:19:42,300 | INFO | S_unknown finite=True min=2.413e-03 max=2.413e-03
+2026-03-09 19:19:42,305 | INFO | obs finite=True pred finite=True
+2026-03-09 19:19:42,307 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:19:42,307 | INFO | pred train mean/std = 1.102e+00 / 1.331e-01
+2026-03-09 19:20:28,193 | INFO | epoch=0051 train=1.150864 val=0.036337 loss_data=0.03263 loss_tv=0.001 loss_lap=2.795e-06 loss_l2=5.823e-06 loss_drift=0.001493
+2026-03-09 19:20:28,197 | INFO |   BEST val=0.036337
+2026-03-09 19:20:48,424 | INFO | S_unknown finite=True min=2.461e-03 max=2.463e-03
+2026-03-09 19:20:48,427 | INFO | obs finite=True pred finite=True
+2026-03-09 19:20:48,428 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:20:48,428 | INFO | pred train mean/std = 1.102e+00 / 1.333e-01
+2026-03-09 19:21:34,490 | INFO | epoch=0052 train=1.122754 val=0.036204 loss_data=0.0326 loss_tv=0.001 loss_lap=2.91e-06 loss_l2=6.065e-06 loss_drift=0.001466
+2026-03-09 19:21:34,494 | INFO |   BEST val=0.036204
+2026-03-09 19:21:54,746 | INFO | S_unknown finite=True min=2.510e-03 max=2.513e-03
+2026-03-09 19:21:54,754 | INFO | obs finite=True pred finite=True
+2026-03-09 19:21:54,759 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:21:54,764 | INFO | pred train mean/std = 1.103e+00 / 1.335e-01
+2026-03-09 19:22:41,091 | INFO | epoch=0053 train=1.094779 val=0.036074 loss_data=0.03257 loss_tv=0.001 loss_lap=3.028e-06 loss_l2=6.312e-06 loss_drift=0.001438
+2026-03-09 19:22:41,095 | INFO |   BEST val=0.036074
+2026-03-09 19:23:01,424 | INFO | S_unknown finite=True min=2.558e-03 max=2.562e-03
+2026-03-09 19:23:01,430 | INFO | obs finite=True pred finite=True
+2026-03-09 19:23:01,434 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:23:01,439 | INFO | pred train mean/std = 1.103e+00 / 1.337e-01
+2026-03-09 19:23:47,910 | INFO | epoch=0054 train=1.067747 val=0.035960 loss_data=0.03253 loss_tv=0.001 loss_lap=3.148e-06 loss_l2=6.564e-06 loss_drift=0.001411
+2026-03-09 19:23:47,914 | INFO |   BEST val=0.035960
+2026-03-09 19:24:08,064 | INFO | S_unknown finite=True min=2.606e-03 max=2.612e-03
+2026-03-09 19:24:08,067 | INFO | obs finite=True pred finite=True
+2026-03-09 19:24:08,068 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:24:08,068 | INFO | pred train mean/std = 1.103e+00 / 1.339e-01
+2026-03-09 19:24:54,690 | INFO | epoch=0055 train=1.042513 val=0.035848 loss_data=0.0325 loss_tv=0.001 loss_lap=3.271e-06 loss_l2=6.822e-06 loss_drift=0.001386
+2026-03-09 19:24:54,695 | INFO |   BEST val=0.035848
+2026-03-09 19:25:14,804 | INFO | S_unknown finite=True min=2.655e-03 max=2.662e-03
+2026-03-09 19:25:14,806 | INFO | obs finite=True pred finite=True
+2026-03-09 19:25:14,808 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:25:14,808 | INFO | pred train mean/std = 1.104e+00 / 1.341e-01
+2026-03-09 19:26:02,000 | INFO | epoch=0056 train=1.017549 val=0.035731 loss_data=0.03247 loss_tv=0.001 loss_lap=3.396e-06 loss_l2=7.084e-06 loss_drift=0.001361
+2026-03-09 19:26:02,008 | INFO |   BEST val=0.035731
+2026-03-09 19:26:22,418 | INFO | S_unknown finite=True min=2.703e-03 max=2.712e-03
+2026-03-09 19:26:22,422 | INFO | obs finite=True pred finite=True
+2026-03-09 19:26:22,423 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:26:22,423 | INFO | pred train mean/std = 1.104e+00 / 1.343e-01
+2026-03-09 19:27:09,515 | INFO | epoch=0057 train=0.992607 val=0.035610 loss_data=0.03244 loss_tv=0.001 loss_lap=3.523e-06 loss_l2=7.352e-06 loss_drift=0.001336
+2026-03-09 19:27:09,519 | INFO |   BEST val=0.035610
+2026-03-09 19:27:29,959 | INFO | S_unknown finite=True min=2.751e-03 max=2.762e-03
+2026-03-09 19:27:29,961 | INFO | obs finite=True pred finite=True
+2026-03-09 19:27:29,962 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:27:29,963 | INFO | pred train mean/std = 1.104e+00 / 1.345e-01
+2026-03-09 19:28:16,953 | INFO | epoch=0058 train=0.967246 val=0.035486 loss_data=0.03241 loss_tv=0.001 loss_lap=3.653e-06 loss_l2=7.625e-06 loss_drift=0.00131
+2026-03-09 19:28:16,957 | INFO |   BEST val=0.035486
+2026-03-09 19:28:37,431 | INFO | S_unknown finite=True min=2.799e-03 max=2.812e-03
+2026-03-09 19:28:37,436 | INFO | obs finite=True pred finite=True
+2026-03-09 19:28:37,441 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:28:37,446 | INFO | pred train mean/std = 1.105e+00 / 1.347e-01
+2026-03-09 19:29:24,341 | INFO | epoch=0059 train=0.941723 val=0.035364 loss_data=0.03237 loss_tv=0.001 loss_lap=3.785e-06 loss_l2=7.903e-06 loss_drift=0.001283
+2026-03-09 19:29:24,346 | INFO |   BEST val=0.035364
+2026-03-09 19:29:44,837 | INFO | S_unknown finite=True min=2.848e-03 max=2.862e-03
+2026-03-09 19:29:44,841 | INFO | obs finite=True pred finite=True
+2026-03-09 19:29:44,842 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:29:44,842 | INFO | pred train mean/std = 1.105e+00 / 1.349e-01
+2026-03-09 19:30:31,060 | INFO | epoch=0060 train=0.917281 val=0.035254 loss_data=0.03234 loss_tv=0.001 loss_lap=3.92e-06 loss_l2=8.186e-06 loss_drift=0.001258
+2026-03-09 19:30:31,065 | INFO |   BEST val=0.035254
+2026-03-09 19:30:51,306 | INFO | S_unknown finite=True min=2.896e-03 max=2.912e-03
+2026-03-09 19:30:51,308 | INFO | obs finite=True pred finite=True
+2026-03-09 19:30:51,314 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:30:51,319 | INFO | pred train mean/std = 1.106e+00 / 1.351e-01
+2026-03-09 19:31:37,642 | INFO | epoch=0061 train=0.894173 val=0.035150 loss_data=0.03231 loss_tv=0.001 loss_lap=4.057e-06 loss_l2=8.475e-06 loss_drift=0.001234
+2026-03-09 19:31:37,646 | INFO |   BEST val=0.035150
+2026-03-09 19:31:57,862 | INFO | S_unknown finite=True min=2.944e-03 max=2.962e-03
+2026-03-09 19:31:57,868 | INFO | obs finite=True pred finite=True
+2026-03-09 19:31:57,869 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:31:57,869 | INFO | pred train mean/std = 1.106e+00 / 1.353e-01
+2026-03-09 19:32:44,435 | INFO | epoch=0062 train=0.871581 val=0.035043 loss_data=0.03228 loss_tv=0.001 loss_lap=4.197e-06 loss_l2=8.769e-06 loss_drift=0.00121
+2026-03-09 19:32:44,440 | INFO |   BEST val=0.035043
+2026-03-09 19:33:04,838 | INFO | S_unknown finite=True min=2.992e-03 max=3.013e-03
+2026-03-09 19:33:04,845 | INFO | obs finite=True pred finite=True
+2026-03-09 19:33:04,850 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:33:04,855 | INFO | pred train mean/std = 1.106e+00 / 1.354e-01
+2026-03-09 19:33:51,352 | INFO | epoch=0063 train=0.849366 val=0.034932 loss_data=0.03226 loss_tv=0.001 loss_lap=4.339e-06 loss_l2=9.068e-06 loss_drift=0.001187
+2026-03-09 19:33:51,357 | INFO |   BEST val=0.034932
+2026-03-09 19:34:11,790 | INFO | S_unknown finite=True min=3.040e-03 max=3.063e-03
+2026-03-09 19:34:11,795 | INFO | obs finite=True pred finite=True
+2026-03-09 19:34:11,797 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:34:11,797 | INFO | pred train mean/std = 1.107e+00 / 1.357e-01
+2026-03-09 19:34:58,402 | INFO | epoch=0064 train=0.826602 val=0.034818 loss_data=0.03223 loss_tv=0.001 loss_lap=4.483e-06 loss_l2=9.372e-06 loss_drift=0.001162
+2026-03-09 19:34:58,408 | INFO |   BEST val=0.034818
+2026-03-09 19:35:18,837 | INFO | S_unknown finite=True min=3.088e-03 max=3.113e-03
+2026-03-09 19:35:18,839 | INFO | obs finite=True pred finite=True
+2026-03-09 19:35:18,840 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:35:18,840 | INFO | pred train mean/std = 1.107e+00 / 1.359e-01
+2026-03-09 19:36:05,516 | INFO | epoch=0065 train=0.803581 val=0.034705 loss_data=0.0322 loss_tv=0.001 loss_lap=4.63e-06 loss_l2=9.682e-06 loss_drift=0.001137
+2026-03-09 19:36:05,520 | INFO |   BEST val=0.034705
+2026-03-09 19:36:25,874 | INFO | S_unknown finite=True min=3.137e-03 max=3.163e-03
+2026-03-09 19:36:25,877 | INFO | obs finite=True pred finite=True
+2026-03-09 19:36:25,877 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:36:25,877 | INFO | pred train mean/std = 1.107e+00 / 1.361e-01
+2026-03-09 19:37:12,740 | INFO | epoch=0066 train=0.781527 val=0.034597 loss_data=0.03217 loss_tv=0.001 loss_lap=4.78e-06 loss_l2=9.997e-06 loss_drift=0.001113
+2026-03-09 19:37:12,744 | INFO |   BEST val=0.034597
+2026-03-09 19:37:33,211 | INFO | S_unknown finite=True min=3.185e-03 max=3.214e-03
+2026-03-09 19:37:33,215 | INFO | obs finite=True pred finite=True
+2026-03-09 19:37:33,216 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:37:33,217 | INFO | pred train mean/std = 1.108e+00 / 1.363e-01
+2026-03-09 19:38:19,911 | INFO | epoch=0067 train=0.760308 val=0.034501 loss_data=0.03214 loss_tv=0.001 loss_lap=4.932e-06 loss_l2=1.032e-05 loss_drift=0.00109
+2026-03-09 19:38:19,916 | INFO |   BEST val=0.034501
+2026-03-09 19:38:40,311 | INFO | S_unknown finite=True min=3.233e-03 max=3.264e-03
+2026-03-09 19:38:40,318 | INFO | obs finite=True pred finite=True
+2026-03-09 19:38:40,323 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:38:40,325 | INFO | pred train mean/std = 1.108e+00 / 1.364e-01
+2026-03-09 19:39:26,739 | INFO | epoch=0068 train=0.740052 val=0.034404 loss_data=0.03211 loss_tv=0.001 loss_lap=5.086e-06 loss_l2=1.064e-05 loss_drift=0.001067
+2026-03-09 19:39:26,743 | INFO |   BEST val=0.034404
+2026-03-09 19:39:47,154 | INFO | S_unknown finite=True min=3.281e-03 max=3.315e-03
+2026-03-09 19:39:47,157 | INFO | obs finite=True pred finite=True
+2026-03-09 19:39:47,157 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:39:47,157 | INFO | pred train mean/std = 1.108e+00 / 1.366e-01
+2026-03-09 19:40:33,591 | INFO | epoch=0069 train=0.720176 val=0.034304 loss_data=0.03208 loss_tv=0.001 loss_lap=5.243e-06 loss_l2=1.097e-05 loss_drift=0.001045
+2026-03-09 19:40:33,595 | INFO |   BEST val=0.034304
+2026-03-09 19:40:53,755 | INFO | S_unknown finite=True min=3.329e-03 max=3.365e-03
+2026-03-09 19:40:53,760 | INFO | obs finite=True pred finite=True
+2026-03-09 19:40:53,764 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:40:53,769 | INFO | pred train mean/std = 1.109e+00 / 1.368e-01
+2026-03-09 19:41:40,314 | INFO | epoch=0070 train=0.700221 val=0.034200 loss_data=0.03206 loss_tv=0.001 loss_lap=5.403e-06 loss_l2=1.131e-05 loss_drift=0.001023
+2026-03-09 19:41:40,318 | INFO |   BEST val=0.034200
+2026-03-09 19:42:00,638 | INFO | S_unknown finite=True min=3.377e-03 max=3.416e-03
+2026-03-09 19:42:00,640 | INFO | obs finite=True pred finite=True
+2026-03-09 19:42:00,641 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:42:00,641 | INFO | pred train mean/std = 1.109e+00 / 1.370e-01
+2026-03-09 19:42:46,957 | INFO | epoch=0071 train=0.679936 val=0.034096 loss_data=0.03203 loss_tv=0.001 loss_lap=5.565e-06 loss_l2=1.165e-05 loss_drift=0.0009995
+2026-03-09 19:42:46,962 | INFO |   BEST val=0.034096
+2026-03-09 19:43:07,300 | INFO | S_unknown finite=True min=3.425e-03 max=3.467e-03
+2026-03-09 19:43:07,305 | INFO | obs finite=True pred finite=True
+2026-03-09 19:43:07,309 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:43:07,309 | INFO | pred train mean/std = 1.109e+00 / 1.372e-01
+2026-03-09 19:43:53,708 | INFO | epoch=0072 train=0.659857 val=0.033993 loss_data=0.032 loss_tv=0.001 loss_lap=5.729e-06 loss_l2=1.2e-05 loss_drift=0.0009761
+2026-03-09 19:43:53,712 | INFO |   BEST val=0.033993
+2026-03-09 19:44:13,991 | INFO | S_unknown finite=True min=3.474e-03 max=3.517e-03
+2026-03-09 19:44:13,993 | INFO | obs finite=True pred finite=True
+2026-03-09 19:44:13,994 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:44:13,994 | INFO | pred train mean/std = 1.110e+00 / 1.375e-01
+2026-03-09 19:45:00,316 | INFO | epoch=0073 train=0.640514 val=0.033900 loss_data=0.03197 loss_tv=0.001 loss_lap=5.896e-06 loss_l2=1.235e-05 loss_drift=0.0009535
+2026-03-09 19:45:00,320 | INFO |   BEST val=0.033900
+2026-03-09 19:45:20,648 | INFO | S_unknown finite=True min=3.522e-03 max=3.568e-03
+2026-03-09 19:45:20,650 | INFO | obs finite=True pred finite=True
+2026-03-09 19:45:20,651 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:45:20,651 | INFO | pred train mean/std = 1.110e+00 / 1.376e-01
+2026-03-09 19:46:06,933 | INFO | epoch=0074 train=0.622199 val=0.033812 loss_data=0.03195 loss_tv=0.001 loss_lap=6.066e-06 loss_l2=1.271e-05 loss_drift=0.0009322
+2026-03-09 19:46:06,937 | INFO |   BEST val=0.033812
+2026-03-09 19:46:27,154 | INFO | S_unknown finite=True min=3.570e-03 max=3.619e-03
+2026-03-09 19:46:27,161 | INFO | obs finite=True pred finite=True
+2026-03-09 19:46:27,166 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:46:27,170 | INFO | pred train mean/std = 1.110e+00 / 1.378e-01
+2026-03-09 19:47:13,594 | INFO | epoch=0075 train=0.604349 val=0.033723 loss_data=0.03192 loss_tv=0.001 loss_lap=6.238e-06 loss_l2=1.308e-05 loss_drift=0.0009113
+2026-03-09 19:47:13,598 | INFO |   BEST val=0.033723
+2026-03-09 19:47:33,887 | INFO | S_unknown finite=True min=3.618e-03 max=3.670e-03
+2026-03-09 19:47:33,889 | INFO | obs finite=True pred finite=True
+2026-03-09 19:47:33,892 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:47:33,897 | INFO | pred train mean/std = 1.111e+00 / 1.380e-01
+2026-03-09 19:48:20,297 | INFO | epoch=0076 train=0.586946 val=0.033631 loss_data=0.0319 loss_tv=0.001 loss_lap=6.413e-06 loss_l2=1.345e-05 loss_drift=0.0008908
+2026-03-09 19:48:20,301 | INFO |   BEST val=0.033631
+2026-03-09 19:48:40,581 | INFO | S_unknown finite=True min=3.666e-03 max=3.721e-03
+2026-03-09 19:48:40,585 | INFO | obs finite=True pred finite=True
+2026-03-09 19:48:40,587 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:48:40,587 | INFO | pred train mean/std = 1.111e+00 / 1.382e-01
+2026-03-09 19:49:26,931 | INFO | epoch=0077 train=0.569447 val=0.033537 loss_data=0.03187 loss_tv=0.001 loss_lap=6.59e-06 loss_l2=1.382e-05 loss_drift=0.0008697
+2026-03-09 19:49:26,935 | INFO |   BEST val=0.033537
+2026-03-09 19:49:47,267 | INFO | S_unknown finite=True min=3.714e-03 max=3.772e-03
+2026-03-09 19:49:47,272 | INFO | obs finite=True pred finite=True
+2026-03-09 19:49:47,277 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:49:47,279 | INFO | pred train mean/std = 1.112e+00 / 1.384e-01
+2026-03-09 19:50:33,543 | INFO | epoch=0078 train=0.551677 val=0.033444 loss_data=0.03184 loss_tv=0.001 loss_lap=6.77e-06 loss_l2=1.42e-05 loss_drift=0.0008479
+2026-03-09 19:50:33,547 | INFO |   BEST val=0.033444
+2026-03-09 19:50:53,698 | INFO | S_unknown finite=True min=3.762e-03 max=3.823e-03
+2026-03-09 19:50:53,701 | INFO | obs finite=True pred finite=True
+2026-03-09 19:50:53,703 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:50:53,703 | INFO | pred train mean/std = 1.112e+00 / 1.386e-01
+2026-03-09 19:51:40,372 | INFO | epoch=0079 train=0.534295 val=0.033352 loss_data=0.03182 loss_tv=0.001 loss_lap=6.952e-06 loss_l2=1.459e-05 loss_drift=0.0008264
+2026-03-09 19:51:40,379 | INFO |   BEST val=0.033352
+2026-03-09 19:52:00,520 | INFO | S_unknown finite=True min=3.810e-03 max=3.874e-03
+2026-03-09 19:52:00,525 | INFO | obs finite=True pred finite=True
+2026-03-09 19:52:00,530 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:52:00,533 | INFO | pred train mean/std = 1.112e+00 / 1.388e-01
+2026-03-09 19:52:46,946 | INFO | epoch=0080 train=0.517497 val=0.033268 loss_data=0.03179 loss_tv=0.001 loss_lap=7.138e-06 loss_l2=1.498e-05 loss_drift=0.0008055
+2026-03-09 19:52:46,950 | INFO |   BEST val=0.033268
+2026-03-09 19:53:07,205 | INFO | S_unknown finite=True min=3.859e-03 max=3.926e-03
+2026-03-09 19:53:07,207 | INFO | obs finite=True pred finite=True
+2026-03-09 19:53:07,208 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:53:07,208 | INFO | pred train mean/std = 1.113e+00 / 1.390e-01
+2026-03-09 19:53:53,570 | INFO | epoch=0081 train=0.501647 val=0.033189 loss_data=0.03177 loss_tv=0.001 loss_lap=7.325e-06 loss_l2=1.538e-05 loss_drift=0.0007858
+2026-03-09 19:53:53,574 | INFO |   BEST val=0.033189
+2026-03-09 19:54:13,805 | INFO | S_unknown finite=True min=3.907e-03 max=3.977e-03
+2026-03-09 19:54:13,810 | INFO | obs finite=True pred finite=True
+2026-03-09 19:54:13,815 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:54:13,817 | INFO | pred train mean/std = 1.113e+00 / 1.392e-01
+2026-03-09 19:55:00,470 | INFO | epoch=0082 train=0.486129 val=0.033110 loss_data=0.03175 loss_tv=0.001 loss_lap=7.516e-06 loss_l2=1.578e-05 loss_drift=0.0007663
+2026-03-09 19:55:00,474 | INFO |   BEST val=0.033110
+2026-03-09 19:55:20,758 | INFO | S_unknown finite=True min=3.955e-03 max=4.028e-03
+2026-03-09 19:55:20,763 | INFO | obs finite=True pred finite=True
+2026-03-09 19:55:20,768 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:55:20,772 | INFO | pred train mean/std = 1.113e+00 / 1.394e-01
+2026-03-09 19:56:07,248 | INFO | epoch=0083 train=0.471134 val=0.033029 loss_data=0.03172 loss_tv=0.001 loss_lap=7.709e-06 loss_l2=1.619e-05 loss_drift=0.0007474
+2026-03-09 19:56:07,252 | INFO |   BEST val=0.033029
+2026-03-09 19:56:27,547 | INFO | S_unknown finite=True min=4.003e-03 max=4.080e-03
+2026-03-09 19:56:27,552 | INFO | obs finite=True pred finite=True
+2026-03-09 19:56:27,556 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:56:27,561 | INFO | pred train mean/std = 1.114e+00 / 1.396e-01
+2026-03-09 19:57:14,059 | INFO | epoch=0084 train=0.456062 val=0.032945 loss_data=0.0317 loss_tv=0.001 loss_lap=7.904e-06 loss_l2=1.661e-05 loss_drift=0.000728
+2026-03-09 19:57:14,063 | INFO |   BEST val=0.032945
+2026-03-09 19:57:34,382 | INFO | S_unknown finite=True min=4.051e-03 max=4.131e-03
+2026-03-09 19:57:34,385 | INFO | obs finite=True pred finite=True
+2026-03-09 19:57:34,385 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:57:34,385 | INFO | pred train mean/std = 1.114e+00 / 1.398e-01
+2026-03-09 19:58:20,959 | INFO | epoch=0085 train=0.440850 val=0.032862 loss_data=0.03168 loss_tv=0.001 loss_lap=8.103e-06 loss_l2=1.703e-05 loss_drift=0.000708
+2026-03-09 19:58:20,963 | INFO |   BEST val=0.032862
+2026-03-09 19:58:41,280 | INFO | S_unknown finite=True min=4.099e-03 max=4.183e-03
+2026-03-09 19:58:41,283 | INFO | obs finite=True pred finite=True
+2026-03-09 19:58:41,284 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:58:41,284 | INFO | pred train mean/std = 1.114e+00 / 1.400e-01
+2026-03-09 19:59:27,808 | INFO | epoch=0086 train=0.425793 val=0.032781 loss_data=0.03165 loss_tv=0.001 loss_lap=8.304e-06 loss_l2=1.746e-05 loss_drift=0.000688
+2026-03-09 19:59:27,812 | INFO |   BEST val=0.032781
+2026-03-09 19:59:48,196 | INFO | S_unknown finite=True min=4.147e-03 max=4.235e-03
+2026-03-09 19:59:48,204 | INFO | obs finite=True pred finite=True
+2026-03-09 19:59:48,208 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 19:59:48,210 | INFO | pred train mean/std = 1.115e+00 / 1.403e-01
+2026-03-09 20:00:34,700 | INFO | epoch=0087 train=0.411406 val=0.032705 loss_data=0.03163 loss_tv=0.001 loss_lap=8.507e-06 loss_l2=1.789e-05 loss_drift=0.0006688
+2026-03-09 20:00:34,704 | INFO |   BEST val=0.032705
+2026-03-09 20:00:55,020 | INFO | S_unknown finite=True min=4.195e-03 max=4.286e-03
+2026-03-09 20:00:55,022 | INFO | obs finite=True pred finite=True
+2026-03-09 20:00:55,023 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:00:55,023 | INFO | pred train mean/std = 1.115e+00 / 1.405e-01
+2026-03-09 20:01:41,445 | INFO | epoch=0088 train=0.397606 val=0.032635 loss_data=0.03161 loss_tv=0.001 loss_lap=8.714e-06 loss_l2=1.833e-05 loss_drift=0.0006503
+2026-03-09 20:01:41,449 | INFO |   BEST val=0.032635
+2026-03-09 20:02:01,778 | INFO | S_unknown finite=True min=4.244e-03 max=4.338e-03
+2026-03-09 20:02:01,785 | INFO | obs finite=True pred finite=True
+2026-03-09 20:02:01,789 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:02:01,794 | INFO | pred train mean/std = 1.116e+00 / 1.406e-01
+2026-03-09 20:02:48,376 | INFO | epoch=0089 train=0.384435 val=0.032566 loss_data=0.03159 loss_tv=0.001 loss_lap=8.923e-06 loss_l2=1.877e-05 loss_drift=0.0006326
+2026-03-09 20:02:48,380 | INFO |   BEST val=0.032566
+2026-03-09 20:03:08,699 | INFO | S_unknown finite=True min=4.292e-03 max=4.390e-03
+2026-03-09 20:03:08,701 | INFO | obs finite=True pred finite=True
+2026-03-09 20:03:08,702 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:03:08,702 | INFO | pred train mean/std = 1.116e+00 / 1.408e-01
+2026-03-09 20:03:55,110 | INFO | epoch=0090 train=0.371552 val=0.032496 loss_data=0.03157 loss_tv=0.001 loss_lap=9.135e-06 loss_l2=1.922e-05 loss_drift=0.0006151
+2026-03-09 20:03:55,118 | INFO |   BEST val=0.032496
+2026-03-09 20:04:15,513 | INFO | S_unknown finite=True min=4.340e-03 max=4.442e-03
+2026-03-09 20:04:15,518 | INFO | obs finite=True pred finite=True
+2026-03-09 20:04:15,523 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:04:15,527 | INFO | pred train mean/std = 1.116e+00 / 1.410e-01
+2026-03-09 20:05:02,068 | INFO | epoch=0091 train=0.358929 val=0.032425 loss_data=0.03154 loss_tv=0.001 loss_lap=9.349e-06 loss_l2=1.968e-05 loss_drift=0.0005977
+2026-03-09 20:05:02,072 | INFO |   BEST val=0.032425
+2026-03-09 20:05:22,345 | INFO | S_unknown finite=True min=4.388e-03 max=4.494e-03
+2026-03-09 20:05:22,347 | INFO | obs finite=True pred finite=True
+2026-03-09 20:05:22,348 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:05:22,353 | INFO | pred train mean/std = 1.117e+00 / 1.412e-01
+2026-03-09 20:06:08,859 | INFO | epoch=0092 train=0.346215 val=0.032354 loss_data=0.03152 loss_tv=0.001 loss_lap=9.566e-06 loss_l2=2.014e-05 loss_drift=0.0005798
+2026-03-09 20:06:08,867 | INFO |   BEST val=0.032354
+2026-03-09 20:06:29,176 | INFO | S_unknown finite=True min=4.436e-03 max=4.546e-03
+2026-03-09 20:06:29,180 | INFO | obs finite=True pred finite=True
+2026-03-09 20:06:29,182 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:06:29,182 | INFO | pred train mean/std = 1.117e+00 / 1.415e-01
+2026-03-09 20:07:15,741 | INFO | epoch=0093 train=0.333514 val=0.032284 loss_data=0.0315 loss_tv=0.001 loss_lap=9.786e-06 loss_l2=2.061e-05 loss_drift=0.0005617
+2026-03-09 20:07:15,745 | INFO |   BEST val=0.032284
+2026-03-09 20:07:36,054 | INFO | S_unknown finite=True min=4.484e-03 max=4.598e-03
+2026-03-09 20:07:36,060 | INFO | obs finite=True pred finite=True
+2026-03-09 20:07:36,065 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:07:36,070 | INFO | pred train mean/std = 1.117e+00 / 1.417e-01
+2026-03-09 20:08:22,341 | INFO | epoch=0094 train=0.321235 val=0.032215 loss_data=0.03148 loss_tv=0.001 loss_lap=1.001e-05 loss_l2=2.109e-05 loss_drift=0.000544
+2026-03-09 20:08:22,346 | INFO |   BEST val=0.032215
+2026-03-09 20:08:42,671 | INFO | S_unknown finite=True min=4.532e-03 max=4.651e-03
+2026-03-09 20:08:42,676 | INFO | obs finite=True pred finite=True
+2026-03-09 20:08:42,680 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:08:42,684 | INFO | pred train mean/std = 1.118e+00 / 1.419e-01
+2026-03-09 20:09:29,029 | INFO | epoch=0095 train=0.309362 val=0.032151 loss_data=0.03146 loss_tv=0.001 loss_lap=1.023e-05 loss_l2=2.157e-05 loss_drift=0.0005267
+2026-03-09 20:09:29,033 | INFO |   BEST val=0.032151
+2026-03-09 20:09:49,357 | INFO | S_unknown finite=True min=4.581e-03 max=4.703e-03
+2026-03-09 20:09:49,362 | INFO | obs finite=True pred finite=True
+2026-03-09 20:09:49,367 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:09:49,369 | INFO | pred train mean/std = 1.118e+00 / 1.421e-01
+2026-03-09 20:10:35,811 | INFO | epoch=0096 train=0.298055 val=0.032092 loss_data=0.03144 loss_tv=0.001 loss_lap=1.046e-05 loss_l2=2.205e-05 loss_drift=0.0005102
+2026-03-09 20:10:35,815 | INFO |   BEST val=0.032092
+2026-03-09 20:10:56,112 | INFO | S_unknown finite=True min=4.629e-03 max=4.755e-03
+2026-03-09 20:10:56,118 | INFO | obs finite=True pred finite=True
+2026-03-09 20:10:56,123 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:10:56,127 | INFO | pred train mean/std = 1.118e+00 / 1.423e-01
+2026-03-09 20:11:42,399 | INFO | epoch=0097 train=0.287235 val=0.032034 loss_data=0.03142 loss_tv=0.001 loss_lap=1.069e-05 loss_l2=2.255e-05 loss_drift=0.0004942
+2026-03-09 20:11:42,404 | INFO |   BEST val=0.032034
+2026-03-09 20:12:02,676 | INFO | S_unknown finite=True min=4.677e-03 max=4.808e-03
+2026-03-09 20:12:02,679 | INFO | obs finite=True pred finite=True
+2026-03-09 20:12:02,679 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:12:02,680 | INFO | pred train mean/std = 1.119e+00 / 1.425e-01
+2026-03-09 20:12:49,037 | INFO | epoch=0098 train=0.276702 val=0.031976 loss_data=0.0314 loss_tv=0.001 loss_lap=1.093e-05 loss_l2=2.305e-05 loss_drift=0.0004786
+2026-03-09 20:12:49,041 | INFO |   BEST val=0.031976
+2026-03-09 20:13:09,331 | INFO | S_unknown finite=True min=4.725e-03 max=4.860e-03
+2026-03-09 20:13:09,334 | INFO | obs finite=True pred finite=True
+2026-03-09 20:13:09,339 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:13:09,344 | INFO | pred train mean/std = 1.119e+00 / 1.427e-01
+2026-03-09 20:13:55,684 | INFO | epoch=0099 train=0.266397 val=0.031918 loss_data=0.03139 loss_tv=0.001 loss_lap=1.116e-05 loss_l2=2.355e-05 loss_drift=0.000463
+2026-03-09 20:13:55,688 | INFO |   BEST val=0.031918
+2026-03-09 20:14:15,942 | INFO | S_unknown finite=True min=4.773e-03 max=4.913e-03
+2026-03-09 20:14:15,947 | INFO | obs finite=True pred finite=True
+2026-03-09 20:14:15,951 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:14:15,956 | INFO | pred train mean/std = 1.120e+00 / 1.429e-01
+2026-03-09 20:15:02,258 | INFO | epoch=0100 train=0.256118 val=0.031859 loss_data=0.03137 loss_tv=0.001 loss_lap=1.14e-05 loss_l2=2.406e-05 loss_drift=0.0004473
+2026-03-09 20:15:02,264 | INFO |   BEST val=0.031859
+2026-03-09 20:15:22,630 | INFO | S_unknown finite=True min=4.822e-03 max=4.966e-03
+2026-03-09 20:15:22,632 | INFO | obs finite=True pred finite=True
+2026-03-09 20:15:22,633 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:15:22,633 | INFO | pred train mean/std = 1.120e+00 / 1.431e-01
+2026-03-09 20:16:09,227 | INFO | epoch=0101 train=0.245952 val=0.031802 loss_data=0.03135 loss_tv=0.001 loss_lap=1.165e-05 loss_l2=2.458e-05 loss_drift=0.0004314
+2026-03-09 20:16:09,231 | INFO |   BEST val=0.031802
+2026-03-09 20:16:29,549 | INFO | S_unknown finite=True min=4.870e-03 max=5.019e-03
+2026-03-09 20:16:29,555 | INFO | obs finite=True pred finite=True
+2026-03-09 20:16:29,560 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:16:29,565 | INFO | pred train mean/std = 1.120e+00 / 1.433e-01
+2026-03-09 20:17:16,057 | INFO | epoch=0102 train=0.235974 val=0.031747 loss_data=0.03133 loss_tv=0.001 loss_lap=1.189e-05 loss_l2=2.51e-05 loss_drift=0.0004155
+2026-03-09 20:17:16,065 | INFO |   BEST val=0.031747
+2026-03-09 20:17:36,450 | INFO | S_unknown finite=True min=4.918e-03 max=5.071e-03
+2026-03-09 20:17:36,452 | INFO | obs finite=True pred finite=True
+2026-03-09 20:17:36,453 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:17:36,453 | INFO | pred train mean/std = 1.121e+00 / 1.435e-01
+2026-03-09 20:18:22,715 | INFO | epoch=0103 train=0.226447 val=0.031693 loss_data=0.03131 loss_tv=0.001 loss_lap=1.214e-05 loss_l2=2.563e-05 loss_drift=0.0004003
+2026-03-09 20:18:22,720 | INFO |   BEST val=0.031693
+2026-03-09 20:18:43,008 | INFO | S_unknown finite=True min=4.966e-03 max=5.124e-03
+2026-03-09 20:18:43,011 | INFO | obs finite=True pred finite=True
+2026-03-09 20:18:43,016 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:18:43,021 | INFO | pred train mean/std = 1.121e+00 / 1.437e-01
+2026-03-09 20:19:29,330 | INFO | epoch=0104 train=0.217242 val=0.031644 loss_data=0.0313 loss_tv=0.001 loss_lap=1.239e-05 loss_l2=2.617e-05 loss_drift=0.0003854
+2026-03-09 20:19:29,334 | INFO |   BEST val=0.031644
+2026-03-09 20:19:49,668 | INFO | S_unknown finite=True min=5.014e-03 max=5.177e-03
+2026-03-09 20:19:49,671 | INFO | obs finite=True pred finite=True
+2026-03-09 20:19:49,671 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:19:49,671 | INFO | pred train mean/std = 1.121e+00 / 1.439e-01
+2026-03-09 20:20:36,054 | INFO | epoch=0105 train=0.208539 val=0.031598 loss_data=0.03128 loss_tv=0.001 loss_lap=1.264e-05 loss_l2=2.671e-05 loss_drift=0.0003713
+2026-03-09 20:20:36,060 | INFO |   BEST val=0.031598
+2026-03-09 20:20:56,416 | INFO | S_unknown finite=True min=5.063e-03 max=5.231e-03
+2026-03-09 20:20:56,418 | INFO | obs finite=True pred finite=True
+2026-03-09 20:20:56,419 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:20:56,419 | INFO | pred train mean/std = 1.122e+00 / 1.441e-01
+2026-03-09 20:21:43,108 | INFO | epoch=0106 train=0.200105 val=0.031553 loss_data=0.03127 loss_tv=0.001 loss_lap=1.29e-05 loss_l2=2.726e-05 loss_drift=0.0003574
+2026-03-09 20:21:43,112 | INFO |   BEST val=0.031553
+2026-03-09 20:22:03,392 | INFO | S_unknown finite=True min=5.111e-03 max=5.284e-03
+2026-03-09 20:22:03,397 | INFO | obs finite=True pred finite=True
+2026-03-09 20:22:03,402 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:22:03,407 | INFO | pred train mean/std = 1.122e+00 / 1.443e-01
+2026-03-09 20:22:49,793 | INFO | epoch=0107 train=0.192001 val=0.031508 loss_data=0.03125 loss_tv=0.001 loss_lap=1.316e-05 loss_l2=2.782e-05 loss_drift=0.000344
+2026-03-09 20:22:49,798 | INFO |   BEST val=0.031508
+2026-03-09 20:23:10,222 | INFO | S_unknown finite=True min=5.159e-03 max=5.337e-03
+2026-03-09 20:23:10,227 | INFO | obs finite=True pred finite=True
+2026-03-09 20:23:10,228 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:23:10,228 | INFO | pred train mean/std = 1.122e+00 / 1.445e-01
+2026-03-09 20:23:56,677 | INFO | epoch=0108 train=0.184073 val=0.031464 loss_data=0.03123 loss_tv=0.001 loss_lap=1.342e-05 loss_l2=2.838e-05 loss_drift=0.0003306
+2026-03-09 20:23:56,681 | INFO |   BEST val=0.031464
+2026-03-09 20:24:16,884 | INFO | S_unknown finite=True min=5.208e-03 max=5.390e-03
+2026-03-09 20:24:16,886 | INFO | obs finite=True pred finite=True
+2026-03-09 20:24:16,887 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:24:16,888 | INFO | pred train mean/std = 1.123e+00 / 1.447e-01
+2026-03-09 20:25:03,197 | INFO | epoch=0109 train=0.176225 val=0.031421 loss_data=0.03122 loss_tv=0.001 loss_lap=1.369e-05 loss_l2=2.895e-05 loss_drift=0.0003171
+2026-03-09 20:25:03,201 | INFO |   BEST val=0.031421
+2026-03-09 20:25:23,469 | INFO | S_unknown finite=True min=5.256e-03 max=5.444e-03
+2026-03-09 20:25:23,474 | INFO | obs finite=True pred finite=True
+2026-03-09 20:25:23,478 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:25:23,479 | INFO | pred train mean/std = 1.123e+00 / 1.450e-01
+2026-03-09 20:26:09,662 | INFO | epoch=0110 train=0.168539 val=0.031378 loss_data=0.0312 loss_tv=0.001 loss_lap=1.396e-05 loss_l2=2.952e-05 loss_drift=0.0003037
+2026-03-09 20:26:09,666 | INFO |   BEST val=0.031378
+2026-03-09 20:26:29,907 | INFO | S_unknown finite=True min=5.304e-03 max=5.497e-03
+2026-03-09 20:26:29,911 | INFO | obs finite=True pred finite=True
+2026-03-09 20:26:29,912 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:26:29,912 | INFO | pred train mean/std = 1.124e+00 / 1.452e-01
+2026-03-09 20:27:16,184 | INFO | epoch=0111 train=0.161001 val=0.031338 loss_data=0.03119 loss_tv=0.001 loss_lap=1.423e-05 loss_l2=3.011e-05 loss_drift=0.0002903
+2026-03-09 20:27:16,188 | INFO |   BEST val=0.031338
+2026-03-09 20:27:36,427 | INFO | S_unknown finite=True min=5.352e-03 max=5.551e-03
+2026-03-09 20:27:36,432 | INFO | obs finite=True pred finite=True
+2026-03-09 20:27:36,436 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:27:36,441 | INFO | pred train mean/std = 1.124e+00 / 1.454e-01
+2026-03-09 20:28:22,857 | INFO | epoch=0112 train=0.153871 val=0.031299 loss_data=0.03117 loss_tv=0.001 loss_lap=1.45e-05 loss_l2=3.069e-05 loss_drift=0.0002775
+2026-03-09 20:28:22,861 | INFO |   BEST val=0.031299
+2026-03-09 20:28:43,100 | INFO | S_unknown finite=True min=5.401e-03 max=5.605e-03
+2026-03-09 20:28:43,103 | INFO | obs finite=True pred finite=True
+2026-03-09 20:28:43,103 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:28:43,103 | INFO | pred train mean/std = 1.124e+00 / 1.456e-01
+2026-03-09 20:29:29,466 | INFO | epoch=0113 train=0.146957 val=0.031263 loss_data=0.03116 loss_tv=0.001 loss_lap=1.478e-05 loss_l2=3.129e-05 loss_drift=0.0002649
+2026-03-09 20:29:29,470 | INFO |   BEST val=0.031263
+2026-03-09 20:29:49,780 | INFO | S_unknown finite=True min=5.449e-03 max=5.658e-03
+2026-03-09 20:29:49,782 | INFO | obs finite=True pred finite=True
+2026-03-09 20:29:49,783 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:29:49,784 | INFO | pred train mean/std = 1.125e+00 / 1.458e-01
+2026-03-09 20:30:36,068 | INFO | epoch=0114 train=0.140377 val=0.031230 loss_data=0.03115 loss_tv=0.001 loss_lap=1.506e-05 loss_l2=3.189e-05 loss_drift=0.0002527
+2026-03-09 20:30:36,072 | INFO |   BEST val=0.031230
+2026-03-09 20:30:56,280 | INFO | S_unknown finite=True min=5.497e-03 max=5.712e-03
+2026-03-09 20:30:56,282 | INFO | obs finite=True pred finite=True
+2026-03-09 20:30:56,283 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:30:56,283 | INFO | pred train mean/std = 1.125e+00 / 1.460e-01
+2026-03-09 20:31:42,748 | INFO | epoch=0115 train=0.134141 val=0.031199 loss_data=0.03113 loss_tv=0.001 loss_lap=1.534e-05 loss_l2=3.25e-05 loss_drift=0.0002412
+2026-03-09 20:31:42,752 | INFO |   BEST val=0.031199
+2026-03-09 20:32:03,006 | INFO | S_unknown finite=True min=5.546e-03 max=5.766e-03
+2026-03-09 20:32:03,011 | INFO | obs finite=True pred finite=True
+2026-03-09 20:32:03,016 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:32:03,020 | INFO | pred train mean/std = 1.126e+00 / 1.462e-01
+2026-03-09 20:32:49,285 | INFO | epoch=0116 train=0.128106 val=0.031169 loss_data=0.03112 loss_tv=0.001 loss_lap=1.563e-05 loss_l2=3.311e-05 loss_drift=0.0002298
+2026-03-09 20:32:49,289 | INFO |   BEST val=0.031169
+2026-03-09 20:33:09,579 | INFO | S_unknown finite=True min=5.594e-03 max=5.820e-03
+2026-03-09 20:33:09,581 | INFO | obs finite=True pred finite=True
+2026-03-09 20:33:09,586 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:33:09,591 | INFO | pred train mean/std = 1.126e+00 / 1.464e-01
+2026-03-09 20:33:56,184 | INFO | epoch=0117 train=0.122381 val=0.031140 loss_data=0.03111 loss_tv=0.001 loss_lap=1.592e-05 loss_l2=3.373e-05 loss_drift=0.0002188
+2026-03-09 20:33:56,188 | INFO |   BEST val=0.031140
+2026-03-09 20:34:16,418 | INFO | S_unknown finite=True min=5.642e-03 max=5.874e-03
+2026-03-09 20:34:16,421 | INFO | obs finite=True pred finite=True
+2026-03-09 20:34:16,421 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:34:16,421 | INFO | pred train mean/std = 1.126e+00 / 1.466e-01
+2026-03-09 20:35:02,873 | INFO | epoch=0118 train=0.116798 val=0.031112 loss_data=0.0311 loss_tv=0.001 loss_lap=1.621e-05 loss_l2=3.436e-05 loss_drift=0.000208
+2026-03-09 20:35:02,877 | INFO |   BEST val=0.031112
+2026-03-09 20:35:23,179 | INFO | S_unknown finite=True min=5.691e-03 max=5.929e-03
+2026-03-09 20:35:23,181 | INFO | obs finite=True pred finite=True
+2026-03-09 20:35:23,182 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:35:23,182 | INFO | pred train mean/std = 1.127e+00 / 1.469e-01
+2026-03-09 20:36:09,575 | INFO | epoch=0119 train=0.111346 val=0.031086 loss_data=0.03109 loss_tv=0.001 loss_lap=1.651e-05 loss_l2=3.5e-05 loss_drift=0.0001972
+2026-03-09 20:36:09,579 | INFO |   BEST val=0.031086
+2026-03-09 20:36:29,898 | INFO | S_unknown finite=True min=5.739e-03 max=5.983e-03
+2026-03-09 20:36:29,901 | INFO | obs finite=True pred finite=True
+2026-03-09 20:36:29,902 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:36:29,902 | INFO | pred train mean/std = 1.127e+00 / 1.471e-01
+2026-03-09 20:37:16,484 | INFO | epoch=0120 train=0.106061 val=0.031061 loss_data=0.03108 loss_tv=0.001 loss_lap=1.68e-05 loss_l2=3.564e-05 loss_drift=0.0001865
+2026-03-09 20:37:16,488 | INFO |   BEST val=0.031061
+2026-03-09 20:37:36,748 | INFO | S_unknown finite=True min=5.788e-03 max=6.037e-03
+2026-03-09 20:37:36,753 | INFO | obs finite=True pred finite=True
+2026-03-09 20:37:36,755 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:37:36,755 | INFO | pred train mean/std = 1.127e+00 / 1.473e-01
+2026-03-09 20:38:23,261 | INFO | epoch=0121 train=0.100939 val=0.031037 loss_data=0.03106 loss_tv=0.001 loss_lap=1.711e-05 loss_l2=3.629e-05 loss_drift=0.000176
+2026-03-09 20:38:23,265 | INFO |   BEST val=0.031037
+2026-03-09 20:38:43,657 | INFO | S_unknown finite=True min=5.836e-03 max=6.092e-03
+2026-03-09 20:38:43,664 | INFO | obs finite=True pred finite=True
+2026-03-09 20:38:43,669 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:38:43,674 | INFO | pred train mean/std = 1.128e+00 / 1.475e-01
+2026-03-09 20:39:30,137 | INFO | epoch=0122 train=0.096024 val=0.031016 loss_data=0.03105 loss_tv=0.001001 loss_lap=1.741e-05 loss_l2=3.694e-05 loss_drift=0.0001658
+2026-03-09 20:39:30,141 | INFO |   BEST val=0.031016
+2026-03-09 20:39:50,434 | INFO | S_unknown finite=True min=5.884e-03 max=6.146e-03
+2026-03-09 20:39:50,436 | INFO | obs finite=True pred finite=True
+2026-03-09 20:39:50,437 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:39:50,438 | INFO | pred train mean/std = 1.128e+00 / 1.477e-01
+2026-03-09 20:40:36,626 | INFO | epoch=0123 train=0.091408 val=0.030996 loss_data=0.03104 loss_tv=0.001001 loss_lap=1.772e-05 loss_l2=3.761e-05 loss_drift=0.000156
+2026-03-09 20:40:36,630 | INFO |   BEST val=0.030996
+2026-03-09 20:40:56,933 | INFO | S_unknown finite=True min=5.933e-03 max=6.201e-03
+2026-03-09 20:40:56,939 | INFO | obs finite=True pred finite=True
+2026-03-09 20:40:56,944 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:40:56,949 | INFO | pred train mean/std = 1.129e+00 / 1.479e-01
+2026-03-09 20:41:43,400 | INFO | epoch=0124 train=0.086975 val=0.030979 loss_data=0.03103 loss_tv=0.001001 loss_lap=1.803e-05 loss_l2=3.827e-05 loss_drift=0.0001465
+2026-03-09 20:41:43,404 | INFO |   BEST val=0.030979
+2026-03-09 20:42:03,712 | INFO | S_unknown finite=True min=5.981e-03 max=6.255e-03
+2026-03-09 20:42:03,715 | INFO | obs finite=True pred finite=True
+2026-03-09 20:42:03,720 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:42:03,725 | INFO | pred train mean/std = 1.129e+00 / 1.482e-01
+2026-03-09 20:42:50,299 | INFO | epoch=0125 train=0.082785 val=0.030963 loss_data=0.03102 loss_tv=0.001001 loss_lap=1.834e-05 loss_l2=3.895e-05 loss_drift=0.0001373
+2026-03-09 20:42:50,303 | INFO |   BEST val=0.030963
+2026-03-09 20:43:10,593 | INFO | S_unknown finite=True min=6.030e-03 max=6.310e-03
+2026-03-09 20:43:10,599 | INFO | obs finite=True pred finite=True
+2026-03-09 20:43:10,603 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:43:10,608 | INFO | pred train mean/std = 1.129e+00 / 1.484e-01
+2026-03-09 20:43:57,102 | INFO | epoch=0126 train=0.078839 val=0.030950 loss_data=0.03102 loss_tv=0.001001 loss_lap=1.866e-05 loss_l2=3.963e-05 loss_drift=0.0001286
+2026-03-09 20:43:57,106 | INFO |   BEST val=0.030950
+2026-03-09 20:44:17,413 | INFO | S_unknown finite=True min=6.078e-03 max=6.365e-03
+2026-03-09 20:44:17,417 | INFO | obs finite=True pred finite=True
+2026-03-09 20:44:17,417 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:44:17,418 | INFO | pred train mean/std = 1.130e+00 / 1.486e-01
+2026-03-09 20:45:03,978 | INFO | epoch=0127 train=0.075111 val=0.030938 loss_data=0.03101 loss_tv=0.001001 loss_lap=1.898e-05 loss_l2=4.032e-05 loss_drift=0.0001202
+2026-03-09 20:45:03,982 | INFO |   BEST val=0.030938
+2026-03-09 20:45:24,340 | INFO | S_unknown finite=True min=6.127e-03 max=6.420e-03
+2026-03-09 20:45:24,345 | INFO | obs finite=True pred finite=True
+2026-03-09 20:45:24,349 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:45:24,350 | INFO | pred train mean/std = 1.130e+00 / 1.488e-01
+2026-03-09 20:46:10,907 | INFO | epoch=0128 train=0.071536 val=0.030928 loss_data=0.031 loss_tv=0.001001 loss_lap=1.93e-05 loss_l2=4.102e-05 loss_drift=0.000112
+2026-03-09 20:46:10,911 | INFO |   BEST val=0.030928
+2026-03-09 20:46:31,217 | INFO | S_unknown finite=True min=6.175e-03 max=6.475e-03
+2026-03-09 20:46:31,220 | INFO | obs finite=True pred finite=True
+2026-03-09 20:46:31,221 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:46:31,221 | INFO | pred train mean/std = 1.130e+00 / 1.490e-01
+2026-03-09 20:47:17,690 | INFO | epoch=0129 train=0.068191 val=0.030919 loss_data=0.03099 loss_tv=0.001001 loss_lap=1.963e-05 loss_l2=4.172e-05 loss_drift=0.0001043
+2026-03-09 20:47:17,694 | INFO |   BEST val=0.030919
+2026-03-09 20:47:38,028 | INFO | S_unknown finite=True min=6.223e-03 max=6.530e-03
+2026-03-09 20:47:38,031 | INFO | obs finite=True pred finite=True
+2026-03-09 20:47:38,031 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:47:38,032 | INFO | pred train mean/std = 1.131e+00 / 1.492e-01
+2026-03-09 20:48:24,598 | INFO | epoch=0130 train=0.064980 val=0.030912 loss_data=0.03098 loss_tv=0.001001 loss_lap=1.996e-05 loss_l2=4.244e-05 loss_drift=9.664e-05
+2026-03-09 20:48:24,602 | INFO |   BEST val=0.030912
+2026-03-09 20:48:44,962 | INFO | S_unknown finite=True min=6.272e-03 max=6.585e-03
+2026-03-09 20:48:44,965 | INFO | obs finite=True pred finite=True
+2026-03-09 20:48:44,966 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:48:44,966 | INFO | pred train mean/std = 1.131e+00 / 1.494e-01
+2026-03-09 20:49:31,589 | INFO | epoch=0131 train=0.061914 val=0.030906 loss_data=0.03098 loss_tv=0.001001 loss_lap=2.029e-05 loss_l2=4.315e-05 loss_drift=8.922e-05
+2026-03-09 20:49:31,595 | INFO |   BEST val=0.030906
+2026-03-09 20:49:51,986 | INFO | S_unknown finite=True min=6.320e-03 max=6.640e-03
+2026-03-09 20:49:51,989 | INFO | obs finite=True pred finite=True
+2026-03-09 20:49:51,989 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:49:51,990 | INFO | pred train mean/std = 1.132e+00 / 1.496e-01
+2026-03-09 20:50:38,453 | INFO | epoch=0132 train=0.058997 val=0.030903 loss_data=0.03097 loss_tv=0.001001 loss_lap=2.062e-05 loss_l2=4.388e-05 loss_drift=8.202e-05
+2026-03-09 20:50:38,457 | INFO |   BEST val=0.030903
+2026-03-09 20:50:58,776 | INFO | S_unknown finite=True min=6.368e-03 max=6.695e-03
+2026-03-09 20:50:58,778 | INFO | obs finite=True pred finite=True
+2026-03-09 20:50:58,783 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:50:58,788 | INFO | pred train mean/std = 1.132e+00 / 1.499e-01
+2026-03-09 20:51:45,237 | INFO | epoch=0133 train=0.056258 val=0.030901 loss_data=0.03096 loss_tv=0.001001 loss_lap=2.096e-05 loss_l2=4.46e-05 loss_drift=7.513e-05
+2026-03-09 20:51:45,241 | INFO |   BEST val=0.030901
+2026-03-09 20:52:05,528 | INFO | S_unknown finite=True min=6.415e-03 max=6.749e-03
+2026-03-09 20:52:05,530 | INFO | obs finite=True pred finite=True
+2026-03-09 20:52:05,531 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:52:05,532 | INFO | pred train mean/std = 1.132e+00 / 1.501e-01
+2026-03-09 20:52:51,838 | INFO | epoch=0134 train=0.053668 val=0.030901 loss_data=0.03096 loss_tv=0.001001 loss_lap=2.129e-05 loss_l2=4.532e-05 loss_drift=6.847e-05
+2026-03-09 20:53:12,126 | INFO | S_unknown finite=True min=6.462e-03 max=6.802e-03
+2026-03-09 20:53:12,129 | INFO | obs finite=True pred finite=True
+2026-03-09 20:53:12,131 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:53:12,131 | INFO | pred train mean/std = 1.133e+00 / 1.503e-01
+2026-03-09 20:53:58,491 | INFO | epoch=0135 train=0.051323 val=0.030903 loss_data=0.03095 loss_tv=0.001001 loss_lap=2.162e-05 loss_l2=4.603e-05 loss_drift=6.236e-05
+2026-03-09 20:54:18,676 | INFO | S_unknown finite=True min=6.507e-03 max=6.855e-03
+2026-03-09 20:54:18,681 | INFO | obs finite=True pred finite=True
+2026-03-09 20:54:18,686 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:54:18,691 | INFO | pred train mean/std = 1.133e+00 / 1.505e-01
+2026-03-09 20:55:05,131 | INFO | epoch=0136 train=0.049155 val=0.030906 loss_data=0.03095 loss_tv=0.001001 loss_lap=2.195e-05 loss_l2=4.674e-05 loss_drift=5.661e-05
+2026-03-09 20:55:25,466 | INFO | S_unknown finite=True min=6.552e-03 max=6.906e-03
+2026-03-09 20:55:25,469 | INFO | obs finite=True pred finite=True
+2026-03-09 20:55:25,470 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:55:25,470 | INFO | pred train mean/std = 1.133e+00 / 1.507e-01
+2026-03-09 20:56:11,690 | INFO | epoch=0137 train=0.047231 val=0.030910 loss_data=0.03094 loss_tv=0.001001 loss_lap=2.227e-05 loss_l2=4.744e-05 loss_drift=5.144e-05
+2026-03-09 20:56:31,870 | INFO | S_unknown finite=True min=6.595e-03 max=6.956e-03
+2026-03-09 20:56:31,877 | INFO | obs finite=True pred finite=True
+2026-03-09 20:56:31,882 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:56:31,887 | INFO | pred train mean/std = 1.134e+00 / 1.509e-01
+2026-03-09 20:57:18,345 | INFO | epoch=0138 train=0.045500 val=0.030916 loss_data=0.03094 loss_tv=0.001001 loss_lap=2.259e-05 loss_l2=4.813e-05 loss_drift=4.673e-05
+2026-03-09 20:57:38,608 | INFO | S_unknown finite=True min=6.637e-03 max=7.005e-03
+2026-03-09 20:57:38,615 | INFO | obs finite=True pred finite=True
+2026-03-09 20:57:38,617 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:57:38,617 | INFO | pred train mean/std = 1.134e+00 / 1.511e-01
+2026-03-09 20:58:24,888 | INFO | epoch=0139 train=0.043939 val=0.030923 loss_data=0.03094 loss_tv=0.001001 loss_lap=2.29e-05 loss_l2=4.88e-05 loss_drift=4.241e-05
+2026-03-09 20:58:45,108 | INFO | S_unknown finite=True min=6.678e-03 max=7.052e-03
+2026-03-09 20:58:45,113 | INFO | obs finite=True pred finite=True
+2026-03-09 20:58:45,117 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:58:45,122 | INFO | pred train mean/std = 1.134e+00 / 1.513e-01
+2026-03-09 20:59:31,580 | INFO | epoch=0140 train=0.042404 val=0.030932 loss_data=0.03093 loss_tv=0.001001 loss_lap=2.321e-05 loss_l2=4.946e-05 loss_drift=3.804e-05
+2026-03-09 20:59:51,985 | INFO | S_unknown finite=True min=6.718e-03 max=7.098e-03
+2026-03-09 20:59:51,990 | INFO | obs finite=True pred finite=True
+2026-03-09 20:59:51,995 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 20:59:51,997 | INFO | pred train mean/std = 1.135e+00 / 1.515e-01
+2026-03-09 21:00:38,197 | INFO | epoch=0141 train=0.040990 val=0.030940 loss_data=0.03093 loss_tv=0.001001 loss_lap=2.35e-05 loss_l2=5.011e-05 loss_drift=3.393e-05
+2026-03-09 21:00:58,422 | INFO | S_unknown finite=True min=6.756e-03 max=7.142e-03
+2026-03-09 21:00:58,425 | INFO | obs finite=True pred finite=True
+2026-03-09 21:00:58,425 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:00:58,425 | INFO | pred train mean/std = 1.135e+00 / 1.516e-01
+2026-03-09 21:01:44,734 | INFO | epoch=0142 train=0.039820 val=0.030949 loss_data=0.03093 loss_tv=0.001001 loss_lap=2.379e-05 loss_l2=5.073e-05 loss_drift=3.051e-05
+2026-03-09 21:02:04,983 | INFO | S_unknown finite=True min=6.793e-03 max=7.185e-03
+2026-03-09 21:02:04,988 | INFO | obs finite=True pred finite=True
+2026-03-09 21:02:04,992 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:02:04,992 | INFO | pred train mean/std = 1.135e+00 / 1.518e-01
+2026-03-09 21:02:51,461 | INFO | epoch=0143 train=0.038816 val=0.030960 loss_data=0.03093 loss_tv=0.001001 loss_lap=2.407e-05 loss_l2=5.134e-05 loss_drift=2.754e-05
+2026-03-09 21:03:11,811 | INFO | S_unknown finite=True min=6.829e-03 max=7.226e-03
+2026-03-09 21:03:11,818 | INFO | obs finite=True pred finite=True
+2026-03-09 21:03:11,822 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:03:11,822 | INFO | pred train mean/std = 1.136e+00 / 1.520e-01
+2026-03-09 21:03:58,126 | INFO | epoch=0144 train=0.037778 val=0.030965 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.434e-05 loss_l2=5.193e-05 loss_drift=2.435e-05
+2026-03-09 21:04:18,349 | INFO | S_unknown finite=True min=6.846e-03 max=7.246e-03
+2026-03-09 21:04:18,351 | INFO | obs finite=True pred finite=True
+2026-03-09 21:04:18,352 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:04:18,352 | INFO | pred train mean/std = 1.136e+00 / 1.520e-01
+2026-03-09 21:05:04,787 | INFO | epoch=0145 train=0.037337 val=0.030972 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.447e-05 loss_l2=5.221e-05 loss_drift=2.32e-05
+2026-03-09 21:05:25,130 | INFO | S_unknown finite=True min=6.862e-03 max=7.265e-03
+2026-03-09 21:05:25,136 | INFO | obs finite=True pred finite=True
+2026-03-09 21:05:25,141 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:05:25,146 | INFO | pred train mean/std = 1.136e+00 / 1.521e-01
+2026-03-09 21:06:11,649 | INFO | epoch=0146 train=0.036802 val=0.030976 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.46e-05 loss_l2=5.249e-05 loss_drift=2.166e-05
+2026-03-09 21:06:31,966 | INFO | S_unknown finite=True min=6.878e-03 max=7.284e-03
+2026-03-09 21:06:31,968 | INFO | obs finite=True pred finite=True
+2026-03-09 21:06:31,969 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:06:31,970 | INFO | pred train mean/std = 1.136e+00 / 1.522e-01
+2026-03-09 21:07:18,507 | INFO | epoch=0147 train=0.036387 val=0.030980 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.472e-05 loss_l2=5.275e-05 loss_drift=2.052e-05
+2026-03-09 21:07:38,858 | INFO | S_unknown finite=True min=6.893e-03 max=7.301e-03
+2026-03-09 21:07:38,860 | INFO | obs finite=True pred finite=True
+2026-03-09 21:07:38,861 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:07:38,861 | INFO | pred train mean/std = 1.136e+00 / 1.522e-01
+2026-03-09 21:08:25,179 | INFO | epoch=0148 train=0.036063 val=0.030987 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.484e-05 loss_l2=5.301e-05 loss_drift=1.967e-05
+2026-03-09 21:08:45,496 | INFO | S_unknown finite=True min=6.907e-03 max=7.318e-03
+2026-03-09 21:08:45,502 | INFO | obs finite=True pred finite=True
+2026-03-09 21:08:45,507 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:08:45,512 | INFO | pred train mean/std = 1.136e+00 / 1.523e-01
+2026-03-09 21:09:31,947 | INFO | epoch=0149 train=0.035651 val=0.030993 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.495e-05 loss_l2=5.325e-05 loss_drift=1.845e-05
+2026-03-09 21:09:52,317 | INFO | S_unknown finite=True min=6.921e-03 max=7.335e-03
+2026-03-09 21:09:52,324 | INFO | obs finite=True pred finite=True
+2026-03-09 21:09:52,325 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:09:52,326 | INFO | pred train mean/std = 1.136e+00 / 1.524e-01
+2026-03-09 21:10:38,880 | INFO | epoch=0150 train=0.035286 val=0.030996 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.506e-05 loss_l2=5.349e-05 loss_drift=1.737e-05
+2026-03-09 21:10:59,279 | INFO | S_unknown finite=True min=6.934e-03 max=7.350e-03
+2026-03-09 21:10:59,284 | INFO | obs finite=True pred finite=True
+2026-03-09 21:10:59,288 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:10:59,292 | INFO | pred train mean/std = 1.137e+00 / 1.524e-01
+2026-03-09 21:11:45,704 | INFO | epoch=0151 train=0.035022 val=0.031001 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.516e-05 loss_l2=5.372e-05 loss_drift=1.666e-05
+2026-03-09 21:12:05,993 | INFO | S_unknown finite=True min=6.947e-03 max=7.365e-03
+2026-03-09 21:12:05,996 | INFO | obs finite=True pred finite=True
+2026-03-09 21:12:05,998 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:12:05,998 | INFO | pred train mean/std = 1.137e+00 / 1.525e-01
+2026-03-09 21:12:52,434 | INFO | epoch=0152 train=0.034754 val=0.031007 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.527e-05 loss_l2=5.393e-05 loss_drift=1.589e-05
+2026-03-09 21:13:12,789 | INFO | S_unknown finite=True min=6.959e-03 max=7.380e-03
+2026-03-09 21:13:12,793 | INFO | obs finite=True pred finite=True
+2026-03-09 21:13:12,794 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:13:12,794 | INFO | pred train mean/std = 1.137e+00 / 1.526e-01
+2026-03-09 21:13:59,213 | INFO | epoch=0153 train=0.034450 val=0.031013 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.536e-05 loss_l2=5.414e-05 loss_drift=1.494e-05
+2026-03-09 21:14:19,389 | INFO | S_unknown finite=True min=6.971e-03 max=7.393e-03
+2026-03-09 21:14:19,391 | INFO | obs finite=True pred finite=True
+2026-03-09 21:14:19,392 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:14:19,392 | INFO | pred train mean/std = 1.137e+00 / 1.526e-01
+2026-03-09 21:14:56,438 | INFO | epoch=0154 train=0.034181 val=0.031017 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.545e-05 loss_l2=5.435e-05 loss_drift=1.411e-05
+2026-03-09 21:15:13,734 | INFO | S_unknown finite=True min=6.982e-03 max=7.407e-03
+2026-03-09 21:15:13,739 | INFO | obs finite=True pred finite=True
+2026-03-09 21:15:13,740 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:15:13,740 | INFO | pred train mean/std = 1.137e+00 / 1.527e-01
+2026-03-09 21:15:50,892 | INFO | epoch=0155 train=0.033978 val=0.031018 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.554e-05 loss_l2=5.454e-05 loss_drift=1.352e-05
+2026-03-09 21:16:08,276 | INFO | S_unknown finite=True min=6.988e-03 max=7.413e-03
+2026-03-09 21:16:08,278 | INFO | obs finite=True pred finite=True
+2026-03-09 21:16:08,279 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:16:08,279 | INFO | pred train mean/std = 1.137e+00 / 1.527e-01
+2026-03-09 21:16:45,388 | INFO | epoch=0156 train=0.033862 val=0.031020 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.559e-05 loss_l2=5.463e-05 loss_drift=1.331e-05
+2026-03-09 21:17:02,613 | INFO | S_unknown finite=True min=6.993e-03 max=7.419e-03
+2026-03-09 21:17:02,618 | INFO | obs finite=True pred finite=True
+2026-03-09 21:17:02,622 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:17:02,623 | INFO | pred train mean/std = 1.137e+00 / 1.527e-01
+2026-03-09 21:17:39,827 | INFO | epoch=0157 train=0.033737 val=0.031023 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.563e-05 loss_l2=5.472e-05 loss_drift=1.304e-05
+2026-03-09 21:17:57,090 | INFO | S_unknown finite=True min=6.998e-03 max=7.425e-03
+2026-03-09 21:17:57,095 | INFO | obs finite=True pred finite=True
+2026-03-09 21:17:57,099 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:17:57,103 | INFO | pred train mean/std = 1.137e+00 / 1.527e-01
+2026-03-09 21:18:34,174 | INFO | epoch=0158 train=0.033606 val=0.031025 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.567e-05 loss_l2=5.481e-05 loss_drift=1.273e-05
+2026-03-09 21:18:51,519 | INFO | S_unknown finite=True min=7.002e-03 max=7.431e-03
+2026-03-09 21:18:51,521 | INFO | obs finite=True pred finite=True
+2026-03-09 21:18:51,522 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:18:51,522 | INFO | pred train mean/std = 1.137e+00 / 1.527e-01
+2026-03-09 21:19:28,641 | INFO | epoch=0159 train=0.033474 val=0.031028 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.571e-05 loss_l2=5.489e-05 loss_drift=1.24e-05
+2026-03-09 21:19:45,907 | INFO | S_unknown finite=True min=7.007e-03 max=7.436e-03
+2026-03-09 21:19:45,909 | INFO | obs finite=True pred finite=True
+2026-03-09 21:19:45,910 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:19:45,910 | INFO | pred train mean/std = 1.137e+00 / 1.528e-01
+2026-03-09 21:20:22,916 | INFO | epoch=0160 train=0.033343 val=0.031031 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.574e-05 loss_l2=5.497e-05 loss_drift=1.206e-05
+2026-03-09 21:20:40,152 | INFO | S_unknown finite=True min=7.011e-03 max=7.441e-03
+2026-03-09 21:20:40,157 | INFO | obs finite=True pred finite=True
+2026-03-09 21:20:40,162 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:20:40,167 | INFO | pred train mean/std = 1.137e+00 / 1.528e-01
+2026-03-09 21:21:17,264 | INFO | epoch=0161 train=0.033225 val=0.031034 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.578e-05 loss_l2=5.505e-05 loss_drift=1.176e-05
+2026-03-09 21:21:34,628 | INFO | S_unknown finite=True min=7.016e-03 max=7.446e-03
+2026-03-09 21:21:34,630 | INFO | obs finite=True pred finite=True
+2026-03-09 21:21:34,631 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:21:34,634 | INFO | pred train mean/std = 1.137e+00 / 1.528e-01
+2026-03-09 21:22:11,719 | INFO | epoch=0162 train=0.033110 val=0.031035 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.581e-05 loss_l2=5.512e-05 loss_drift=1.147e-05
+2026-03-09 21:22:28,926 | INFO | S_unknown finite=True min=7.020e-03 max=7.451e-03
+2026-03-09 21:22:28,931 | INFO | obs finite=True pred finite=True
+2026-03-09 21:22:28,933 | INFO | obs train mean/std = 1.141e+00 / 2.310e-01
+2026-03-09 21:22:28,933 | INFO | pred train mean/std = 1.137e+00 / 1.529e-01
+2026-03-09 21:23:06,038 | INFO | epoch=0163 train=0.033007 val=0.031037 loss_data=0.03092 loss_tv=0.001001 loss_lap=2.584e-05 loss_l2=5.52e-05 loss_drift=1.123e-05
+2026-03-09 21:23:06,039 | INFO | Early stopping at epoch=163 (patience=30). Best val=0.030901
+2026-03-09 21:23:06,073 | INFO | Saved best calibration to: /scratch/ab9738/stamp/logs/calib_pol_run1/calib_pol_best.npz
+INFO:    Terminating squashfuse_ll after timeout
+INFO:    Timeouts can be caused by a running background process
+INFO:    Terminating fuse2fs after timeout
+INFO:    Timeouts can be caused by a running background process
+INFO:    Cleanup error: while stopping driver for /share/apps/apptainer/1.4.5/x86_64/var/lib/apptainer/mnt/session/rootfs: squashfuse_ll exited: fuse: failed to unmount /share/apps/apptainer/1.4.5/x86_64/var/lib/apptainer/mnt/session/rootfs: Invalid argument
+, while stopping driver for /share/apps/apptainer/1.4.5/x86_64/var/lib/apptainer/mnt/session/overlay-images/0: fuse2fs exited: FUSE2FS (3): Warning: Mounting unchecked fs, running e2fsck is recommended.
+fuse: failed to unmount /share/apps/apptainer/1.4.5/x86_64/var/lib/apptainer/mnt/session/overlay-images/0: Invalid argument
+Mount failed while opening filesystem.  Check dmesg(1) for details.
