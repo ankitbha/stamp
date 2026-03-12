@@ -1076,7 +1076,7 @@ def main():
                 break
 
     # Save outputs
-    save_path = os.path.join(CFG.out_dir, "calib_pol_best.npz")
+    save_path = os.path.join(CFG.out_dir, "calib_stamp_pol_best.npz")
     to_save: Dict[str, Any] = {
         "best_val_mse": np.array([best_val], dtype=np.float32),
         "traj": np.array([CFG.traj], dtype=np.int32),
