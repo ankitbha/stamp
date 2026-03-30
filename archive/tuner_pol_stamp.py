@@ -439,16 +439,18 @@ class TunerConfig:
 
     # STAMP dynamics prior regularization
     use_stamp: bool = True
-    lambda_stamp: float = 0.1
     stamp_ckpt_path: str = "/scratch/ab9738/stamp/checkpoints/mprnn_pol_best.pt"
     stamp_eps: float = 1e-6
     stamp_max_horizon: Optional[int] = 64
     stamp_detach_stats: bool = True
     stamp_balance_by_grad: bool = True
-    stamp_target_grad_ratio: float = 2.0
+    stamp_target_grad_ratio: float = 0.25
     stamp_grad_eps: float = 1e-12
     stamp_lambda_min: float = 1e-4
     stamp_lambda_max: float = 1e2
+    stamp_warmup_epochs: int = 50           # STAMP off for first 50 epochs
+    stamp_ramp_epochs: int = 50            # then linearly ramp
+    stamp_ratio_final: float = 0.25         # final target ratio
 
     # Runtime
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
@@ -947,8 +949,16 @@ def main():
         if not torch.isfinite(loss_train):
             raise RuntimeError("Non-finite loss_total")
 
+        stamp_scale = 0.0
+        if epoch > CFG.stamp_warmup_epochs:
+            if CFG.stamp_ramp_epochs <= 1:
+                stamp_scale = 1.0
+            else:
+                t = (epoch - CFG.stamp_warmup_epochs - 1) / float(CFG.stamp_ramp_epochs - 1)
+                stamp_scale = min(1.0, max(0.0, t))
+        
         # Optional STAMP term (dynamics consistency via frozen MPRNN prior)
-        if CFG.use_stamp and CFG.lambda_stamp > 0.0:
+        if CFG.use_stamp and stamp_scale > 0.0:
             # base loss already computed above as `loss_train`
             base_loss = loss_train
             
@@ -971,10 +981,7 @@ def main():
                 and "S_unknown" in calib.params
             ) else None
             su_params = [p for p in su_mod.parameters() if p.requires_grad] if su_mod is not None else []
-            
-            # defaults
-            lambda_eff = float(CFG.lambda_stamp)
-            
+                    
             if len(su_params) > 0 and getattr(CFG, "stamp_balance_by_grad", False):
                 g_base = torch.autograd.grad(
                     base_loss, su_params, retain_graph=True, create_graph=False, allow_unused=True
@@ -1001,6 +1008,7 @@ def main():
                     CFG.stamp_lambda_min, CFG.stamp_lambda_max
                 )
                 lambda_eff = float((CFG.stamp_target_grad_ratio * ratio).detach().cpu().item())
+                lambda_eff = stamp_scale * lambda_eff
             
             loss_train = base_loss + lambda_eff * L_stamp
             logs["loss_stamp"] = float(L_stamp.detach().cpu().item())

@@ -48,7 +48,9 @@ from model.prior.graph import build_edge_features, build_graph_from_xy
 from model.prior.mprnn import MPRNN
 
 # Simulator
-import sim.polsim as polsim
+# import sim.polsim as polsim
+# import sim.polsim_diff_only as polsim
+import sim.polsim_adv_only as polsim
 
 
 # =============================================================================
@@ -732,7 +734,7 @@ def main():
         "dt": float(_to_numpy(npz["dt"])) if "dt" in npz else CFG.dt,
         "steps": int(_to_numpy(npz["steps"])) if "steps" in npz else CFG.steps,
         "save_every": int(_to_numpy(npz["save_every"])) if "save_every" in npz else CFG.save_every,
-        "enforce_cfl": True,
+        "enforce_cfl": False,
     }
 
     # Some datasets may store U0; polsim may or may not accept it (defensive)
