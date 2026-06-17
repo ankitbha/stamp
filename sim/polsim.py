@@ -42,12 +42,14 @@ Notes:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple, Literal
+from typing import Any, Dict, Optional, Tuple, Literal
 
 import math
 import numpy as np
 import torch
 import torch.nn.functional as F
+
+from sim.pol_sources import PolSourceInventory, load_pol_source_inventory
 
 
 # =============================================================================
@@ -72,7 +74,15 @@ class PolGrid:
     src_dir: str = "./"
 
     # Known sources (normalized) on the simulation grid [Nx,Ny]
+    # Legacy aggregate source for the old S_known + S_unknown workflow.
     S_known: Optional[torch.Tensor] = None
+
+    # Named source inventories for the IASA path. These are not aggregated.
+    source_names: Optional[list[str]] = None
+    source_maps: Optional[torch.Tensor] = None  # [K,Nx,Ny]
+    source_matrix: Optional[torch.Tensor] = None  # [Nx*Ny,K]
+    source_activity_defaults: Optional[Dict[str, Any]] = None
+    source_metadata: Optional[Dict[str, Any]] = None
 
     # Cached initial condition field (constructed from govdata via kriging) [Nx,Ny]
     U0: Optional[torch.Tensor] = None
@@ -110,7 +120,11 @@ def load_known_sources_40x40(
     device: torch.device | str = "cpu",
 ) -> Tuple[torch.Tensor, Dict[str, np.ndarray]]:
     """
-    Load known sources from intensity maps and crop to the 40x40 domain, matching pollution.py.
+    Legacy aggregate source loader for the old S_known + S_unknown workflow.
+
+    This sums source categories before applying one shared aggregate p99 scale.
+    Do not use this as the IASA source-inventory API; use
+    sim.pol_sources.load_pol_source_inventory instead.
 
     Files expected in src_dir:
       - brick_kilns_intensity_80x80.npy
@@ -169,8 +183,9 @@ def make_grid(
     device: torch.device | str = "cpu",
     dtype: torch.dtype = torch.float32,
     load_sources: bool = True,
+    load_inventory: bool = False,
 ) -> PolGrid:
-    """Create grid (x,y,dx,dy) and optionally load known sources."""
+    """Create grid (x,y,dx,dy) and optionally load legacy or named sources."""
     x = torch.linspace(0.0, float(Lx), int(Nx), device=torch.device(device), dtype=dtype)
     y = torch.linspace(0.0, float(Ly), int(Ny), device=torch.device(device), dtype=dtype)
     dx = float(Lx) / float(Nx - 1)
@@ -181,6 +196,14 @@ def make_grid(
     if load_sources:
         S_known, _raw = load_known_sources_40x40(src_dir=src_dir, device=device)
         grid.S_known = S_known.to(device=torch.device(device), dtype=dtype)
+
+    if load_inventory:
+        inventory = load_pol_source_inventory(src_dir=src_dir, crop=grid.crop)
+        grid.source_names = list(inventory.source_names)
+        grid.source_maps = torch.as_tensor(inventory.source_maps, device=torch.device(device), dtype=dtype)
+        grid.source_matrix = torch.as_tensor(inventory.source_matrix, device=torch.device(device), dtype=dtype)
+        grid.source_activity_defaults = inventory.source_activity_defaults
+        grid.source_metadata = inventory.raw_metadata
 
     return grid
 
@@ -696,6 +719,8 @@ __all__ = [
     "PolParams",
     "make_grid",
     "load_known_sources_40x40",
+    "PolSourceInventory",
+    "load_pol_source_inventory",
     "monsoon_wind_series",
     "smooth_and_upsample_unknown",
     "rollout_pollution",
@@ -770,7 +795,6 @@ if __name__ == "__main__":
 
 
 # In[ ]:
-
 
 
 

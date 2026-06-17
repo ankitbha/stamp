@@ -239,7 +239,9 @@ direction_conversion_convention
 
 **Objective**
 
-Expose separate named source inventories while preserving the current aggregate source behavior for compatibility.
+Expose separate named source inventories without directly aggregating them into a
+single `S_known` field. The proxy maps should remain distinct because their raw
+scales are not reliably comparable across source categories.
 
 **Likely files**
 
@@ -249,19 +251,25 @@ Expose separate named source inventories while preserving the current aggregate 
 
 **Implementation details**
 
-- Add a loader that returns individual cropped and normalized source maps:
+- Add a loader that returns individual cropped source maps with source-specific
+  normalization or scale metadata:
 
 ```text
 brick_kilns
 industries
 population_density
-traffic
+traffic_00
+traffic_06
+traffic_12
+traffic_18
 ```
 
-- Preserve both traffic representations:
-  - an aggregate traffic inventory for compatibility
-  - the four time-of-day traffic maps (`traffic_00`, `traffic_06`, `traffic_12`, `traffic_18`) for the traffic diurnal activity basis
-- Preserve the existing crop `(21:61, 16:56)` and percentile-99 normalization policy unless a later experiment explicitly changes it.
+- Do not sum source categories into one aggregate source in the new IASA path.
+- Preserve the four time-of-day traffic maps (`traffic_00`, `traffic_06`, `traffic_12`, `traffic_18`) for the traffic diurnal activity basis.
+- Preserve the existing crop `(21:61, 16:56)`.
+- Do not apply the old shared aggregate percentile-99 normalization to the
+  combined source field. Instead, keep per-source normalization choices explicit
+  and record the scale used for each source map in metadata.
 - Return:
 
 ```text
@@ -269,23 +277,21 @@ source_names: list[str]
 source_maps: [K, Nx, Ny]
 source_time_profiles or source_activity_defaults
 source_matrix: [Nx * Ny, K]
-aggregate_source: [Nx, Ny]
 raw_metadata: dict
 ```
 
-- Keep `load_known_sources_40x40()` working as a compatibility wrapper that returns the aggregate field expected by existing code.
-- Add optional source splitting hooks, but do not make spatial splitting mandatory in this task. The default source groups should include brick kilns, industries, population density, and traffic, with traffic retaining its time-of-day maps for later temporal-basis construction.
+- Add optional source splitting hooks, but do not make spatial splitting mandatory in this task. The default source groups should include brick kilns, industries, population density, and traffic time-of-day maps for later temporal-basis construction.
 
 **Outputs and artifacts**
 
 - Named source maps are available from simulator utilities.
-- Existing callers that expect `grid.S_known` still work.
+- Each source map carries enough metadata to reconstruct its crop, raw file,
+  normalization convention, and scale factor.
 
 **Acceptance checks**
 
-- Existing pollution data generation still runs.
 - New source loader returns exactly aligned 40x40 source maps.
-- The aggregate source produced by summing named maps matches the previous `S_known` output within numerical tolerance.
+- Source maps are not collapsed into an aggregate `S_known` for the new IASA path.
 - Traffic time-of-day maps are available for constructing a diurnal traffic basis.
 
 ### Task 4: Simulator support for inventory activities and wind providers
@@ -297,8 +303,6 @@ Allow the simulator to build emissions from inventory activities and run under r
 ```text
 S_total(t) = sum_k source_map_k * theta_k(t)
 ```
-
-while retaining the legacy `S_unknown` path.
 
 **Likely files**
 
@@ -338,8 +342,9 @@ theta_k(t) >= 0
   - population-related activity: slowly varying or constant baseline unless a better proxy is available
 - Add a simulator path that accepts `source_theta`, `source_activities`, or temporal-basis coefficients.
 - If inventory activities are provided, use them as the source term at each simulator step.
-- If `S_unknown` is provided, keep the current aggregate-known-plus-unknown behavior.
-- Avoid allowing both modes silently. If both `source_theta` and `S_unknown` are passed, raise a clear error unless an explicit compatibility option is provided.
+- Do not model residual or unknown spatial mass as a learned `S_unknown` field in
+  the IASA path. Unexplained broad components should be handled through the
+  background basis and residual diagnostics.
 - Clamp or validate nonnegative activities.
 - Add a `WindProvider` interface or equivalent input contract supporting:
   - `real_imputed_new_delhi`
@@ -354,7 +359,7 @@ theta_k(t) >= 0
 **Outputs and artifacts**
 
 - Simulator can run with named source activities.
-- Legacy unknown-field runs remain possible.
+- Residual/background components remain separate from named inventory activities.
 
 **Acceptance checks**
 
@@ -362,7 +367,7 @@ theta_k(t) >= 0
 - A one-hot source activity activates exactly one source group.
 - A one-basis temporal coefficient produces the expected `theta_k(t)` profile.
 - Real imputed wind can be passed into the simulator without invoking synthetic `monsoon_wind_series`.
-- Legacy `S_unknown` data generation and calibration still import and run.
+- Inventory-activity runs do not require a learned `S_unknown` field.
 
 ### Task 5: Open-boundary lagged response matrix builder
 
@@ -1048,7 +1053,8 @@ These sanity gates are not replacements for the unit tests below. Unit tests che
 
 ### Smoke tests
 
-- Load source inventories and verify names, shapes, and aggregate compatibility.
+- Load source inventories and verify names, shapes, crop metadata, and
+  per-source normalization metadata.
 - Load government `WD`/`WS` and verify timestamps, station ids, missingness masks, and units are preserved.
 - Run wind imputation on a short window and verify imputed `WD`/`WS` contain no missing values.
 - Build a simulator grid and run a short inventory-activity rollout.
@@ -1095,7 +1101,6 @@ Y_tilde.shape == (num_sensors * num_times,)
 
 ### Regression tests
 
-- Existing `S_unknown` pollution dataset generation should continue to import and run if backwards compatibility is retained.
 - Existing simulator APIs should not break without a deprecation note.
 - Existing edge-hold simulator output should never be mislabeled as the open-boundary response used for paper-facing IASA claims.
 
@@ -1161,7 +1166,8 @@ Use this path only if the FieldFormer/ImputeFormer implementation is not already
 
 - The implementation target is the pollution/source-apportionment path.
 - Heat and shallow-water modules should remain untouched unless a shared utility naturally benefits them.
-- The current free-field `S_unknown` workflow is legacy or an optional comparison baseline.
+- The current free-field unknown-source workflow is legacy and should not shape
+  the IASA source-inventory design.
 - Treat `sim/govdata_1H_current.csv` as the authoritative local New Delhi source for observed `pm25`, `WD`, and `WS`.
 - Use imputed real `WD/WS` as the default wind input for the New Delhi apportionment workflow.
 - Use synthetic wind providers for controlled identifiability experiments.
