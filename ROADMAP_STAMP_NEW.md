@@ -42,7 +42,7 @@ The implementation needs these new capabilities:
 - Government `WD`/`WS` ingestion, missing-data imputation, and conversion to simulator-ready wind vectors.
 - A wind-provider interface that supports real imputed New Delhi wind and controlled synthetic wind regimes.
 - Source activity parameterization over inventory groups and temporal activity bases.
-- Construction of `H_lag` from simulator-generated source fingerprints under real or synthetic wind sequences.
+- Construction of `H_lag` from a dedicated open-boundary source-response operator under real or synthetic wind sequences.
 - Background basis construction and projection.
 - Identifiability diagnostics: rank, singular values, condition number, effective rank, visibility, background absorption, pairwise coherence, ray distance where feasible, and perturbation sensitivity.
 - Nonnegative source-activity fitting.
@@ -70,6 +70,8 @@ The implementation needs these new capabilities:
 - Accepts `S_unknown` as a 10x10 coarse field, smooths and upsamples it to the simulator grid, and adds it to `S_known`.
 
 The simulator currently ignores the `WD` and `WS` meteorological fields already present in `sim/govdata_1H_current.csv`. It must be extended to accept actual wind sequences, not only internally generated synthetic winds.
+
+The current simulator uses an edge-hold boundary condition. This is useful for legacy rollouts, but it is not the paper-faithful open-boundary response operator used to define `H_lag`. The IASA response-matrix path should therefore use a dedicated open-boundary response implementation, or explicitly label any PDE rollout response as `edge_hold_pde` until an open-boundary PDE mode exists.
 
 There are also `sim/polsim_adv_only.py` and `sim/polsim_diff_only.py` variants for ablation-style model comparisons. These match the old paper more than the new one.
 
@@ -362,11 +364,11 @@ theta_k(t) >= 0
 - Real imputed wind can be passed into the simulator without invoking synthetic `monsoon_wind_series`.
 - Legacy `S_unknown` data generation and calibration still import and run.
 
-### Task 5: Lagged response matrix builder
+### Task 5: Open-boundary lagged response matrix builder
 
 **Objective**
 
-Build the central object required by the new paper: `H_lag`.
+Build the central object required by the new paper: `H_lag`, using a paper-faithful open-boundary transport response rather than the legacy edge-hold simulator boundary.
 
 **Likely files**
 
@@ -376,7 +378,13 @@ Build the central object required by the new paper: `H_lag`.
 
 **Implementation details**
 
-- Implement a response-matrix builder that accepts:
+- Implement `model/iasa/response.py` as the owner of `H_lag` construction. Its primary public API should be:
+
+```text
+build_lagged_response_matrix(...) -> H_lag, metadata
+```
+
+- The builder should accept:
 
 ```text
 source_maps or source_matrix
@@ -387,21 +395,30 @@ grid
 params
 observer
 dt
+times
 steps
 save_every
 lag_window
-wind_provider or fixed Vx/Vy sequence
+wind_sequence_or_provider
+response_config
 initial_condition policy
 baseline/background policy
 ```
 
-- For each source group and temporal basis component, run a unit-response simulation and record its sensor trajectory.
+- The v1 response implementation should use the open-boundary puff/plume approximation described by the paper. It must be the default response implementation for paper-facing IASA results.
+- Open-boundary behavior is required:
+  - Emissions leaving the modeled domain are removed.
+  - Boundary exits are never reflected, wrapped, clamped, or renormalized.
+  - Unit source releases are transported through the supplied wind sequence and accumulated into sensor fingerprints over `lag_window`.
+  - Kernel or plume mass outside the domain is dropped, so in-domain mass is non-increasing under pure transport.
+- For each source group and temporal basis component, generate an open-boundary unit response and record its sensor trajectory.
 - Stack each `(source group, temporal basis component)` fingerprint into one column. Constant source activities are represented as the special case with one constant temporal basis per source.
 - Support response-matrix construction under:
-  - real imputed New Delhi wind
+  - city-level imputed New Delhi wind from the required ImputeFormer pipeline
   - single-direction synthetic wind
   - progressively more diverse synthetic wind regimes
   - fixed supplied `Vx/Vy` arrays
+  - later spatially varying wind without changing downstream diagnostics or fitting APIs
 - Produce:
 
 ```text
@@ -410,6 +427,9 @@ row_index metadata: sensor id, time index, lag policy
 source_names
 source_basis metadata
 wind metadata
+boundary_mode
+response_implementation
+dropped_mass summaries
 ```
 
 - Make baseline subtraction explicit. Recommended default:
@@ -418,18 +438,22 @@ wind metadata
 - Record the exact wind sequence used to build each `H_lag`.
 - For New Delhi, default to imputed government `WD/WS` converted to `Vx/Vy`.
 - For wind-diversity experiments, make the wind regime an explicit saved config dimension.
+- Do not silently reuse the current `sim/polsim.py` edge-hold rollout as the paper-facing `H_lag` generator. If PDE unit rollouts are retained as an auxiliary response mode, metadata must label them as `edge_hold_pde`; if an open-boundary PDE mode is added later, it must expose `boundary_mode="open"`.
 
 **Outputs and artifacts**
 
-- A reusable response-matrix construction API.
+- A reusable open-boundary response-matrix construction API.
 - Optional script to save `H_lag` and metadata to `data/` or `logs/iasa_*`.
 
 **Acceptance checks**
 
 - `H_lag.shape == (num_sensors * num_times, num_source_basis_columns)`.
-- One-hot source-basis coefficient prediction matches the corresponding simulator unit response after baseline subtraction.
+- A source or puff leaving the domain stops contributing after exit.
+- Total in-domain response mass is non-increasing under pure transport with no source reinjection.
+- No boundary reflection or wraparound signal appears at opposite edges.
+- One-hot source-basis coefficient prediction matches the corresponding open-boundary response column after baseline subtraction.
 - Repeated runs with the same real wind file or synthetic wind seed produce identical matrices.
-- The saved metadata is sufficient to map each fitted coefficient back to source name and temporal basis.
+- The saved metadata is sufficient to map each fitted coefficient back to source name and temporal basis, and to prove which boundary mode generated the matrix.
 
 ### Task 6: Background basis and projection
 
@@ -817,7 +841,15 @@ The implementation should add tests or smoke checks as the IASA modules are intr
 - Load government `WD`/`WS` and verify timestamps, station ids, missingness masks, and units are preserved.
 - Run wind imputation on a short window and verify imputed `WD`/`WS` contain no missing values.
 - Build a simulator grid and run a short inventory-activity rollout.
-- Construct a small `H_lag` with a reduced time horizon.
+- Construct a small open-boundary `H_lag` with a reduced time horizon.
+
+### Open-boundary response tests
+
+- With constant eastward wind, a source near the east outflow boundary should exit quickly and then produce no additional contribution.
+- With constant northward wind, an interior source should move toward the expected downwind sensors before leaving the domain.
+- Domain-exit mass should be reported and should never be renormalized back into the grid.
+- No reflected or wrapped signal should appear at the opposite domain edge after a puff exits.
+- Metadata for every saved response matrix should record `boundary_mode="open"` for the paper-facing response implementation, or `response_implementation="edge_hold_pde"` for any legacy PDE-response comparison.
 
 ### Shape and consistency tests
 
@@ -831,7 +863,7 @@ theta_hat_t.shape == (num_sources, num_times)
 Y_tilde.shape == (num_sensors * num_times,)
 ```
 
-- One-hot source-basis activity should match the corresponding response-matrix column after projection.
+- One-hot source-basis activity should match the corresponding open-boundary response column after projection and baseline subtraction.
 - Empty background basis should be a no-op.
 - `WD/WS -> Vx/Vy` conversion should pass cardinal-direction cases with the documented meteorological convention.
 
@@ -854,6 +886,7 @@ Y_tilde.shape == (num_sensors * num_times,)
 
 - Existing `S_unknown` pollution dataset generation should continue to import and run if backwards compatibility is retained.
 - Existing simulator APIs should not break without a deprecation note.
+- Existing edge-hold simulator output should never be mislabeled as the open-boundary response used for paper-facing IASA claims.
 
 ### End-to-end tests
 
@@ -864,7 +897,7 @@ load inventories -> impute/load wind -> build temporal bases -> build H_lag -> p
 ```
 
 - Save diagnostics and fit outputs.
-- Verify summary report contains source activities, residuals, singular values, visibility, coherence, and merge recommendations.
+- Verify summary report contains source activities, residuals, singular values, visibility, coherence, merge recommendations, and response boundary metadata.
 - Run a New Delhi smoke test that uses observed `pm25`, imputed `WD/WS`, named inventories, and temporal bases to emit an apportionment report without requiring ground-truth source activities.
 
 ## 5. Suggested Package Layout
@@ -877,7 +910,7 @@ model/iasa/
   sources.py        # optional if not placed under sim/
   wind.py           # WD/WS loading, imputed wind products, WindProvider
   activity.py       # source-specific temporal bases and theta_k(t)
-  response.py       # H_lag construction
+  response.py       # open-boundary H_lag construction
   background.py     # Q basis construction
   projection.py     # P_Q_perp application
   diagnostics.py    # rank, singular values, coherence, visibility, absorption
@@ -924,6 +957,8 @@ Use this path only if the FieldFormer/ImputeFormer implementation is not already
 - The first IASA version should use temporal-basis coefficients, not unconstrained `theta_k(t)` at every timestamp.
 - Traffic should have a diurnal activity basis, brick kilns should support seasonal or intermittent activity, and industry should support day-to-day or slowly varying activity.
 - The response-matrix builder should support fixed supplied `Vx/Vy` sequences, imputed New Delhi wind, and synthetic wind providers.
+- Paper-facing `H_lag` construction should prefer the dedicated open-boundary puff/plume response implementation over minimal reuse of the current edge-hold PDE simulator.
+- Spatially varying wind can be added after v1; a city-level imputed wind sequence is acceptable for the first open-boundary response path if the metadata documents that choice.
 - Background projection should be implemented before diagnostics and fitting, because the new paper treats `H_tilde` as the central object.
 - Merge recommendations should be reported as recommendations, not silently applied to source-level estimates.
 - Any generated large matrices or experiment outputs should go under `logs/` or a clearly named generated-data path, not be committed by default.
