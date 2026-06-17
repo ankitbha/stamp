@@ -455,6 +455,75 @@ dropped_mass summaries
 - Repeated runs with the same real wind file or synthetic wind seed produce identical matrices.
 - The saved metadata is sufficient to map each fitted coefficient back to source name and temporal basis, and to prove which boundary mode generated the matrix.
 
+**Sanity experiment requirements**
+
+Task 5 should also create the reusable tiny sanity runner that later tasks extend. Put it under `experiments/iasa_pol/sanity.py` or `scripts/run_iasa_sanity.py`, and support:
+
+```text
+--gate response
+--gate projection
+--gate diagnostics
+--gate fit
+--gate merge
+--gate all
+```
+
+The default sanity setup should be fully synthetic and should not require New Delhi data or ImputeFormer training:
+
+```text
+grid size: 16x16
+timesteps: 40 to 80
+lag window: 8 to 16
+source count: 3
+sensor count: 4
+seed: 123
+```
+
+Use grid coordinates consistent with the response builder. If `x` increases east and `y` increases north, use:
+
+```text
+sources:
+  west_source: compact one-cell or Gaussian source centered near (3, 8)
+  east_edge_source: compact one-cell or Gaussian source centered near (14, 8)
+  north_source: compact one-cell or Gaussian source centered near (8, 12)
+
+sensors:
+  west_sensor/upwind: near (1, 8)
+  east_sensor/downwind: near (12, 8)
+  north_sensor: near (8, 14)
+  south_sensor: near (8, 3)
+
+wind cases:
+  eastward: Vx > 0, Vy = 0 for all timesteps
+  northward: Vx = 0, Vy > 0 for all timesteps
+  two_direction: eastward first half, northward second half
+```
+
+The exact units and speeds should match the response implementation, but the puffs must visibly move across the small domain within the configured horizon. The runner should save compact JSON summaries and optional `.npz` arrays under `logs/iasa_sanity/` or `/tmp/iasa_sanity/`. Every gate should print `PASS` or raise a clear error naming the failed metric and expected range. Use the real public APIs rather than private helper-only shortcuts.
+
+Gate S1, completed as part of Task 5, builds `H_lag` for the shared toy geometry with constant temporal bases and open-boundary transport. It must verify:
+
+- `H_lag` is nonzero and has shape `(num_sensors * num_times, num_sources)`.
+- Metadata records `boundary_mode="open"`, wind sequence, lag policy, source columns, sensor/time row index, and dropped-mass summaries.
+- Under eastward wind, `west_source` produces a larger response norm at `east_sensor` than at `west_sensor`.
+- Under eastward wind, `east_edge_source` exits quickly and has less total in-domain response than `west_source`.
+- After `east_edge_source` exits, later contribution does not reappear at the west edge or opposite boundary.
+- Under northward wind, `north_sensor` response increases relative to the eastward case for at least one source placed south or interior.
+- `two_direction` fingerprints are not identical to single-direction fingerprints.
+- If pure transport with no source reinjection is exposed in metadata, total in-domain mass is non-increasing after each puff release leaves the source time.
+
+Suggested pass/fail tolerances:
+
+```text
+norm(H_lag) > 0
+downwind_norm > 2 * upwind_norm for the designed source/wind pair
+east_edge_total_mass < west_source_total_mass
+opposite_edge_late_signal <= 1e-6 or <= 1e-4 * source_column_norm
+max_abs(H_two_direction - H_eastward) > 1e-6
+```
+
+If the response approximation is intentionally diffuse, adjust only the ratio thresholds, not the qualitative checks.
+
 ### Task 6: Background basis and projection
 
 **Objective**
@@ -501,6 +570,33 @@ P_Q_perp X = X - Q (Q^+ X)
 - Projected columns are numerically orthogonal to `Q`.
 - With empty `Q`, projected outputs equal inputs.
 - With constant `Q`, a constant observation vector projects close to zero.
+
+**Sanity experiment requirements**
+
+Gate S2, completed as part of Task 6, extends the Task 5 sanity runner with `--gate projection`. Use the Task 5 toy `H_lag` and create:
+
+```text
+Y = H_lag c_true + Q beta
+c_true = [1.0, 0.5, 0.0]
+Q = per-sensor intercepts or one global constant plus one linear time trend
+```
+
+Project both `H_lag` and `Y` to produce `H_tilde` and `Y_tilde`. The gate must verify:
+
+- Empty `Q` returns unchanged `H_lag` and `Y`.
+- With nonempty `Q`, projected columns and projected observations are numerically orthogonal to `Q`.
+- The known background component `Q beta` is removed from `Y_tilde`.
+- Source columns are not accidentally erased in the normal background case.
+- In a deliberately over-flexible `Q` case that includes a source-like column, the affected source visibility drops and a warning or high absorption score is produced.
+
+Suggested pass/fail tolerances:
+
+```text
+||Q.T @ H_tilde||_max <= 1e-6 * max(1, ||H_lag||)
+||Q.T @ Y_tilde||_max <= 1e-6 * max(1, ||Y||)
+normal_projection_visibility_ratio >= 0.2 for every designed visible source
+overflexible_projection_visibility_ratio < normal_projection_visibility_ratio
+```
 
 ### Task 7: Identifiability diagnostics
 
@@ -551,6 +647,36 @@ or the complementary removed fraction, with naming made explicit.
 - Duplicate source columns yield high coherence and rank deficiency.
 - Orthogonal synthetic columns yield low coherence and stable rank.
 - Zero or near-zero source columns are flagged as weakly visible.
+
+**Sanity experiment requirements**
+
+Gate S3, completed as part of Task 7, extends the sanity runner with `--gate diagnostics`. Run diagnostics on:
+
+```text
+orthogonal_case: nearly orthogonal source columns
+duplicate_case: column 2 exactly equals column 1
+weak_case: one column has near-zero norm
+```
+
+Also run diagnostics on the response matrices from Gate S1 for eastward and two-direction wind. The gate must verify:
+
+- `orthogonal_case` has full rank, low maximum coherence, and finite condition number.
+- `duplicate_case` has rank deficiency and coherence close to 1 for the duplicated pair.
+- `weak_case` flags the near-zero source as weakly visible.
+- For the designed toy geometry, adding the second wind direction does not make identifiability worse by the reported metrics unless the summary explicitly explains the exception.
+- Diagnostics output includes rank, singular values, condition number, effective rank, visibility, pairwise coherence, background absorption if projection was used, and warning flags.
+
+Suggested pass/fail tolerances:
+
+```text
+duplicate_pair_coherence >= 0.999
+weak_column_visibility <= 1e-8 or weak_visibility_flag == true
+orthogonal_max_coherence <= 0.1
+two_direction_sigma_min >= eastward_sigma_min - 1e-8
+two_direction_max_coherence <= eastward_max_coherence + 1e-8
+```
+
+If the toy geometry does not satisfy the wind-diversity inequalities, redesign the sanity setup; do not silently weaken this gate.
 
 ### Task 8: IASA nonnegative fitting
 
@@ -616,6 +742,33 @@ solver metadata
 - Duplicate-column case reports unstable or non-unique activity split.
 - Nonnegativity is enforced in all solver paths.
 
+**Sanity experiment requirements**
+
+Gate S4, completed as part of Task 8, extends the sanity runner with `--gate fit`. Generate synthetic observations from known coefficients:
+
+```text
+Y = H_tilde c_true
+c_true = [1.5, 0.7, 0.0]
+```
+
+Run the nonnegative fitter. The gate must verify:
+
+- In the well-conditioned noiseless case, recovered coefficients match `c_true` within tight tolerance.
+- With small Gaussian noise, recovered coefficients remain close and residual norm is lower than the zero-coefficient baseline.
+- Nonnegativity is enforced for every solver path.
+- In a duplicate-column case, individual duplicate coefficients may be unstable, but their sum matches the true merged contribution.
+- In an ill-conditioned case, fit metadata includes a warning rather than presenting the result as fully stable.
+
+Suggested pass/fail tolerances:
+
+```text
+noiseless_relative_coefficient_error <= 1e-4
+noisy_relative_coefficient_error <= 0.1
+residual_norm < zero_model_residual_norm
+min(c_hat) >= -1e-8
+duplicate_pair_sum_error <= 1e-4 in noiseless duplicate case
+```
+
 ### Task 9: Merge recommendation system
 
 **Objective**
@@ -661,6 +814,49 @@ diagnostic values that triggered the merge
 - Identical source fingerprints are recommended for merge.
 - Clearly separated synthetic sources are not merged.
 - Weakly visible sources are flagged even if they do not form a high-coherence pair.
+
+**Sanity experiment requirements**
+
+Gate S5, completed as part of Task 9, extends the sanity runner with `--gate merge`. Use fingerprints and fits from the duplicate and separated cases. The gate must verify:
+
+- Duplicate fingerprints produce one merge recommendation containing exactly the duplicate source pair.
+- The merge reason includes the triggering diagnostic, such as high coherence or rank deficiency.
+- Clearly separated synthetic sources are not recommended for merge.
+- A weakly visible source is flagged even if it is not connected to a high-coherence pair.
+- Merged contribution summaries are computed and match the true total contribution in the duplicate synthetic case.
+
+Suggested pass/fail tolerances:
+
+```text
+duplicate_pair_in_same_merge_component == true
+separated_sources_merged == false
+weak_source_flagged == true
+merged_duplicate_total_error <= 1e-4 in noiseless case
+```
+
+Gate S6, also completed as part of Task 9 before Task 10 begins, is the minimal end-to-end IASA sanity run. It should be available as `--gate all` and run:
+
+```text
+build toy sources
+choose synthetic wind
+build H_lag
+build Q and project
+generate synthetic Y from known coefficients plus background
+run diagnostics
+fit coefficients
+recommend merges
+write summary
+```
+
+The end-to-end gate must verify:
+
+- The full toy pipeline runs from public APIs with one command.
+- The summary includes source names, `c_true`, `c_hat`, coefficient error, residual norm, rank, singular values, condition number, visibility, coherence, background absorption, merge recommendations, and response boundary metadata.
+- The well-conditioned case recovers source coefficients.
+- The duplicate-source case recommends a merge and reports stable merged contribution.
+- Generated artifacts are small and go to `logs/` or `/tmp`, not tracked source paths.
+
+Task 10 should not begin until Gates S1 through S6 pass, except when a gate is explicitly marked blocked with a documented implementation reason.
 
 ### Task 10: Controlled experiment suite
 
@@ -835,6 +1031,21 @@ Make the new workflow discoverable and separate it clearly from legacy STAMP/Sim
 
 The implementation should add tests or smoke checks as the IASA modules are introduced.
 
+In addition to code-level tests, Tasks 5 through 9 must run the tiny sanity experiment gates defined above. These gates are deliberately smaller than paper experiments: they should use synthetic sources, synthetic wind, short horizons, and known coefficients so failures identify conceptual or algorithmic mistakes early.
+
+Required sanity-gate ordering:
+
+```text
+Task 5 complete -> Gate S1 response sanity passes
+Task 6 complete -> Gate S2 projection sanity passes
+Task 7 complete -> Gate S3 diagnostic sanity passes
+Task 8 complete -> Gate S4 fitting sanity passes
+Task 9 complete -> Gate S5 merge sanity passes
+Before Task 10 -> Gate S6 minimal end-to-end IASA sanity passes
+```
+
+These sanity gates are not replacements for the unit tests below. Unit tests check local contracts; sanity gates check whether the assembled method behaves as intended on toy scientific cases.
+
 ### Smoke tests
 
 - Load source inventories and verify names, shapes, and aggregate compatibility.
@@ -968,7 +1179,7 @@ Use this path only if the FieldFormer/ImputeFormer implementation is not already
 
 ### Milestone A: Minimal IASA core
 
-Complete Tasks 1 through 8.
+Complete Tasks 1 through 8 and sanity Gates S1 through S4.
 
 Deliverable:
 
@@ -979,16 +1190,18 @@ Deliverable:
 - `H_lag` and `H_tilde` can be constructed.
 - Diagnostics run.
 - Nonnegative source-basis coefficients can be fit for one dataset.
+- Toy response, projection, diagnostics, and fitting sanity gates pass with saved summaries.
 
 ### Milestone B: Identifiable-resolution reporting
 
-Complete Task 9 and the single-run parts of Task 11.
+Complete Task 9, sanity Gates S5 and S6, and the single-run parts of Task 11.
 
 Deliverable:
 
 - Fit output includes diagnostics, uncertainty where available, source flags, and merge recommendations.
 - One command can run a minimal source-apportionment report.
 - New Delhi smoke run produces an apportionment report using imputed wind.
+- Toy merge and end-to-end IASA sanity gates pass before broad controlled experiments begin.
 
 ### Milestone C: Paper-style experiments
 
