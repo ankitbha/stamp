@@ -22,15 +22,25 @@ The supported runtime command pattern is:
 ```
 
 The smoke check verifies the runtime packages used by the pollution path:
-`numpy`, `torch`, `pandas`, `pykrige`, and optional `scipy`. It also imports
-`sim.polsim`, loads the pollution source maps, builds a 40x40 grid, and reports
-sensor metadata shapes without running a simulation.
+`numpy`, `torch`, `pandas`, `pykrige`, `einops`, and optional `scipy`. It also
+imports `sim.polsim`, loads the pollution source maps, builds a 40x40 grid,
+checks the 32-station New Delhi wind smoke window, asserts the cardinal
+`WD`/`WS` to transport-vector conversion, and reports sensor metadata shapes
+without running a simulation.
 
 ## New Delhi Wind Imputation
 
-Task 2 adds a FieldFormer ImputeFormer wind pipeline. The implementation copies
-the compact fixed-node ImputeFormer model into this repository and trains a
-fresh checkpoint on the local government wind observations.
+Task 2 adds a FieldFormer-style ImputeFormer wind pipeline. The local
+implementation is this repository's fixed-node ImputeFormer adapter in
+`model/imputation/imputeformer.py`; it trains a fresh checkpoint on the local
+government wind observations unless `--skip-train` is used with an existing
+compatible checkpoint.
+
+Saved wind products keep the legacy `*_mask` fields as valid/observed masks
+where `True` means a raw value was present. They also save explicit
+`*_missing_mask` fields, `vector_mask`, `vector_missing_mask`, and
+`mask_convention` metadata so downstream apportionment code does not need to
+guess mask polarity.
 
 For a quick smoke run, use a short time window and a tiny training budget:
 

@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SIM_DIR = REPO_ROOT / "sim"
@@ -32,6 +34,11 @@ def _import_status(module_names: tuple[str, ...]) -> dict[str, bool]:
 
 def _shape(value: Any) -> tuple[int, ...]:
     return tuple(int(x) for x in value.shape)
+
+
+def _assert_equal(name: str, actual: Any, expected: Any) -> None:
+    if actual != expected:
+        raise RuntimeError(f"{name}={actual!r}; expected {expected!r}")
 
 
 def main() -> None:
@@ -68,6 +75,23 @@ def main() -> None:
         pd.Series([0.0, 90.0, 180.0, 270.0]).to_numpy(),
         pd.Series([1.0, 1.0, 1.0, 1.0]).to_numpy(),
     )
+    expected_cardinal_ux = np.asarray([0.0, -1.0, 0.0, 1.0], dtype=np.float32)
+    expected_cardinal_vy = np.asarray([-1.0, 0.0, 1.0, 0.0], dtype=np.float32)
+
+    _assert_equal("S_known_shape", _shape(source), (40, 40))
+    _assert_equal("grid_shape", (grid.Nx, grid.Ny), (40, 40))
+    _assert_equal("grid_S_known_shape", _shape(grid.S_known), (40, 40))
+    _assert_equal("wind_smoke_station_count", len(wind.station_ids), 32)
+    _assert_equal("wind_smoke_timestamp_count", len(wind.timestamps), 24)
+    _assert_equal("wind_smoke_vector_shape", _shape(wind.observed_vectors), (32, 24, 2))
+    if wind.vector_mask.dtype != np.bool_:
+        raise RuntimeError("wind vector_mask must be boolean.")
+    if not wind.vector_mask.any():
+        raise RuntimeError("wind smoke window has no valid observed wind vectors.")
+    if not np.isfinite(wind.observed_vectors[wind.vector_mask]).all():
+        raise RuntimeError("wind smoke window contains non-finite observed vectors where vector_mask is valid.")
+    np.testing.assert_allclose(cardinal_ux, expected_cardinal_ux, atol=1e-6)
+    np.testing.assert_allclose(cardinal_vy, expected_cardinal_vy, atol=1e-6)
 
     print("# STAMP IASA runtime smoke check")
     print(f"repo_root: {REPO_ROOT}")
@@ -85,6 +109,7 @@ def main() -> None:
     print(f"wind_smoke_vector_shape: {_shape(wind.observed_vectors)}")
     print(f"wind_cardinal_U_x: {[round(float(x), 6) for x in cardinal_ux]}")
     print(f"wind_cardinal_V_y: {[round(float(y), 6) for y in cardinal_vy]}")
+    print("smoke_assertions: ok")
 
 
 if __name__ == "__main__":

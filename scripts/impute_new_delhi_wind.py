@@ -82,7 +82,7 @@ def main() -> None:
         info = train_wind_imputeformer(wind, args.checkpoint, cfg, device=args.device)
         print(f"[train] best_val_rmse={info['best_val_rmse']:.6f} checkpoint={info['checkpoint_path']}")
 
-    imputed = impute_wind_with_checkpoint(wind, args.checkpoint, cfg=cfg, device=args.device)
+    imputed = impute_wind_with_checkpoint(wind, args.checkpoint, cfg=None, device=args.device)
     save_imputed_wind_product(
         wind,
         imputed,
@@ -90,12 +90,17 @@ def main() -> None:
         imputation_config={
             **asdict(cfg),
             "checkpoint": str(args.checkpoint),
+            "checkpoint_config_source": "checkpoint",
             "start": args.start,
             "end": args.end,
             "skip_train": bool(args.skip_train),
         },
     )
-    assert_imputed_product_complete(args.output)
+    assert_imputed_product_complete(
+        args.output,
+        expected_station_count=len(wind.station_ids),
+        expected_timestamp_count=len(wind.timestamps),
+    )
     print(f"[save] {args.output}")
     print(f"[done] Vx/Vy length={imputed['Vx'].shape[0]}")
 

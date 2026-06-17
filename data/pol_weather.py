@@ -18,6 +18,19 @@ PUSA_SOURCES = ("Pusa_IMD", "Pusa_DPCC")
 PUSA_OUTPUT = "Pusa_averaged"
 DIRECTION_CONVENTION = "meteorological_from_degrees; transport vector points toward pollutant motion"
 DIRECTION_FORMULA = "U_x=-WS*sin(WD*pi/180); V_y=-WS*cos(WD*pi/180)"
+MASK_CONVENTION = (
+    "*_mask fields are valid/observed masks where True means source value is present; "
+    "*_missing_mask fields are the logical inverse."
+)
+IMPUTEFORMER_ARCHITECTURE_FIELDS = (
+    "windows",
+    "input_embedding_dim",
+    "learnable_embedding_dim",
+    "num_layers",
+    "num_temporal_heads",
+    "dim_proj",
+    "dropout",
+)
 
 
 @dataclass
@@ -226,12 +239,63 @@ def _make_model(num_nodes: int, windows: int, out_dim: int, cfg: ImputeFormerWin
     ).to(device)
 
 
+def _validate_training_config(cfg: ImputeFormerWindConfig) -> None:
+    if cfg.epochs < 1:
+        raise ValueError("ImputeFormer training requires epochs >= 1.")
+    if cfg.windows < 2:
+        raise ValueError("ImputeFormer training requires windows >= 2.")
+    if cfg.window_stride < 1:
+        raise ValueError("ImputeFormer training requires window_stride >= 1.")
+    if cfg.batch_size < 1 or cfg.val_batch_size < 1:
+        raise ValueError("ImputeFormer training requires positive batch sizes.")
+    if not (0.0 < cfg.mask_rate <= 1.0):
+        raise ValueError("ImputeFormer training requires 0 < mask_rate <= 1.")
+    if not (0.0 < cfg.train_frac <= 1.0):
+        raise ValueError("ImputeFormer training requires 0 < train_frac <= 1.")
+    if not (0.0 < cfg.val_frac <= 1.0):
+        raise ValueError("ImputeFormer training requires 0 < val_frac <= 1.")
+    if cfg.lr <= 0.0:
+        raise ValueError("ImputeFormer training requires lr > 0.")
+    if cfg.weight_decay < 0.0:
+        raise ValueError("ImputeFormer training requires weight_decay >= 0.")
+    if cfg.grad_clip <= 0.0:
+        raise ValueError("ImputeFormer training requires grad_clip > 0.")
+    if cfg.patience < 1:
+        raise ValueError("ImputeFormer training requires patience >= 1.")
+
+
+def _config_from_checkpoint(checkpoint: dict[str, Any], checkpoint_path: str | Path) -> ImputeFormerWindConfig:
+    config = checkpoint.get("config")
+    if not isinstance(config, dict):
+        raise ValueError(f"{checkpoint_path} is missing an ImputeFormer config.")
+    return ImputeFormerWindConfig(**config)
+
+
+def _assert_checkpoint_config_compatible(
+    checkpoint_cfg: ImputeFormerWindConfig,
+    override_cfg: ImputeFormerWindConfig,
+    checkpoint_path: str | Path,
+) -> None:
+    mismatches = [
+        name
+        for name in IMPUTEFORMER_ARCHITECTURE_FIELDS
+        if getattr(checkpoint_cfg, name) != getattr(override_cfg, name)
+    ]
+    if mismatches:
+        details = ", ".join(
+            f"{name}: checkpoint={getattr(checkpoint_cfg, name)!r} override={getattr(override_cfg, name)!r}"
+            for name in mismatches
+        )
+        raise ValueError(f"{checkpoint_path} ImputeFormer architecture mismatch: {details}")
+
+
 def train_wind_imputeformer(
     wind: WindData,
     checkpoint_path: str | Path,
     cfg: ImputeFormerWindConfig,
     device: str | torch.device = "cuda",
 ) -> dict[str, Any]:
+    _validate_training_config(cfg)
     _set_seed(cfg.seed)
     device_t = torch.device(device if str(device) != "cuda" or torch.cuda.is_available() else "cpu")
     values = wind.observed_vectors.astype(np.float32)
@@ -253,6 +317,10 @@ def train_wind_imputeformer(
     val_time_mask = np.zeros(n_times, dtype=bool)
     train_time_mask[:n_train] = True
     val_time_mask[val_start:val_end] = True
+    if not masks[:, train_time_mask, :].astype(bool).any():
+        raise ValueError("No observed wind vectors are available in the ImputeFormer training window.")
+    if not masks[:, val_time_mask, :].astype(bool).any():
+        raise ValueError("No observed wind vectors are available in the ImputeFormer validation window.")
 
     mean, std = _normalization(values, masks, train_time_mask)
     norm_values = ((values - mean) / std).astype(np.float32)
@@ -263,6 +331,7 @@ def train_wind_imputeformer(
     best = float("inf")
     best_state = None
     bad = 0
+    optimizer_steps = 0
 
     def batch_window(starts_np: np.ndarray, target_time_mask: np.ndarray, context_time_mask: np.ndarray):
         vals, ctx, tgt = [], [], []
@@ -277,8 +346,6 @@ def train_wind_imputeformer(
             torch.from_numpy(np.stack(tgt)).float().to(device_t),
         )
 
-    if cfg.epochs <= 0:
-        best_state = model.state_dict()
     for epoch in range(1, cfg.epochs + 1):
         model.train()
         rng = np.random.default_rng(cfg.seed + epoch)
@@ -311,6 +378,7 @@ def train_wind_imputeformer(
             opt.step()
             total += float(loss.item())
             batches += 1
+            optimizer_steps += 1
 
         model.eval()
         se = 0.0
@@ -322,6 +390,8 @@ def train_wind_imputeformer(
                 std_t = torch.from_numpy(std).float().to(device_t)
                 se += ((((pred - vals_t) * std_t) ** 2) * tgt_t).sum().item()
                 n += int(tgt_t.sum().item())
+        if n <= 0:
+            raise ValueError("ImputeFormer validation produced no held-out observed values.")
         rmse = math.sqrt(se / max(1, n))
         print(f"[epoch {epoch:03d}] train_mse={total / max(1, batches):.4e} val_rmse={rmse:.6f}")
         if rmse < best:
@@ -333,6 +403,10 @@ def train_wind_imputeformer(
             if bad >= cfg.patience:
                 break
 
+    if optimizer_steps <= 0:
+        raise ValueError("ImputeFormer training completed without any optimizer steps.")
+    if best_state is None or not math.isfinite(best):
+        raise ValueError("ImputeFormer training did not produce a finite validation checkpoint.")
     if best_state is not None:
         model.load_state_dict(best_state)
     checkpoint_path = Path(checkpoint_path)
@@ -364,15 +438,21 @@ def impute_wind_with_checkpoint(
     device: str | torch.device = "cuda",
 ) -> dict[str, np.ndarray]:
     checkpoint = torch.load(checkpoint_path, map_location="cpu")
-    ckpt_cfg = ImputeFormerWindConfig(**checkpoint.get("config", {})) if cfg is None else cfg
+    ckpt_cfg = _config_from_checkpoint(checkpoint, checkpoint_path)
+    if cfg is not None:
+        _assert_checkpoint_config_compatible(ckpt_cfg, cfg, checkpoint_path)
     meta = checkpoint.get("meta", {})
     mean = np.asarray(meta.get("val_mean", [0.0, 0.0]), dtype=np.float32)
     std = np.asarray(meta.get("val_std", [1.0, 1.0]), dtype=np.float32)
     values = wind.observed_vectors.astype(np.float32)
     masks = wind.vector_mask.astype(np.float32)
     n_sensors, n_times, out_dim = values.shape
-    windows = int(meta.get("windows", min(ckpt_cfg.windows, n_times)))
-    windows = min(windows, n_times)
+    windows = int(meta.get("windows", ckpt_cfg.windows))
+    if windows > n_times:
+        raise ValueError(
+            f"{checkpoint_path} was trained with windows={windows}, but the requested wind window "
+            f"has only {n_times} timestamps."
+        )
 
     device_t = torch.device(device if str(device) != "cuda" or torch.cuda.is_available() else "cpu")
     model = _make_model(n_sensors, windows, out_dim, ckpt_cfg, device_t)
@@ -428,6 +508,11 @@ def save_imputed_wind_product(
         raw_WD_mask=wind.raw_WD_mask,
         raw_WS_mask=wind.raw_WS_mask,
         raw_pm25_mask=wind.raw_pm25_mask,
+        raw_WD_missing_mask=~wind.raw_WD_mask,
+        raw_WS_missing_mask=~wind.raw_WS_mask,
+        raw_pm25_missing_mask=~wind.raw_pm25_mask,
+        vector_mask=wind.vector_mask,
+        vector_missing_mask=~wind.vector_mask,
         imputed_U_x=imputed["imputed_U_x"],
         imputed_V_y=imputed["imputed_V_y"],
         imputed_WD=imputed["imputed_WD"],
@@ -437,6 +522,7 @@ def save_imputed_wind_product(
         imputation_config=np.asarray([json.dumps(imputation_config, sort_keys=True)], dtype="<U4096"),
         direction_conversion_convention=np.asarray([DIRECTION_CONVENTION], dtype="<U128"),
         wind_vector_formula=np.asarray([DIRECTION_FORMULA], dtype="<U128"),
+        mask_convention=np.asarray([MASK_CONVENTION], dtype="<U256"),
         source_columns=np.asarray(wind.source_columns, dtype="<U16"),
         source_data_csv=np.asarray([wind.source_data_csv], dtype="<U256"),
         source_locations_csv=np.asarray([wind.source_locations_csv], dtype="<U256"),
@@ -445,11 +531,119 @@ def save_imputed_wind_product(
     )
 
 
-def assert_imputed_product_complete(path: str | Path) -> None:
-    data = np.load(path, allow_pickle=True)
-    required = ("imputed_U_x", "imputed_V_y", "imputed_WD", "imputed_WS", "Vx", "Vy")
-    for key in required:
-        arr = data[key]
-        if not np.isfinite(arr).all():
-            raise ValueError(f"{path} has non-finite values in {key}")
+def _require_keys(data: np.lib.npyio.NpzFile, path: str | Path, keys: tuple[str, ...]) -> None:
+    missing = [key for key in keys if key not in data.files]
+    if missing:
+        raise ValueError(f"{path} is missing required keys: {missing}")
 
+
+def _scalar_text(data: np.lib.npyio.NpzFile, key: str) -> str:
+    value = np.asarray(data[key]).reshape(-1)
+    return str(value[0]) if value.size else ""
+
+
+def assert_imputed_product_complete(
+    path: str | Path,
+    expected_station_count: int | None = None,
+    expected_timestamp_count: int | None = None,
+) -> None:
+    required = (
+        "timestamps",
+        "station_ids",
+        "sensors_xy",
+        "location_names",
+        "raw_WD",
+        "raw_WS",
+        "raw_pm25",
+        "raw_WD_mask",
+        "raw_WS_mask",
+        "raw_pm25_mask",
+        "raw_WD_missing_mask",
+        "raw_WS_missing_mask",
+        "raw_pm25_missing_mask",
+        "vector_mask",
+        "vector_missing_mask",
+        "imputed_U_x",
+        "imputed_V_y",
+        "imputed_WD",
+        "imputed_WS",
+        "Vx",
+        "Vy",
+        "imputation_config",
+        "direction_conversion_convention",
+        "wind_vector_formula",
+        "mask_convention",
+        "source_columns",
+        "source_data_csv",
+        "source_locations_csv",
+    )
+    with np.load(path, allow_pickle=False) as data:
+        _require_keys(data, path, required)
+        station_ids = np.asarray(data["station_ids"])
+        timestamps = np.asarray(data["timestamps"])
+        n_stations = int(station_ids.shape[0])
+        n_times = int(timestamps.shape[0])
+        if n_stations <= 0 or n_times <= 0:
+            raise ValueError(f"{path} must contain at least one station and one timestamp.")
+        if expected_station_count is not None and n_stations != int(expected_station_count):
+            raise ValueError(f"{path} has {n_stations} stations; expected {expected_station_count}.")
+        if expected_timestamp_count is not None and n_times != int(expected_timestamp_count):
+            raise ValueError(f"{path} has {n_times} timestamps; expected {expected_timestamp_count}.")
+
+        parsed_timestamps = pd.to_datetime(timestamps.astype(str))
+        if len(parsed_timestamps) > 1 and not parsed_timestamps.is_monotonic_increasing:
+            raise ValueError(f"{path} timestamps are not monotonically increasing.")
+        if len(np.unique(station_ids.astype(str))) != n_stations:
+            raise ValueError(f"{path} station_ids must be unique.")
+        if data["sensors_xy"].shape != (n_stations, 2):
+            raise ValueError(f"{path} sensors_xy must have shape {(n_stations, 2)}.")
+        if data["location_names"].shape != (n_stations,):
+            raise ValueError(f"{path} location_names must have shape {(n_stations,)}.")
+
+        matrix_shape = (n_stations, n_times)
+        vector_shape = (n_stations, n_times, 2)
+        for key in ("raw_WD", "raw_WS", "raw_pm25", "imputed_U_x", "imputed_V_y", "imputed_WD", "imputed_WS"):
+            if data[key].shape != matrix_shape:
+                raise ValueError(f"{path} {key} must have shape {matrix_shape}.")
+        for key in ("raw_WD_mask", "raw_WS_mask", "raw_pm25_mask", "raw_WD_missing_mask", "raw_WS_missing_mask", "raw_pm25_missing_mask"):
+            if data[key].shape != matrix_shape:
+                raise ValueError(f"{path} {key} must have shape {matrix_shape}.")
+            if data[key].dtype != np.bool_:
+                raise ValueError(f"{path} {key} must be a boolean mask.")
+        for key in ("vector_mask", "vector_missing_mask"):
+            if data[key].shape != vector_shape:
+                raise ValueError(f"{path} {key} must have shape {vector_shape}.")
+            if data[key].dtype != np.bool_:
+                raise ValueError(f"{path} {key} must be a boolean mask.")
+
+        mask_pairs = (
+            ("raw_WD_mask", "raw_WD_missing_mask"),
+            ("raw_WS_mask", "raw_WS_missing_mask"),
+            ("raw_pm25_mask", "raw_pm25_missing_mask"),
+            ("vector_mask", "vector_missing_mask"),
+        )
+        for valid_key, missing_key in mask_pairs:
+            if not np.array_equal(data[missing_key], ~data[valid_key]):
+                raise ValueError(f"{path} {missing_key} must be the logical inverse of {valid_key}.")
+        expected_vector_mask = np.repeat((data["raw_WD_mask"] & data["raw_WS_mask"])[..., None], 2, axis=-1)
+        if not np.array_equal(data["vector_mask"], expected_vector_mask):
+            raise ValueError(f"{path} vector_mask must match finite raw WD/WS observations.")
+
+        for key in ("imputed_U_x", "imputed_V_y", "imputed_WD", "imputed_WS", "Vx", "Vy"):
+            arr = data[key]
+            if not np.isfinite(arr).all():
+                raise ValueError(f"{path} has non-finite values in {key}.")
+        for key in ("Vx", "Vy"):
+            if data[key].shape != (n_times,):
+                raise ValueError(f"{path} {key} must have shape {(n_times,)}.")
+
+        source_columns = set(data["source_columns"].astype(str).tolist())
+        if not {"WD", "WS", "pm25"}.issubset(source_columns):
+            raise ValueError(f"{path} source_columns must include WD, WS, and pm25.")
+        for key in ("source_data_csv", "source_locations_csv", "direction_conversion_convention", "wind_vector_formula", "mask_convention"):
+            if not _scalar_text(data, key):
+                raise ValueError(f"{path} {key} metadata must be non-empty.")
+        try:
+            json.loads(_scalar_text(data, "imputation_config"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{path} imputation_config must contain JSON.") from exc
