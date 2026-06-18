@@ -12,7 +12,9 @@
 - The main empirical goal is to demonstrate non-identifiability and model indistinguishability, even when the forward simulator and optimizer are accurate.
 
 The old codebase reflected this framing through free spatial-field recovery, but
-that active support has been removed from the main implementation path.
+the active repository target is now IASA-only. Legacy files may be kept locally
+under `archive/` for reference, but they are not maintained, tested, or part of
+the repository contract.
 
 ### New paper: identifiability-aware source apportionment
 
@@ -52,6 +54,11 @@ The implementation needs these new capabilities:
 - Controlled experiments matching the new paper hypotheses, including the claim that wind diversity improves source separability.
 - Real New Delhi apportionment reporting from observed `pm25`.
 
+The active tree should contain only code needed for this IASA path. Old STAMP,
+SimGrad, heat, shallow-water, notebook, free-field pollution, and ablation files
+should be moved out of tracked active paths and into `archive/` if they are kept
+at all.
+
 ## 2. Current Codebase Map
 
 ### Pollution simulator
@@ -70,10 +77,22 @@ The implementation needs these new capabilities:
 
 The simulator currently ignores the `WD` and `WS` meteorological fields already present in `sim/govdata_1H_current.csv`. It must be extended to accept actual wind sequences, not only internally generated synthetic winds.
 
-The current simulator uses an edge-hold boundary condition. This is useful for legacy rollouts, but it is not the paper-faithful open-boundary response operator used to define `H_lag`. The IASA response-matrix path should therefore use a dedicated open-boundary response implementation, or explicitly label any PDE rollout response as `edge_hold_pde` until an open-boundary PDE mode exists.
+The current simulator uses an edge-hold boundary condition. This is not the
+paper-faithful open-boundary response operator used to define `H_lag`. The IASA
+response-matrix path should therefore use a dedicated open-boundary response
+implementation, or explicitly label any diagnostic-only PDE rollout response as
+`edge_hold_pde` until an open-boundary PDE mode exists.
 
-Old advection-only and diffusion-only pollution variants have been archived and
-are not part of the active IASA implementation path.
+Old advection-only and diffusion-only pollution variants belong under
+`archive/` if retained locally. They are not part of the active IASA
+implementation path and must not be imported by active code.
+
+### Archive policy
+
+Legacy files removed from active tracked paths should be moved under
+`archive/`. This directory is ignored, untracked, and non-contract: it may be
+absent from clean checkouts, and no active code, tests, roadmap tasks, README
+commands, or experiment scripts may import from or rely on it.
 
 ### Government weather data
 
@@ -106,13 +125,17 @@ response-matrix diagnostics, and identifiability predictions.
 
 ### Prior model
 
-`model/prior/*` implements MPRNN/STAMP prior training and graph utilities. This machinery is useful for old STAMP-style dynamics regularization, but it is mostly orthogonal to the new IASA formulation. It can remain as a legacy or optional comparison path.
+`model/prior/*` implements MPRNN/STAMP prior training and graph utilities. This
+machinery is orthogonal to the new IASA formulation. It should be moved to
+`archive/` unless a specific utility is reused through an explicit IASA module.
 
 ### Main mismatch
 
 The active codebase is being redirected toward estimating nonnegative activity
 coefficients over named inventories, using real or controlled wind sequences,
-and auditing whether those source groups are identifiable.
+and auditing whether those source groups are identifiable. A clean active tree
+means tracked imports pass, legacy references are gone, and a minimal IASA
+sanity path runs without depending on `archive/`.
 
 ## 3. Sequential Implementation Tasks
 
@@ -276,11 +299,55 @@ raw_metadata: dict
   source loader is maintained.
 - Traffic time-of-day maps are available for constructing a diurnal traffic basis.
 
+### Task 3A: Clean slate active tree
+
+**Objective**
+
+Make the tracked repository active tree IASA-only. Legacy files should be moved
+to ignored `archive/` if they are kept locally, and all tracked code should be
+free of dependencies on archived files.
+
+**Likely files**
+
+- `ROADMAP_STAMP_NEW.md`
+- `.gitignore`
+- Active package `__init__.py` files and tests
+- Optional: local-only files under `archive/`
+
+**Implementation details**
+
+- Move old heat/SWE modules, old pollution free-field generators, old
+  evaluators, old SimGrad tuners, old notebooks, old prior/calibrator code, and
+  old advection/diffusion ablation simulators out of active tracked paths and
+  into `archive/` if local reference copies are desired.
+- Treat `archive/` as ignored, untracked, non-contract storage. It may be absent
+  from a clean checkout.
+- Remove stale imports and active references to archived modules.
+- Active code must not import from `archive/`.
+- Active tests, README commands, roadmap tasks, and experiment scripts must not
+  require files under `archive/`.
+- Keep only IASA-relevant tracked modules plus the source inventories, government
+  data inputs, runtime scripts, and tests needed for the IASA workflow.
+
+**Outputs and artifacts**
+
+- Active tracked tree contains only IASA-relevant code and data inputs.
+- Optional local archive copies exist only under ignored `archive/`.
+
+**Acceptance checks**
+
+- All tracked Python modules import in the supported container runtime.
+- Repository searches show no active references to `S_unknown`,
+  `load_known_sources_40x40`, `rollout_pollution`, old heat/SWE APIs, old
+  SimGrad entrypoints, or `archive/` imports.
+- Source/weather tests and the minimal IASA sanity runner pass.
+
 ### Task 4: Simulator support for inventory activities and wind providers
 
 **Objective**
 
-Allow the simulator to build emissions from inventory activities and run under real or synthetic wind providers:
+Build the first IASA source-activity and wind-provider primitives, plus a
+minimal inventory-driven rollout or response input path:
 
 ```text
 S_total(t) = sum_k source_map_k * theta_k(t)
@@ -290,8 +357,9 @@ S_total(t) = sum_k source_map_k * theta_k(t)
 
 - `sim/polsim.py`
 - `sim/pol_sources.py`
-- Optional: `model/iasa/wind.py`
-- Optional: `model/iasa/activity.py`
+- New `model/iasa/wind.py`
+- New `model/iasa/activity.py`
+- Optional: `model/iasa/sources.py` if source helpers move out of `sim/`
 
 **Implementation details**
 
@@ -309,6 +377,8 @@ source_matrix
 combine_inventory_sources(source_maps, theta, nonnegative=True)
 ```
 
+- Add a source activity API that produces `theta_k(t)` from constant activities
+  or low-dimensional temporal bases.
 - Generalize from constant `theta` to time-varying nonnegative activity:
 
 ```text
@@ -321,8 +391,11 @@ theta_k(t) >= 0
   - brick kilns: seasonal/intermittent basis with sparse or blocky activation
   - industry: day-to-day or slowly varying activity basis
   - population-related activity: slowly varying or constant baseline unless a better proxy is available
-- Add a simulator path that accepts `source_theta`, `source_activities`, or temporal-basis coefficients.
-- If inventory activities are provided, use them as the source term at each simulator step.
+- Add a minimal IASA path that accepts `source_theta`, `source_activities`, or
+  temporal-basis coefficients and emits the source term needed by rollout or
+  response construction.
+- If inventory activities are provided, use them as the only named-inventory
+  source term at each step.
 - Do not model residual or unmodeled spatial mass as a learned free field.
   Unexplained broad components should be handled through the background basis
   and residual diagnostics.
@@ -339,7 +412,9 @@ theta_k(t) >= 0
 
 **Outputs and artifacts**
 
-- Simulator can run with named source activities.
+- IASA source-activity and wind-provider primitives exist under `model/iasa/`.
+- A minimal inventory-driven rollout or response-input path can construct
+  `S_total(t)` from named source activities.
 - Residual/background components remain separate from named inventory activities.
 
 **Acceptance checks**
@@ -354,7 +429,7 @@ theta_k(t) >= 0
 
 **Objective**
 
-Build the central object required by the new paper: `H_lag`, using a paper-faithful open-boundary transport response rather than the legacy edge-hold simulator boundary.
+Build the central object required by the new paper: `H_lag`, using a paper-faithful open-boundary transport response rather than the edge-hold simulator boundary.
 
 **Likely files**
 
@@ -969,7 +1044,8 @@ Produce:
 
 **Objective**
 
-Make the new workflow discoverable and separate it clearly from legacy STAMP/SimGrad workflows.
+Make the IASA workflow discoverable and make clear that archived legacy files
+are outside the active repository contract.
 
 **Likely files**
 
@@ -995,21 +1071,23 @@ Make the new workflow discoverable and separate it clearly from legacy STAMP/Sim
 10. Evaluate controlled experiments and real New Delhi apportionment.
 ```
 
-- Identify any remaining legacy comparison modules and mark them as optional
-  baselines only.
+- Document that legacy files live only in ignored `archive/` if kept locally,
+  and active code must not depend on them.
 - Include commands for a minimal end-to-end IASA run.
-- Keep old pollution calibration instructions if backwards compatibility remains.
+- Remove old pollution calibration, heat/SWE, SimGrad, and free-field recovery
+  instructions from active workflow documentation.
 
 **Outputs and artifacts**
 
 - Updated project documentation.
-- Clear distinction between old STAMP/SimGrad and new IASA paths.
+- Clear IASA-only active workflow documentation.
 
 **Acceptance checks**
 
 - A new contributor can follow documentation to run the minimal IASA pipeline.
 - Documentation names the expected runtime environment.
-- Legacy code is not presented as the main implementation of the new paper.
+- Documentation does not present archived legacy code as maintained, required,
+  or available in clean checkouts.
 
 ## 4. Test Plan
 
@@ -1032,12 +1110,17 @@ These sanity gates are not replacements for the unit tests below. Unit tests che
 
 ### Smoke tests
 
+- Verify all tracked Python modules import in the supported container runtime.
 - Load source inventories and verify names, shapes, crop metadata, and
   per-source normalization metadata.
 - Load government `WD`/`WS` and verify timestamps, station ids, missingness masks, and units are preserved.
 - Run wind imputation on a short window and verify imputed `WD`/`WS` contain no missing values.
-- Build a simulator grid and run a short inventory-activity rollout.
+- Build a simulator grid and construct a short inventory-activity source term.
 - Construct a small open-boundary `H_lag` with a reduced time horizon.
+- Search active tracked files and verify there are no imports from `archive/`.
+- Search active tracked files and verify stale legacy APIs such as `S_unknown`,
+  `load_known_sources_40x40`, `rollout_pollution`, old heat/SWE APIs, and old
+  SimGrad entrypoints are absent.
 
 ### Open-boundary response tests
 
@@ -1045,7 +1128,7 @@ These sanity gates are not replacements for the unit tests below. Unit tests che
 - With constant northward wind, an interior source should move toward the expected downwind sensors before leaving the domain.
 - Domain-exit mass should be reported and should never be renormalized back into the grid.
 - No reflected or wrapped signal should appear at the opposite domain edge after a puff exits.
-- Metadata for every saved response matrix should record `boundary_mode="open"` for the paper-facing response implementation, or `response_implementation="edge_hold_pde"` for any legacy PDE-response comparison.
+- Metadata for every saved response matrix should record `boundary_mode="open"` for the paper-facing response implementation, or `response_implementation="edge_hold_pde"` for any diagnostic-only non-open PDE response.
 
 ### Shape and consistency tests
 
@@ -1078,10 +1161,15 @@ Y_tilde.shape == (num_sensors * num_times,)
 - Preserve nonnegative estimates in both SciPy and PyTorch fallback solvers.
 - Flag instability in a high-coherence or rank-deficient case.
 
-### Regression tests
+### Clean-slate regression tests
 
-- Existing simulator APIs should not break without a deprecation note.
-- Existing edge-hold simulator output should never be mislabeled as the open-boundary response used for paper-facing IASA claims.
+- The active tree does not depend on ignored `archive/` files.
+- No tracked active module imports deleted legacy modules.
+- The minimal IASA sanity runner passes from a clean checkout where `archive/`
+  is absent.
+- Any diagnostic-only edge-hold PDE response must be explicitly labeled
+  `edge_hold_pde`; paper-facing response matrices must record
+  `boundary_mode="open"`.
 
 ### End-to-end tests
 
@@ -1097,12 +1185,13 @@ load inventories -> impute/load wind -> build temporal bases -> build H_lag -> p
 
 ## 5. Suggested Package Layout
 
-Add a focused IASA package instead of expanding the old calibrator scripts.
+Make `model/iasa/` the core implementation area instead of expanding old
+calibrator or simulator scripts.
 
 ```text
 model/iasa/
   __init__.py
-  sources.py        # optional if not placed under sim/
+  sources.py        # optional bridge from sim/pol_sources.py
   wind.py           # WD/WS loading, imputed wind products, WindProvider
   activity.py       # source-specific temporal bases and theta_k(t)
   response.py       # open-boundary H_lag construction
@@ -1124,6 +1213,9 @@ scripts/run_pol_iasa.py
 scripts/diagnose_pol_sources.py
 ```
 
+`data/pol_weather.py` may remain as a thin data-loading bridge if already
+present, but new wind-provider contracts should live in `model/iasa/wind.py`.
+
 Recommended experiment area:
 
 ```text
@@ -1143,10 +1235,15 @@ Use this path only if the FieldFormer/ImputeFormer implementation is not already
 
 ## 6. Defaults and Assumptions
 
-- The implementation target is the pollution/source-apportionment path.
-- Heat and shallow-water modules should remain untouched unless a shared utility naturally benefits them.
-- Removed free-field recovery workflows should not shape the IASA
-  source-inventory design.
+- The implementation target is an IASA-only pollution/source-apportionment
+  active tree.
+- Legacy STAMP, SimGrad, heat, shallow-water, free-field pollution, old ablation,
+  and notebook workflows are out of scope for active tracked code.
+- Removed legacy workflows should not shape the IASA source-inventory design.
+- `archive/` is ignored, untracked, non-contract, and may be absent from clean
+  checkouts.
+- Active code, tests, docs, and scripts must not import from or rely on
+  `archive/`.
 - Treat `sim/govdata_1H_current.csv` as the authoritative local New Delhi source for observed `pm25`, `WD`, and `WS`.
 - Use imputed real `WD/WS` as the default wind input for the New Delhi apportionment workflow.
 - Use synthetic wind providers for controlled identifiability experiments.
@@ -1164,17 +1261,21 @@ Use this path only if the FieldFormer/ImputeFormer implementation is not already
 
 ### Milestone A: Minimal IASA core
 
-Complete Tasks 1 through 8 and sanity Gates S1 through S4.
+Complete Tasks 1 through 8, including Task 3A, and sanity Gates S1 through S4.
 
 Deliverable:
 
+- Active tracked tree is IASA-only and does not depend on `archive/`.
 - Named inventories load.
 - New Delhi `WD/WS` can be loaded, imputed, and converted to `Vx/Vy`.
-- Inventory activity simulator path works.
+- Coherent `model/iasa/` skeleton exists for wind, activity, response,
+  projection, diagnostics, fitting, merging, and reporting.
+- Inventory activity source-term construction works.
 - Temporal activity bases can be generated.
 - `H_lag` and `H_tilde` can be constructed.
 - Diagnostics run.
 - Nonnegative source-basis coefficients can be fit for one dataset.
+- One tiny end-to-end IASA sanity run passes before broader experiments expand.
 - Toy response, projection, diagnostics, and fitting sanity gates pass with saved summaries.
 
 ### Milestone B: Identifiable-resolution reporting
@@ -1205,4 +1306,5 @@ Complete Task 12.
 Deliverable:
 
 - The README and docs identify the new IASA workflow as the main implementation of `STAMP_new.pdf`.
-- Legacy STAMP/SimGrad paths are documented as baselines or prior work.
+- Archive policy is documented as non-contract local reference storage only.
+- No README or roadmap command depends on archived legacy files.
