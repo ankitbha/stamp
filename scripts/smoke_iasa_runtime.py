@@ -94,8 +94,8 @@ def main() -> None:
     _assert_equal("grid_source_names", grid.source_names, expected_sources)
     _assert_equal("grid_source_maps_shape", _shape(grid.source_maps), (7, 40, 40))
     _assert_equal("grid_source_matrix_shape", _shape(grid.source_matrix), (1600, 7))
-    if grid.S_known is not None:
-        raise RuntimeError("IASA inventory grid should not populate aggregate S_known.")
+    if grid.source_metadata is None:
+        raise RuntimeError("IASA inventory grid must expose source metadata.")
     if inventory.raw_metadata.get("normalization") != "per_source_cropped_p99":
         raise RuntimeError("Expected per-source p99 normalization metadata.")
     if "traffic_06" not in inventory.raw_metadata.get("all_zero_sources", []):

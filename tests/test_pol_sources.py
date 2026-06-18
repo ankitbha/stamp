@@ -62,8 +62,9 @@ class PolSourceInventoryTests(unittest.TestCase):
             device="cpu",
             dtype=torch.float32,
         )
-        self.assertIsNone(empty_grid.S_known)
         self.assertIsNone(empty_grid.source_maps)
+        self.assertIsNone(empty_grid.source_matrix)
+        self.assertIsNone(empty_grid.source_names)
 
         grid = polsim.make_grid(
             Nx=40,
@@ -74,7 +75,6 @@ class PolSourceInventoryTests(unittest.TestCase):
             load_inventory=True,
         )
 
-        self.assertIsNone(grid.S_known)
         self.assertEqual(grid.source_names, list(SOURCE_NAMES))
         self.assertEqual(tuple(grid.source_maps.shape), (7, 40, 40))
         self.assertEqual(tuple(grid.source_matrix.shape), (1600, 7))

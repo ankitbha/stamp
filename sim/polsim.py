@@ -1,19 +1,12 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
-#!/usr/bin/env python
-# coding: utf-8
 """
 sim/polsim.py
 
 Differentiable (PyTorch) 2D advection-diffusion-source utilities for the
 STAMP / FieldFormer pollution case.
 
-This file is adapted from the FieldFormer data-generation script (pollution.py) but refactored
-into a reusable simulator module, similar in spirit to heatsim.py / swesim.py.
+This file is adapted from the FieldFormer data-generation script
+(`pollution.py`) and now keeps only the pollution utilities needed by the IASA
+inventory path.
 
 Core PDE form (in normalized coordinates x,y in [0,1]):
 
@@ -69,9 +62,6 @@ class PolGrid:
 
     # Base directory for pollution inputs (sources + govdata files)
     src_dir: str = "./"
-
-    # Deprecated placeholder only; source loaders no longer populate aggregate S_known.
-    S_known: Optional[torch.Tensor] = None
 
     # Named source inventories for the IASA path. These are not aggregated.
     source_names: Optional[list[str]] = None

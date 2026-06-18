@@ -28,6 +28,16 @@ checks the 32-station New Delhi wind smoke window, asserts the cardinal
 `WD`/`WS` to transport-vector conversion, and reports sensor metadata shapes
 without running a simulation.
 
+The minimal Task 3A IASA sanity runner checks the active inventory, weather, and
+simple nonnegative activity source-term path:
+
+```bash
+/share/apps/apptainer/bin/singularity exec --fakeroot \
+  --overlay overlay-25GB-500K.ext3:ro \
+  cuda11.8.86-cudnn8.7-devel-ubuntu22.04.2.sif \
+  /bin/bash -lc "source /ext3/env.sh && cd /scratch/ab9738/stamp && python3 scripts/run_iasa_sanity.py"
+```
+
 ## New Delhi Wind Imputation
 
 Task 2 adds a FieldFormer-style ImputeFormer wind pipeline. The local

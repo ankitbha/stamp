@@ -41,7 +41,7 @@ The goal becomes: estimate source activities and report the finest source groupi
 
 The implementation needs these new capabilities:
 
-- Separate named source inventories instead of one aggregate `S_known`.
+- Separate named source inventories instead of one aggregate source field.
 - Government `WD`/`WS` ingestion, missing-data imputation, and conversion to simulator-ready wind vectors.
 - A wind-provider interface that supports real imputed New Delhi wind and controlled synthetic wind regimes.
 - Source activity parameterization over inventory groups and temporal activity bases.
@@ -125,9 +125,9 @@ response-matrix diagnostics, and identifiability predictions.
 
 ### Prior model
 
-`model/prior/*` implements MPRNN/STAMP prior training and graph utilities. This
-machinery is orthogonal to the new IASA formulation. It should be moved to
-`archive/` unless a specific utility is reused through an explicit IASA module.
+The old dynamics-prior training machinery is orthogonal to the new IASA
+formulation and belongs outside the tracked active tree unless a specific
+utility is reused through an explicit IASA module.
 
 ### Main mismatch
 
@@ -243,8 +243,8 @@ direction_conversion_convention
 
 **Objective**
 
-Expose separate named source inventories without directly aggregating them into a
-single `S_known` field. The proxy maps should remain distinct because their raw
+Expose separate named source inventories without directly aggregating them into
+a single source field. The proxy maps should remain distinct because their raw
 scales are not reliably comparable across source categories.
 
 **Likely files**
@@ -295,8 +295,8 @@ raw_metadata: dict
 **Acceptance checks**
 
 - New source loader returns exactly aligned 40x40 source maps.
-- Source maps are not collapsed into an aggregate `S_known`, and no aggregate
-  source loader is maintained.
+- Source maps are not collapsed into an aggregate field, and no aggregate source
+  loader is maintained.
 - Traffic time-of-day maps are available for constructing a diurnal traffic basis.
 
 ### Task 3A: Clean slate active tree
@@ -328,19 +328,26 @@ free of dependencies on archived files.
   require files under `archive/`.
 - Keep only IASA-relevant tracked modules plus the source inventories, government
   data inputs, runtime scripts, and tests needed for the IASA workflow.
+- Add `scripts/run_iasa_sanity.py` as the minimal Task 3A IASA sanity runner.
+  At this stage it should validate the active inventory, weather, and simple
+  nonnegative activity source-term path. The later `H_lag`, projection,
+  diagnostics, fit, and merge gates are added by Tasks 5 through 9.
 
 **Outputs and artifacts**
 
 - Active tracked tree contains only IASA-relevant code and data inputs.
 - Optional local archive copies exist only under ignored `archive/`.
+- `scripts/run_iasa_sanity.py` provides a concrete minimal IASA sanity command
+  for the current active-tree stage.
 
 **Acceptance checks**
 
 - All tracked Python modules import in the supported container runtime.
-- Repository searches show no active references to `S_unknown`,
-  `load_known_sources_40x40`, `rollout_pollution`, old heat/SWE APIs, old
-  SimGrad entrypoints, or `archive/` imports.
-- Source/weather tests and the minimal IASA sanity runner pass.
+- Repository searches show no active references to retired free-field source
+  APIs, old non-pollution simulator APIs, old SimGrad entrypoints, or imports
+  from local archive storage.
+- Source/weather tests, `scripts/smoke_iasa_runtime.py`, and
+  `scripts/run_iasa_sanity.py` pass.
 
 ### Task 4: Simulator support for inventory activities and wind providers
 
@@ -1118,9 +1125,8 @@ These sanity gates are not replacements for the unit tests below. Unit tests che
 - Build a simulator grid and construct a short inventory-activity source term.
 - Construct a small open-boundary `H_lag` with a reduced time horizon.
 - Search active tracked files and verify there are no imports from `archive/`.
-- Search active tracked files and verify stale legacy APIs such as `S_unknown`,
-  `load_known_sources_40x40`, `rollout_pollution`, old heat/SWE APIs, and old
-  SimGrad entrypoints are absent.
+- Search active tracked files and verify stale legacy free-field source APIs,
+  old non-pollution simulator APIs, and old SimGrad entrypoints are absent.
 
 ### Open-boundary response tests
 
