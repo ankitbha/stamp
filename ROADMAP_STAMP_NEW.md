@@ -386,6 +386,8 @@ combine_inventory_sources(source_maps, theta, nonnegative=True)
 
 - Add a source activity API that produces `theta_k(t)` from constant activities
   or low-dimensional temporal bases.
+- Add a temporal-basis coefficient API where a basis matrix `[T, B]` and
+  source coefficients `[K, B]` produce `theta: [T, K]`.
 - Generalize from constant `theta` to time-varying nonnegative activity:
 
 ```text
@@ -396,8 +398,14 @@ theta_k(t) >= 0
 - Add source-specific activity defaults:
   - traffic: diurnal basis or fixed hourly profiles informed by `traffic_00`, `traffic_06`, `traffic_12`, and `traffic_18`
   - brick kilns: seasonal/intermittent basis with sparse or blocky activation
-  - industry: day-to-day or slowly varying activity basis
-  - population-related activity: slowly varying or constant baseline unless a better proxy is available
+  - industry: day-heavy diurnal profile with optional spatial operating-fraction
+    metadata; some fraction may represent 24/7 industries while the remainder
+    follows daytime-only operation
+  - population-related activity: baseline plus morning, afternoon, and evening
+    cooking-related peaks
+- For Task 4 v1, industry spatial sampling is represented as metadata and a
+  mixed temporal profile, not as mandatory source-map splitting. True spatial
+  splitting remains optional and should not block this task.
 - Add a minimal IASA path that accepts `source_theta`, `source_activities`, or
   temporal-basis coefficients and emits the source term needed by rollout or
   response construction.
@@ -415,11 +423,16 @@ theta_k(t) >= 0
   - `ar1_synthetic`
   - `multi_direction_synthetic`
 - For the real New Delhi workflow, use imputed government wind as the default. Synthetic wind providers should be used for controlled identifiability experiments.
+- The `real_imputed_new_delhi` provider must consume the saved imputed wind
+  product from Task 2 (`Vx`/`Vy` in the `.npz`). If observed-only fallback is
+  allowed for smoke checks, it must use a different provider label.
 - Save source names, activity time series, wind source, and exact `Vx/Vy` sequences in simulator outputs where useful.
 
 **Outputs and artifacts**
 
-- IASA source-activity and wind-provider primitives exist under `model/iasa/`.
+- IASA source-activity and wind-provider primitives exist under `model/iasa/`,
+  including `ActivityProfile`, `WindSequence`, and inventory source-term
+  construction.
 - A minimal inventory-driven rollout or response-input path can construct
   `S_total(t)` from named source activities.
 - Residual/background components remain separate from named inventory activities.
@@ -431,6 +444,11 @@ theta_k(t) >= 0
 - A one-basis temporal coefficient produces the expected `theta_k(t)` profile.
 - Real imputed wind can be passed into the simulator without invoking synthetic `monsoon_wind_series`.
 - Inventory-activity runs do not require a learned free spatial field.
+- Industry default activity has higher daytime than nighttime activity.
+- Population default activity has local peaks near morning, afternoon, and
+  evening cooking windows.
+- Activity metadata records source-default assumptions, the industry operating
+  fraction, and the seed used for deterministic proxy profiles.
 
 ### Task 5: Open-boundary lagged response matrix builder
 
