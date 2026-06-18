@@ -468,13 +468,13 @@ def compute_total_objective(
     cfg: ObjectiveConfig,
     sigma: Optional[Tensor] = None,     # [S] broadcastable
     mask: Optional[Tensor] = None,      # [S,T]
-    reg_field: Optional[Tensor] = None, # [H,W] or [B,H,W] to regularize (e.g., S_unknown)
+    reg_field: Optional[Tensor] = None, # [H,W] or [B,H,W] to regularize
     reg_tensor: Optional[Tensor] = None,# any tensor for L2/box if needed
 ) -> Tuple[Tensor, Dict[str, float]]:
     """
     Compute total loss and a dict of scalars for logging.
 
-    reg_field: a 2D field regularized with TV/Laplacian (e.g., unknown sources)
+    reg_field: a 2D field regularized with TV/Laplacian
     reg_tensor: used for L2 and/or box penalties (can be same as reg_field)
     """
     logs: Dict[str, float] = {}

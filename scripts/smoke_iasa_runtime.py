@@ -56,7 +56,6 @@ def main() -> None:
         Nx=40,
         Ny=40,
         src_dir=str(SIM_DIR),
-        load_sources=False,
         load_inventory=True,
     )
 

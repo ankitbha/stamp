@@ -11,7 +11,8 @@
 - Distinct PDE models can collapse in observation space; in particular, advection-diffusion can become observationally close to pure advection under sparse and spatially isolated sensing.
 - The main empirical goal is to demonstrate non-identifiability and model indistinguishability, even when the forward simulator and optimizer are accurate.
 
-The old codebase reflects this framing. The pollution path simulates advection-diffusion dynamics with an aggregate known source plus a learnable coarse unknown source field. Calibration is done by optimizing that field through the differentiable simulator and then evaluating whether the inferred field matches ground truth.
+The old codebase reflected this framing through free spatial-field recovery, but
+that active support has been removed from the main implementation path.
 
 ### New paper: identifiability-aware source apportionment
 
@@ -55,25 +56,24 @@ The implementation needs these new capabilities:
 
 ### Pollution simulator
 
-`sim/polsim.py` is the main differentiable pollution simulator. It currently:
+`sim/polsim.py` is the active pollution utility module. It currently:
 
-- Loads seven pollution intensity maps.
-- Aggregates them into one normalized `S_known` field:
+- Loads seven pollution intensity maps as separate named inventories:
   - brick kilns
   - industries
   - population density
-  - traffic at 00, 06, 12, and 18 hours, averaged into one traffic field
+  - traffic at 00, 06, 12, and 18 hours
 - Crops the 80x80 source maps to the 40x40 simulation domain.
+- Records per-source normalization metadata without aggregating the maps.
 - Builds an initial condition from government sensor data through kriging.
 - Generates a monsoon-like synthetic wind series.
-- Evolves a 2D advection-diffusion-source PDE.
-- Accepts `S_unknown` as a 10x10 coarse field, smooths and upsamples it to the simulator grid, and adds it to `S_known`.
 
 The simulator currently ignores the `WD` and `WS` meteorological fields already present in `sim/govdata_1H_current.csv`. It must be extended to accept actual wind sequences, not only internally generated synthetic winds.
 
 The current simulator uses an edge-hold boundary condition. This is useful for legacy rollouts, but it is not the paper-faithful open-boundary response operator used to define `H_lag`. The IASA response-matrix path should therefore use a dedicated open-boundary response implementation, or explicitly label any PDE rollout response as `edge_hold_pde` until an open-boundary PDE mode exists.
 
-There are also `sim/polsim_adv_only.py` and `sim/polsim_diff_only.py` variants for ablation-style model comparisons. These match the old paper more than the new one.
+Old advection-only and diffusion-only pollution variants have been archived and
+are not part of the active IASA implementation path.
 
 ### Government weather data
 
@@ -89,41 +89,20 @@ There are references to FieldFormer-style data generation in the repository, but
 
 ### Data generation
 
-`data/poldata.py` currently generates a dataset by:
-
-- Creating a 40x40 pollution grid.
-- Loading the aggregate known source.
-- Generating one synthetic 10x10 unknown source.
-- Scaling the unknown source relative to the aggregate known source.
-- Running the simulator.
-- Sampling fixed government sensor locations.
-- Saving `sensor_clean`, `sensor_noisy`, `S_known`, `S_unknown_coarse`, and `S_unknown_fine`.
-
-This dataset supports free-field source recovery, not source apportionment over named inventories.
+The old pollution free-field dataset generator has been removed from the active
+tree. New data generation should be inventory-activity based.
 
 ### Calibration
 
-`model/calibrator/tuner_pol_simgrad.py` currently:
-
-- Loads the pollution dataset.
-- Builds the simulator and sensor observer.
-- Creates a learnable `S_unknown` field.
-- Optimizes the unknown field through the differentiable simulator.
-- Optionally adds a frozen MPRNN/STAMP dynamics loss.
-- Saves best calibration outputs.
-
-This is a gradient-through-simulator inverse solver. It is not the linear or constrained source-activity fitting pipeline described in the new paper.
+The old pollution SimGrad tuner has been removed from the active tree. New
+calibration should estimate nonnegative source-activity coefficients over named
+inventories.
 
 ### Evaluation
 
-`evaluation/eval_pol.py` currently:
-
-- Loads a predicted unknown source field.
-- Runs the simulator using that predicted field.
-- Compares predicted and observed sensor trajectories.
-- Computes spatial error and correlation metrics against `S_unknown_coarse`.
-
-The new paper needs evaluation over source activities, merged groups, response-matrix diagnostics, and identifiability predictions.
+The old pollution free-field evaluator has been removed from the active tree.
+The new paper needs evaluation over source activities, merged groups,
+response-matrix diagnostics, and identifiability predictions.
 
 ### Prior model
 
@@ -131,7 +110,9 @@ The new paper needs evaluation over source activities, merged groups, response-m
 
 ### Main mismatch
 
-The current codebase optimizes a spatial unknown source field using synthetic wind. The new paper requires estimating nonnegative activity coefficients over named inventories, using real or controlled wind sequences, and auditing whether those source groups are identifiable. The implementation should therefore add an IASA path rather than trying to force the existing `S_unknown` calibrator to serve as the main method.
+The active codebase is being redirected toward estimating nonnegative activity
+coefficients over named inventories, using real or controlled wind sequences,
+and auditing whether those source groups are identifiable.
 
 ## 3. Sequential Implementation Tasks
 
@@ -246,8 +227,7 @@ scales are not reliably comparable across source categories.
 **Likely files**
 
 - `sim/polsim.py`
-- `data/poldata.py`
-- Optional: new `sim/pol_sources.py`
+- `sim/pol_sources.py`
 
 **Implementation details**
 
@@ -264,7 +244,8 @@ traffic_12
 traffic_18
 ```
 
-- Do not sum source categories into one aggregate source in the new IASA path.
+- Do not sum source categories into one aggregate source in any source-loading
+  path.
 - Preserve the four time-of-day traffic maps (`traffic_00`, `traffic_06`, `traffic_12`, `traffic_18`) for the traffic diurnal activity basis.
 - Preserve the existing crop `(21:61, 16:56)`.
 - Do not apply the old shared aggregate percentile-99 normalization to the
@@ -291,7 +272,8 @@ raw_metadata: dict
 **Acceptance checks**
 
 - New source loader returns exactly aligned 40x40 source maps.
-- Source maps are not collapsed into an aggregate `S_known` for the new IASA path.
+- Source maps are not collapsed into an aggregate `S_known`, and no aggregate
+  source loader is maintained.
 - Traffic time-of-day maps are available for constructing a diurnal traffic basis.
 
 ### Task 4: Simulator support for inventory activities and wind providers
@@ -307,10 +289,9 @@ S_total(t) = sum_k source_map_k * theta_k(t)
 **Likely files**
 
 - `sim/polsim.py`
-- Optional: `sim/pol_sources.py`
+- `sim/pol_sources.py`
 - Optional: `model/iasa/wind.py`
 - Optional: `model/iasa/activity.py`
-- Optional: `data/poldata.py`
 
 **Implementation details**
 
@@ -342,9 +323,9 @@ theta_k(t) >= 0
   - population-related activity: slowly varying or constant baseline unless a better proxy is available
 - Add a simulator path that accepts `source_theta`, `source_activities`, or temporal-basis coefficients.
 - If inventory activities are provided, use them as the source term at each simulator step.
-- Do not model residual or unknown spatial mass as a learned `S_unknown` field in
-  the IASA path. Unexplained broad components should be handled through the
-  background basis and residual diagnostics.
+- Do not model residual or unmodeled spatial mass as a learned free field.
+  Unexplained broad components should be handled through the background basis
+  and residual diagnostics.
 - Clamp or validate nonnegative activities.
 - Add a `WindProvider` interface or equivalent input contract supporting:
   - `real_imputed_new_delhi`
@@ -367,7 +348,7 @@ theta_k(t) >= 0
 - A one-hot source activity activates exactly one source group.
 - A one-basis temporal coefficient produces the expected `theta_k(t)` profile.
 - Real imputed wind can be passed into the simulator without invoking synthetic `monsoon_wind_series`.
-- Inventory-activity runs do not require a learned `S_unknown` field.
+- Inventory-activity runs do not require a learned free spatial field.
 
 ### Task 5: Open-boundary lagged response matrix builder
 
@@ -873,8 +854,8 @@ Rework experiments around the hypotheses in the new paper.
 
 - New `experiments/iasa_pol/`
 - New scripts under `scripts/` or `experiments/iasa_pol/`
-- Updates to `data/poldata.py` or new `data/poldata_iasa.py`
-- Updates to `evaluation/eval_pol.py` or new `evaluation/eval_pol_iasa.py`
+- New IASA data loading utilities if experiment-specific loaders are needed
+- New IASA evaluation utilities if experiment-specific metrics are needed
 
 **Implementation details**
 
@@ -1014,10 +995,8 @@ Make the new workflow discoverable and separate it clearly from legacy STAMP/Sim
 10. Evaluate controlled experiments and real New Delhi apportionment.
 ```
 
-- Identify legacy modules:
-  - `model/calibrator/tuner_pol_simgrad.py`
-  - `archive/tuner_pol_stamp.py`
-  - MPRNN prior code where used only for optional comparison
+- Identify any remaining legacy comparison modules and mark them as optional
+  baselines only.
 - Include commands for a minimal end-to-end IASA run.
 - Keep old pollution calibration instructions if backwards compatibility remains.
 
@@ -1166,8 +1145,8 @@ Use this path only if the FieldFormer/ImputeFormer implementation is not already
 
 - The implementation target is the pollution/source-apportionment path.
 - Heat and shallow-water modules should remain untouched unless a shared utility naturally benefits them.
-- The current free-field unknown-source workflow is legacy and should not shape
-  the IASA source-inventory design.
+- Removed free-field recovery workflows should not shape the IASA
+  source-inventory design.
 - Treat `sim/govdata_1H_current.csv` as the authoritative local New Delhi source for observed `pm25`, `WD`, and `WS`.
 - Use imputed real `WD/WS` as the default wind input for the New Delhi apportionment workflow.
 - Use synthetic wind providers for controlled identifiability experiments.

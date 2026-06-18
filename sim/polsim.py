@@ -9,22 +9,20 @@
 """
 sim/polsim.py
 
-Differentiable (PyTorch) 2D advection–diffusion–source simulator for the STAMP / FieldFormer
-pollution case.
+Differentiable (PyTorch) 2D advection-diffusion-source utilities for the
+STAMP / FieldFormer pollution case.
 
 This file is adapted from the FieldFormer data-generation script (pollution.py) but refactored
 into a reusable simulator module, similar in spirit to heatsim.py / swesim.py.
 
-Core PDE (in normalized coordinates x,y \in [0,1]):
+Core PDE form (in normalized coordinates x,y in [0,1]):
 
-    ∂_t U = - Vx(t) ∂_x U - Vy(t) ∂_y U  +  k ΔU  +  S_known(x,y) + S_unknown(x,y)
+    dU/dt = - Vx(t) dU/dx - Vy(t) dU/dy + k Laplacian(U) + S(x,y,t)
 
 - U(x,y,t): pollutant concentration (normalized)
 - Vx(t), Vy(t): time-varying (monsoon-like) wind components
 - k: diffusivity
-- S_known: static known sources loaded from *.npy intensity maps and cropped to 40x40
-- S_unknown: a 10x10 coarse matrix (optionally batched) representing unknown sources to infer;
-            it is smoothed and upsampled to 40x40 internally before use
+- S(x,y,t): explicit source term supplied by future inventory-activity paths
 
 Numerics:
 - Upwind first-order for advection
@@ -36,18 +34,17 @@ Numerics:
 
 Notes:
 - This module assumes the intensity *.npy files are available in the same folder at runtime.
-- All operations are implemented in PyTorch to allow gradients w.r.t. S_unknown.
+- Source inventory loading is handled without aggregating source categories.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Tuple, Literal
+from typing import Any, Dict, Optional, Tuple
 
 import math
 import numpy as np
 import torch
-import torch.nn.functional as F
 
 from sim.pol_sources import PolSourceInventory, load_pol_source_inventory
 
@@ -73,8 +70,7 @@ class PolGrid:
     # Base directory for pollution inputs (sources + govdata files)
     src_dir: str = "./"
 
-    # Known sources (normalized) on the simulation grid [Nx,Ny]
-    # Legacy aggregate source for the old S_known + S_unknown workflow.
+    # Deprecated placeholder only; source loaders no longer populate aggregate S_known.
     S_known: Optional[torch.Tensor] = None
 
     # Named source inventories for the IASA path. These are not aggregated.
@@ -111,68 +107,8 @@ class PolParams:
 
 
 # =============================================================================
-# Sources I/O (keep this part aligned with pollution.py)
+# Sources I/O
 # =============================================================================
-
-def load_known_sources_40x40(
-    src_dir: str = "./",
-    dtype: np.dtype = np.float32,
-    device: torch.device | str = "cpu",
-) -> Tuple[torch.Tensor, Dict[str, np.ndarray]]:
-    """
-    Legacy aggregate source loader for the old S_known + S_unknown workflow.
-
-    This sums source categories before applying one shared aggregate p99 scale.
-    Do not use this as the IASA source-inventory API; use
-    sim.pol_sources.load_pol_source_inventory instead.
-
-    Files expected in src_dir:
-      - brick_kilns_intensity_80x80.npy
-      - industries_intensity_80x80.npy
-      - population_density_intensity_80x80.npy
-      - traffic_00_intensity_80x80.npy
-      - traffic_06_intensity_80x80.npy
-      - traffic_12_intensity_80x80.npy
-      - traffic_18_intensity_80x80.npy
-
-    Returns:
-      S_norm_torch: [40,40] torch tensor, percentile-99 normalized (like pollution.py)
-      raw: dict of raw numpy arrays (useful for debugging)
-    """
-    src_dir = src_dir if src_dir.endswith("/") else (src_dir + "/")
-
-    brick_kilns = np.load(src_dir + "brick_kilns_intensity_80x80.npy").astype(dtype, copy=False)
-    industries = np.load(src_dir + "industries_intensity_80x80.npy").astype(dtype, copy=False)
-    population_density = np.load(src_dir + "population_density_intensity_80x80.npy").astype(dtype, copy=False)
-    traffic_00 = np.load(src_dir + "traffic_00_intensity_80x80.npy").astype(dtype, copy=False)
-    traffic_06 = np.load(src_dir + "traffic_06_intensity_80x80.npy").astype(dtype, copy=False)
-    traffic_12 = np.load(src_dir + "traffic_12_intensity_80x80.npy").astype(dtype, copy=False)
-    traffic_18 = np.load(src_dir + "traffic_18_intensity_80x80.npy").astype(dtype, copy=False)
-
-    traffic = (traffic_00 + traffic_06 + traffic_12 + traffic_18) / 4.0
-    known_source_full = brick_kilns + industries + population_density + traffic
-
-    # Match the exact crop in pollution.py -> 40x40
-    known_source = known_source_full[21:61, 16:56]
-    S_scale = np.percentile(known_source, 99)
-    S_norm = (known_source / (S_scale + 1e-12)).astype(dtype, copy=False)
-
-    S_norm_torch = torch.as_tensor(S_norm, device=torch.device(device), dtype=torch.float32)
-
-    raw = {
-        "brick_kilns": brick_kilns,
-        "industries": industries,
-        "population_density": population_density,
-        "traffic_00": traffic_00,
-        "traffic_06": traffic_06,
-        "traffic_12": traffic_12,
-        "traffic_18": traffic_18,
-        "known_source_full": known_source_full,
-        "known_source_cropped": known_source,
-        "S_scale_p99": np.array([S_scale], dtype=np.float32),
-    }
-    return S_norm_torch, raw
-
 
 def make_grid(
     Nx: int = 40,
@@ -182,20 +118,15 @@ def make_grid(
     src_dir: str = "./",
     device: torch.device | str = "cpu",
     dtype: torch.dtype = torch.float32,
-    load_sources: bool = True,
     load_inventory: bool = False,
 ) -> PolGrid:
-    """Create grid (x,y,dx,dy) and optionally load legacy or named sources."""
+    """Create grid (x,y,dx,dy) and optionally load named source inventories."""
     x = torch.linspace(0.0, float(Lx), int(Nx), device=torch.device(device), dtype=dtype)
     y = torch.linspace(0.0, float(Ly), int(Ny), device=torch.device(device), dtype=dtype)
     dx = float(Lx) / float(Nx - 1)
     dy = float(Ly) / float(Ny - 1)
 
     grid = PolGrid(Nx=Nx, Ny=Ny, Lx=Lx, Ly=Ly, dx=dx, dy=dy, x=x, y=y, src_dir=src_dir)
-
-    if load_sources:
-        S_known, _raw = load_known_sources_40x40(src_dir=src_dir, device=device)
-        grid.S_known = S_known.to(device=torch.device(device), dtype=dtype)
 
     if load_inventory:
         inventory = load_pol_source_inventory(src_dir=src_dir, crop=grid.crop)
@@ -471,330 +402,11 @@ def rhs(U: torch.Tensor, Vx: float | torch.Tensor, Vy: float | torch.Tensor, k: 
     return -adv + diff + S
 
 
-# =============================================================================
-# Source mixing: known + unknown
-# =============================================================================
-
-def combine_sources(
-    S_known: torch.Tensor,
-    S_unknown: torch.Tensor,
-    mode: Literal["add", "softplus"] = "add",
-    softplus_beta: float = 1.0,
-) -> torch.Tensor:
-    """
-    Combine known + unknown sources.
-
-    S_known: [Nx,Ny]
-    S_unknown: [Nx,Ny] or [...,Nx,Ny] (batched)
-      - if S_unknown is batched, S_known is broadcast.
-
-    mode:
-      - "add": S_total = S_known + S_unknown
-      - "softplus": S_total = S_known + softplus(S_unknown)
-
-    Note: rollout_pollution expects S_unknown on a 10x10 coarse grid and will smooth + upsample it to the
-simulation grid (typically 40x40) before combining; using softplus can enforce nonnegativity.
-    """
-    if mode == "add":
-        return S_known + S_unknown
-    if mode == "softplus":
-        return S_known + F.softplus(S_unknown, beta=float(softplus_beta))
-    raise ValueError("mode must be 'add' or 'softplus'.")
-
-
-
-# =============================================================================
-# Unknown source parameterization: 10x10 -> smooth -> upsample to [Nx,Ny]
-# =============================================================================
-
-def _gaussian_kernel2d(
-    sigma: float,
-    truncate: float = 3.0,
-    device: Optional[torch.device] = None,
-    dtype: Optional[torch.dtype] = None,
-) -> torch.Tensor:
-    """Create a normalized 2D Gaussian kernel suitable for depthwise conv2d."""
-    if sigma <= 0:
-        # Degenerate: no smoothing
-        k = torch.zeros((1, 1, 1, 1), device=device, dtype=dtype)
-        k[..., 0, 0] = 1.0
-        return k
-
-    radius = int(math.ceil(float(truncate) * float(sigma)))
-    size = 2 * radius + 1
-    xs = torch.arange(-radius, radius + 1, device=device, dtype=dtype)
-    g1 = torch.exp(-0.5 * (xs / float(sigma)) ** 2)
-    g1 = g1 / (g1.sum() + 1e-12)
-    g2 = torch.outer(g1, g1)
-    g2 = g2 / (g2.sum() + 1e-12)
-    return g2.view(1, 1, size, size)
-
-
-def smooth_and_upsample_unknown(
-    S_coarse: torch.Tensor,
-    out_hw: Tuple[int, int],
-    *,
-    sigma: float = 1.0,
-    truncate: float = 3.0,
-    mode: Literal["bilinear", "bicubic"] = "bilinear",
-) -> torch.Tensor:
-    """
-    Convert a 10x10 coarse unknown-source grid into an [H,W] field:
-
-      1) Smooth on the coarse grid using a Gaussian kernel (helps avoid checkerboard artifacts).
-      2) Upsample to (H,W) using interpolation.
-
-    Args:
-      S_coarse: [..., 10, 10]
-      out_hw: (H, W) target resolution (e.g., (40,40))
-      sigma: Gaussian std (in coarse-grid pixels). sigma=0 disables smoothing.
-      mode: interpolation mode for upsampling.
-
-    Returns:
-      S_fine: [..., H, W]
-    """
-    if S_coarse.ndim < 2:
-        raise ValueError("S_coarse must have shape [..., 10, 10].")
-    if tuple(S_coarse.shape[-2:]) != (10, 10):
-        raise AssertionError(f"S_unknown must be a 10x10 coarse grid; got shape {tuple(S_coarse.shape)}")
-
-    device, dtype = S_coarse.device, S_coarse.dtype
-
-    # Reshape to NCHW for conv/interp: [B,1,10,10]
-    lead_shape = S_coarse.shape[:-2]
-    B = int(torch.tensor(lead_shape).prod().item()) if len(lead_shape) > 0 else 1
-    S = S_coarse.reshape(B, 1, 10, 10)
-
-    # Smooth on coarse grid (depthwise conv)
-    if sigma > 0:
-        k = _gaussian_kernel2d(float(sigma), truncate=float(truncate), device=device, dtype=dtype)
-        pad = (k.shape[-1] // 2, k.shape[-1] // 2, k.shape[-2] // 2, k.shape[-2] // 2)  # (l,r,t,b)
-        S = F.pad(S, pad, mode="replicate")
-        S = F.conv2d(S, k)
-
-    # Upsample to fine grid
-    H, W = int(out_hw[0]), int(out_hw[1])
-    align = False if mode in ("bilinear", "bicubic") else None
-    S_up = F.interpolate(S, size=(H, W), mode=mode, align_corners=align)
-
-    return S_up.reshape(*lead_shape, H, W)
-
-
-# =============================================================================
-# Rollout
-# =============================================================================
-
-def rollout_pollution(
-    S_unknown: torch.Tensor,               # [..., 10, 10] (coarse unknown source grid to infer)
-    grid: PolGrid,
-    params: PolParams,
-    dt: float,
-    steps: int,
-    save_every: int = 1,
-    enforce_cfl: bool = False,
-    cfl: float = 0.45,
-    source_mode: Literal["add", "softplus"] = "add",
-    U0: Optional[torch.Tensor] = None,                      # [..., Nx, Ny]
-    softplus_beta: Optional[float] = None,
-    wind_seed: Optional[int] = None,
-    no_grad: bool = False,
-) -> Dict[str, torch.Tensor]:
-    """
-    Simulate the PDE for a given unknown source (provided as a 10x10 coarse grid).
-
-    Returns a dict with:
-      - "U": concentration snapshots [..., Nx, Ny, Tsave]
-      - "t": times [Tsave]
-      - "Vx", "Vy": wind series [steps]
-    """
-    if grid.S_known is None:
-        raise ValueError("grid.S_known is None. Create grid with load_sources=True or set S_known explicitly.")
-
-
-    # Enforce unknown-source parameterization: S_unknown must be a 10x10 coarse grid (optionally batched)
-    if tuple(S_unknown.shape[-2:]) != (10, 10):
-        raise AssertionError(f"S_unknown must have shape [..., 10, 10]; got {tuple(S_unknown.shape)}")
-
-    if softplus_beta is None:
-        softplus_beta = float(params.sim_seconds_per_day) * 0.0 + 1.0  # default 1.0
-
-    # Determine device/dtype from provided U0, otherwise from grid tensors
-    if U0 is not None:
-        device, dtype = U0.device, U0.dtype
-    else:
-        device = torch.device("cpu") if grid.x is None else grid.x.device
-        dtype = torch.float32 if grid.x is None else grid.x.dtype
-
-    # Build U0 internally from govdata via kriging if not provided
-    if U0 is None:
-        if grid.U0 is None:
-            U0_built, _meta = build_U0_from_govdata_kriging(grid, device=device, dtype=dtype)
-            grid.U0 = U0_built
-        U0 = grid.U0.to(device=device, dtype=dtype)
-
-    # ---- Batch-broadcast U0 to match S_unknown leading dims ----
-    # S_unknown: [...,10,10]
-    batch_shape = tuple(S_unknown.shape[:-2])  # () if unbatched, (B,) if batched
-    if batch_shape:
-        # U0 is expected to be [...,Nx,Ny] or [Nx,Ny]
-        if U0.ndim == 2:
-            # [Nx,Ny] -> [...,Nx,Ny]
-            U0 = U0.expand(*batch_shape, *U0.shape).contiguous()
-        elif U0.ndim == 2 + len(batch_shape):
-            # already batched correctly
-            pass
-        else:
-            raise RuntimeError(
-                f"U0 has shape {tuple(U0.shape)} but expected [Nx,Ny] or {batch_shape}+[Nx,Ny]"
-            )
-    # ----------------------------------------------------------
-
-    # Time vector for wind model
-    t_full = torch.arange(0, steps, device=device, dtype=dtype) * float(dt)
-    Vx_steps, Vy_steps = monsoon_wind_series(
-        t_seconds=t_full,
-        Vx_base=float(params.Vx0),
-        Vy_base=float(params.Vy0),
-        sim_seconds_per_day=float(params.sim_seconds_per_day),
-        diurnal_amp_frac=float(params.diurnal_amp_frac),
-        ar1_rho=float(params.ar1_rho),
-        ar1_sigma_frac=float(params.ar1_sigma_frac),
-        seed=wind_seed,
-    )
-
-    # Optional CFL check using a conservative bound:
-    # For advection-diffusion, a simple check is dt <= cfl * min(dx/|Vx|, dy/|Vy|).
-    if enforce_cfl:
-        vmax = float(torch.max(torch.stack([torch.max(torch.abs(Vx_steps)), torch.max(torch.abs(Vy_steps)), torch.tensor(params.eps, device=device, dtype=dtype)])).item())
-        dt_max = float(cfl) * min(grid.dx, grid.dy) / vmax
-        if dt > dt_max:
-            raise ValueError(f"CFL violation (advection): dt={dt:.3e} > dt_max={dt_max:.3e} (vmax={vmax:.3e}).")
-
-    # Smooth + upsample unknown sources: [...,10,10] -> [...,Nx,Ny]
-    S_unknown_fine = smooth_and_upsample_unknown(S_unknown.to(device=device, dtype=dtype), out_hw=(grid.Nx, grid.Ny), sigma=1.0)
-
-    # Combine sources (broadcast known to batch if needed)
-    S_total = combine_sources(grid.S_known.to(device=device, dtype=dtype), S_unknown_fine, mode=source_mode, softplus_beta=float(softplus_beta))
-
-    # Heun / RK2 time stepping
-    def _simulate() -> Dict[str, torch.Tensor]:
-        U = U0
-        snaps = []
-        times = []
-        for n in range(steps):
-            if (n % save_every) == 0:
-                snaps.append(U)
-                times.append(t_full[n])
-
-            Vx_t = Vx_steps[n]
-            Vy_t = Vy_steps[n]
-            k = params.k.to(device=device, dtype=dtype)
-
-            f0 = rhs(U, Vx_t, Vy_t, k, S_total, grid.dx, grid.dy)
-            f0 = torch.nan_to_num(f0, nan=0.0, posinf=0.0, neginf=0.0)
-
-            U_star = U + float(dt) * f0
-            f1 = rhs(U_star, Vx_t, Vy_t, k, S_total, grid.dx, grid.dy)
-            f1 = torch.nan_to_num(f1, nan=0.0, posinf=0.0, neginf=0.0)
-
-            U = U + float(dt) * 0.5 * (f0 + f1)
-
-        # last snapshot if steps not aligned with save_every
-        if ((steps - 1) % save_every) != 0:
-            snaps.append(U)
-            times.append(t_full[-1])
-
-        U_snap = torch.stack(snaps, dim=-1)  # [...,Nx,Ny,Tsave]
-        t_snap = torch.stack(times, dim=0)   # [Tsave]
-        return {"U": U_snap, "t": t_snap, "Vx": Vx_steps, "Vy": Vy_steps}
-
-    if no_grad:
-        with torch.no_grad():
-            return _simulate()
-    return _simulate()
-
-
 __all__ = [
     "PolGrid",
     "PolParams",
     "make_grid",
-    "load_known_sources_40x40",
     "PolSourceInventory",
     "load_pol_source_inventory",
     "monsoon_wind_series",
-    "smooth_and_upsample_unknown",
-    "rollout_pollution",
 ]
-
-# -----------------------------------------------------------------------------
-# Self-test
-# -----------------------------------------------------------------------------
-
-def _self_test():
-    """
-    Lightweight sanity test for the pollution simulator.
-
-    Verifies:
-    - rollout runs without error
-    - shapes are correct
-    - concentration stays finite and non-negative
-    """
-    import numpy as np
-    import torch
-
-    torch.manual_seed(0)
-    np.random.seed(0)
-
-    device = torch.device("cpu")
-    dtype = torch.float32
-
-    # Grid
-    Nx = Ny = 40
-    Lx = Ly = 1.0
-    grid = make_grid(Nx=Nx, Ny=Ny, Lx=Lx, Ly=Ly, device=device, dtype=dtype)
-
-    # Unknown source field (what STAMP would infer): 10x10 coarse grid
-    S_unknown = 0.1 * torch.rand((10, 10), device=device, dtype=dtype)
-
-    # Wind forcing
-    steps = 50
-    dt = 0.01
-
-    # Parameters
-    params = PolParams(
-        k=torch.tensor(0.01),
-    )
-
-    # Rollout
-    out = rollout_pollution(
-        grid=grid,
-        params=params,
-        dt=dt,
-        steps=steps,
-        S_unknown=S_unknown,
-        save_every=1,
-        no_grad=True,
-    )
-
-    # Basic checks
-    assert "U" in out, "Output must contain concentration field 'c'"
-    c = out["U"]  # [Nx,Ny,T] or [T,Nx,Ny] depending on your implementation
-
-    assert torch.isfinite(c).all(), "NaNs or Infs detected in concentration"
-    assert (c >= 0).all(), "Negative concentration detected"
-
-    print("[polsim self-test] PASSED")
-    print(f"  c.shape = {tuple(c.shape)}")
-    print(f"  c.max   = {float(c.max()):.4e}")
-    print(f"  c.mean  = {float(c.mean()):.4e}")
-
-
-if __name__ == "__main__":
-    _self_test()
-
-
-
-# In[ ]:
-
-
-

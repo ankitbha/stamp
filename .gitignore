@@ -6,3 +6,4 @@ cuda11.8.86-cudnn8.7-devel-ubuntu22.04.2.sif
 *.pt
 logs/
 __pycache__/
+archive/

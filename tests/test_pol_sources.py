@@ -55,13 +55,22 @@ class PolSourceInventoryTests(unittest.TestCase):
                 self.assertAlmostEqual(float(np.percentile(source_map, 99)), 1.0, places=5)
 
     def test_make_grid_inventory_is_opt_in_and_non_aggregate(self) -> None:
+        empty_grid = polsim.make_grid(
+            Nx=40,
+            Ny=40,
+            src_dir=str(SIM_DIR),
+            device="cpu",
+            dtype=torch.float32,
+        )
+        self.assertIsNone(empty_grid.S_known)
+        self.assertIsNone(empty_grid.source_maps)
+
         grid = polsim.make_grid(
             Nx=40,
             Ny=40,
             src_dir=str(SIM_DIR),
             device="cpu",
             dtype=torch.float32,
-            load_sources=False,
             load_inventory=True,
         )
 
@@ -70,21 +79,6 @@ class PolSourceInventoryTests(unittest.TestCase):
         self.assertEqual(tuple(grid.source_maps.shape), (7, 40, 40))
         self.assertEqual(tuple(grid.source_matrix.shape), (1600, 7))
         self.assertEqual(grid.source_metadata["normalization"], "per_source_cropped_p99")
-
-    def test_legacy_aggregate_loader_still_matches_old_formula(self) -> None:
-        legacy, raw = polsim.load_known_sources_40x40(src_dir=str(SIM_DIR), device="cpu")
-
-        traffic = (
-            raw["traffic_00"]
-            + raw["traffic_06"]
-            + raw["traffic_12"]
-            + raw["traffic_18"]
-        ) / 4.0
-        aggregate = raw["brick_kilns"] + raw["industries"] + raw["population_density"] + traffic
-        cropped = aggregate[21:61, 16:56]
-        expected = (cropped / (np.percentile(cropped, 99) + 1e-12)).astype(np.float32)
-
-        np.testing.assert_allclose(legacy.detach().cpu().numpy(), expected, rtol=1e-6, atol=1e-6)
 
 
 if __name__ == "__main__":
