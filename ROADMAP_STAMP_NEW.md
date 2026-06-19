@@ -450,11 +450,13 @@ theta_k(t) >= 0
 - Activity metadata records source-default assumptions, the industry operating
   fraction, and the seed used for deterministic proxy profiles.
 
-### Task 5: Open-boundary lagged response matrix builder
+### Task 5: Open-boundary Gaussian puff response matrix builder
 
 **Objective**
 
-Build the central object required by the new paper: `H_lag`, using a paper-faithful open-boundary transport response rather than the edge-hold simulator boundary.
+Build the central object required by the new paper: `H_lag`, using the
+paper-faithful open-boundary Gaussian puff response rather than the edge-hold
+simulator boundary.
 
 **Likely files**
 
@@ -487,16 +489,69 @@ save_every
 lag_window
 wind_sequence_or_provider
 response_config
+dispersion_config
 initial_condition policy
 baseline/background policy
 ```
 
-- The v1 response implementation should use the open-boundary puff/plume approximation described by the paper. It must be the default response implementation for paper-facing IASA results.
+- The v1 response implementation should be the paper's open-boundary
+  differentiable Gaussian puff approximation. Record
+  `response_implementation="open_boundary_gaussian_puff"` and make it the
+  default for paper-facing IASA results.
+- For a unit release from source cell `i` at location `r_i` and release time
+  `tau`, initialize a puff center at `z_i(tau)=r_i` and advect it through the
+  supplied or interpolated wind sequence:
+
+```text
+z_i(a + substep_dt) = z_i(a) + substep_dt * w_a(z_i(a))
+```
+
+- If the puff center exits the modeled domain, remove its remaining in-domain
+  mass. Do not reflect, wrap, clamp, or reinsert it.
+- If the puff remains active, spread its contribution with an anisotropic
+  Gaussian kernel centered at the advected puff location:
+
+```text
+K_phi(x, z_i, Sigma_i) =
+  exp(-0.5 * (x - z_i)^T Sigma_i^{-1} (x - z_i))
+  / (2*pi*sqrt(|Sigma_i|))
+```
+
+- Use a simple covariance model aligned to the mean wind direction along the
+  puff trajectory:
+
+```text
+Sigma_i(t, tau) =
+  R_i(t, tau) diag(
+    sigma_parallel^2 * max(t - tau, min_dispersion_time),
+    sigma_perp^2 * max(t - tau, min_dispersion_time)
+  ) R_i(t, tau)^T
+```
+
+- `R_i` should align the first covariance axis with the mean downwind direction
+  when wind speed is nonzero; use a deterministic fallback orientation when the
+  wind norm is near zero.
+- Kernel support may be truncated for efficiency, but mass outside the modeled
+  domain or outside the truncated support must be reported and must not be
+  renormalized back into the grid.
+- The response config should expose at least:
+
+```text
+substep_dt
+sigma_parallel
+sigma_perp
+min_dispersion_time
+kernel_truncation_radius
+wind_interpolation
+zero_wind_orientation
+```
+
 - Open-boundary behavior is required:
   - Emissions leaving the modeled domain are removed.
   - Boundary exits are never reflected, wrapped, clamped, or renormalized.
   - Unit source releases are transported through the supplied wind sequence and accumulated into sensor fingerprints over `lag_window`.
-  - Kernel or plume mass outside the domain is dropped, so in-domain mass is non-increasing under pure transport.
+  - Gaussian kernel mass outside the domain is dropped, so in-domain mass is
+    non-increasing under pure transport.
 - For each source group and temporal basis component, generate an open-boundary unit response and record its sensor trajectory.
 - Stack each `(source group, temporal basis component)` fingerprint into one column. Constant source activities are represented as the special case with one constant temporal basis per source.
 - Support response-matrix construction under:
@@ -515,7 +570,12 @@ source_basis metadata
 wind metadata
 boundary_mode
 response_implementation
+dispersion_parameters
+substep_dt
+kernel_truncation_radius
+kernel_mass_retained summaries
 dropped_mass summaries
+exit_time summaries
 ```
 
 - Make baseline subtraction explicit. Recommended default:
@@ -537,9 +597,19 @@ dropped_mass summaries
 - A source or puff leaving the domain stops contributing after exit.
 - Total in-domain response mass is non-increasing under pure transport with no source reinjection.
 - No boundary reflection or wraparound signal appears at opposite edges.
+- Downwind spread increases with lag under nonzero wind.
+- Crosswind spread follows `sigma_perp`, along-wind spread follows
+  `sigma_parallel`, and changing these parameters changes the response
+  anisotropy in the expected direction.
+- Kernel mass outside the domain is dropped rather than renormalized, so a puff
+  near an outflow boundary has lower retained mass than the same puff in the
+  interior.
 - One-hot source-basis coefficient prediction matches the corresponding open-boundary response column after baseline subtraction.
 - Repeated runs with the same real wind file or synthetic wind seed produce identical matrices.
-- The saved metadata is sufficient to map each fitted coefficient back to source name and temporal basis, and to prove which boundary mode generated the matrix.
+- The saved metadata is sufficient to map each fitted coefficient back to source
+  name and temporal basis, and to prove which boundary mode, response
+  implementation, wind sequence, and dispersion parameters generated the
+  matrix.
 
 **Sanity experiment requirements**
 
@@ -563,15 +633,21 @@ lag window: 8 to 16
 source count: 3
 sensor count: 4
 seed: 123
+response_implementation: open_boundary_gaussian_puff
+substep_dt: chosen so puffs move smoothly across grid cells
+sigma_parallel: larger than sigma_perp for anisotropic downwind spread
+sigma_perp: positive crosswind dispersion
+kernel_truncation_radius: at least 3 Gaussian standard deviations
 ```
 
 Use grid coordinates consistent with the response builder. If `x` increases east and `y` increases north, use:
 
 ```text
 sources:
-  west_source: compact one-cell or Gaussian source centered near (3, 8)
-  east_edge_source: compact one-cell or Gaussian source centered near (14, 8)
-  north_source: compact one-cell or Gaussian source centered near (8, 12)
+  west_source: compact Gaussian inventory centered near (3, 8)
+  east_edge_source: compact Gaussian inventory centered near (14, 8)
+  south_source: compact Gaussian inventory centered near (8, 3)
+  interior_source: optional compact Gaussian inventory centered near (8, 8)
 
 sensors:
   west_sensor/upwind: near (1, 8)
@@ -583,20 +659,48 @@ wind cases:
   eastward: Vx > 0, Vy = 0 for all timesteps
   northward: Vx = 0, Vy > 0 for all timesteps
   two_direction: eastward first half, northward second half
+
+dispersion cases:
+  isotropic: sigma_parallel == sigma_perp
+  anisotropic: sigma_parallel > sigma_perp
+  boundary_loss: same puff/kernel as interior case, but near outflow boundary
 ```
 
-The exact units and speeds should match the response implementation, but the puffs must visibly move across the small domain within the configured horizon. The runner should save compact JSON summaries and optional `.npz` arrays under `logs/iasa_sanity/` or `/tmp/iasa_sanity/`. Every gate should print `PASS` or raise a clear error naming the failed metric and expected range. Use the real public APIs rather than private helper-only shortcuts.
+The exact units and speeds should match the response implementation, but the
+puffs must visibly move across the small domain within the configured horizon.
+The runner should save compact JSON summaries and optional `.npz` arrays under
+`logs/iasa_sanity/` or `/tmp/iasa_sanity/`. Every gate should print `PASS` or
+raise a clear error naming the failed metric and expected range. Use the real
+public APIs rather than private helper-only shortcuts.
 
-Gate S1, completed as part of Task 5, builds `H_lag` for the shared toy geometry with constant temporal bases and open-boundary transport. It must verify:
+Gate S1, completed as part of Task 5, builds `H_lag` for the shared toy
+geometry with constant temporal bases and open-boundary Gaussian puff transport.
+It must verify:
 
 - `H_lag` is nonzero and has shape `(num_sensors * num_times, num_sources)`.
-- Metadata records `boundary_mode="open"`, wind sequence, lag policy, source columns, sensor/time row index, and dropped-mass summaries.
+- Metadata records `boundary_mode="open"`,
+  `response_implementation="open_boundary_gaussian_puff"`, wind sequence, lag
+  policy, source columns, sensor/time row index, dispersion parameters,
+  retained-kernel-mass summaries, dropped-mass summaries, and exit-time
+  summaries.
 - Under eastward wind, `west_source` produces a larger response norm at `east_sensor` than at `west_sensor`.
 - Under eastward wind, `east_edge_source` exits quickly and has less total in-domain response than `west_source`.
 - After `east_edge_source` exits, later contribution does not reappear at the west edge or opposite boundary.
-- Under northward wind, `north_sensor` response increases relative to the eastward case for at least one source placed south or interior.
+- Under northward wind, `south_source` produces a larger response norm at
+  `north_sensor` than at `south_sensor`.
 - `two_direction` fingerprints are not identical to single-direction fingerprints.
-- If pure transport with no source reinjection is exposed in metadata, total in-domain mass is non-increasing after each puff release leaves the source time.
+- For a fixed interior source and eastward wind, increasing `sigma_parallel`
+  while holding `sigma_perp` fixed increases the along-wind second moment more
+  than the crosswind second moment.
+- For a fixed interior source and eastward wind, increasing `sigma_perp` while
+  holding `sigma_parallel` fixed increases the crosswind second moment.
+- The isotropic dispersion case has approximately equal along-wind and crosswind
+  second moments after orientation into wind-aligned coordinates.
+- The boundary-loss case reports lower retained kernel mass than the matched
+  interior case and does not renormalize the retained mass to one.
+- If pure transport with no source reinjection is exposed in metadata, total
+  in-domain mass is non-increasing after each puff release leaves the source
+  time.
 
 Suggested pass/fail tolerances:
 
@@ -606,9 +710,15 @@ downwind_norm > 2 * upwind_norm for the designed source/wind pair
 east_edge_total_mass < west_source_total_mass
 opposite_edge_late_signal <= 1e-6 or <= 1e-4 * source_column_norm
 max_abs(H_two_direction - H_eastward) > 1e-6
+anisotropic_along_moment / anisotropic_cross_moment > 1.25 when sigma_parallel > sigma_perp
+crosswind_moment_large_sigma_perp > crosswind_moment_small_sigma_perp
+abs(isotropic_along_moment - isotropic_cross_moment) / max(isotropic_total_moment, 1e-12) <= 0.25
+boundary_retained_mass < matched_interior_retained_mass
+max_abs(retained_mass + dropped_mass - emitted_mass) <= 1e-5
 ```
 
-If the response approximation is intentionally diffuse, adjust only the ratio thresholds, not the qualitative checks.
+If the response approximation is intentionally diffuse, adjust only the ratio
+thresholds, not the qualitative checks.
 
 ### Task 6: Background basis and projection
 
