@@ -8,6 +8,7 @@ from model.iasa.response import (
     Observer,
     ResponseConfig,
     ResponseMatrixResult,
+    WindSampler,
     build_lagged_response_matrix,
 )
 
@@ -19,5 +20,6 @@ __all__ = [
     "Observer",
     "ResponseConfig",
     "ResponseMatrixResult",
+    "WindSampler",
     "build_lagged_response_matrix",
 ]

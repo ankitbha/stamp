@@ -25,7 +25,7 @@ from model.iasa.response import (  # noqa: E402
     ResponseConfig,
     build_lagged_response_matrix,
 )
-from model.iasa.wind import constant_direction  # noqa: E402
+from model.iasa.wind import WindSequence, constant_direction  # noqa: E402
 
 
 def _station_grid_indices(sensors_xy: np.ndarray, nx: int, ny: int) -> tuple[np.ndarray, np.ndarray]:
@@ -154,6 +154,58 @@ def _response_sanity_inputs() -> tuple[np.ndarray, list[str], TemporalBasis, Obs
     return source_maps, source_names, basis, observer, response_config, dispersion_config
 
 
+def _dense_grid_observer(nx: int, ny: int) -> Observer:
+    xy = np.asarray([(float(x), float(y)) for x in range(nx) for y in range(ny)], dtype=np.float32)
+    ids = [f"cell_{x}_{y}" for x in range(nx) for y in range(ny)]
+    return Observer(sensor_ids=ids, sensor_xy=xy)
+
+
+def _response_moments(values: np.ndarray, sensor_xy: np.ndarray) -> tuple[float, float]:
+    weights = np.asarray(values, dtype=np.float64)
+    total = float(weights.sum())
+    if total <= 0.0:
+        raise RuntimeError("dispersion moment response has zero mass")
+    xy = np.asarray(sensor_xy, dtype=np.float64)
+    mean = (weights[:, None] * xy).sum(axis=0) / total
+    centered = xy - mean
+    moments = (weights[:, None] * centered ** 2).sum(axis=0) / total
+    return float(moments[0]), float(moments[1])
+
+
+def _moment_case(sigma_parallel: float, sigma_perp: float) -> tuple[float, float]:
+    nx = ny = 16
+    T = 8
+    source = np.zeros((1, nx, ny), dtype=np.float32)
+    source[0, 8, 8] = 1.0
+    impulse = np.zeros((T, 1), dtype=np.float32)
+    impulse[0, 0] = 1.0
+    basis = TemporalBasis(names=["impulse_t0"], values=impulse, metadata={"purpose": "dispersion_moment"})
+    dense = _dense_grid_observer(nx, ny)
+    result = build_lagged_response_matrix(
+        source,
+        ["interior_single_cell"],
+        basis,
+        dense,
+        constant_direction(length=T, vx=0.5, vy=0.0),
+        response_config=ResponseConfig(
+            dt=1.0,
+            lag_window_steps=8,
+            substep_dt=0.25,
+            kernel_truncation_radius=4.0,
+            max_kernel_diagnostic_records=20,
+        ),
+        dispersion_config=DispersionConfig(
+            sigma_parallel=sigma_parallel,
+            sigma_perp=sigma_perp,
+            min_dispersion_time=0.25,
+        ),
+    )
+    age_index = 3
+    M = len(dense.sensor_ids)
+    values = result.H_lag[age_index * M:(age_index + 1) * M, 0]
+    return _response_moments(values, dense.sensor_xy)
+
+
 def run_response_gate() -> dict[str, Any]:
     source_maps, source_names, basis, observer, response_config, dispersion_config = _response_sanity_inputs()
     wind = constant_direction(length=basis.values.shape[0], vx=1.0, vy=0.0)
@@ -208,6 +260,13 @@ def run_response_gate() -> dict[str, Any]:
         "column_index",
         "baseline_policy",
         "baseline",
+        "kernel_emitted_mass_by_column",
+        "kernel_observation_count_by_column",
+        "kernel_diagnostic_total_count",
+        "kernel_diagnostic_stored_count",
+        "kernel_diagnostics_truncated",
+        "kernel_quadrature_clip_count_by_column",
+        "max_raw_retained_fraction_by_column",
         "kernel_mass_retained_by_column",
         "dropped_mass_by_column",
         "exit_count_by_column",
@@ -226,6 +285,82 @@ def run_response_gate() -> dict[str, Any]:
         raise RuntimeError("zero-source baseline metadata must be a zero vector aligned to H_lag rows")
     if len(result.metadata["wind_vx"]) != basis.values.shape[0] or len(result.metadata["wind_vy"]) != basis.values.shape[0]:
         raise RuntimeError("metadata must preserve the exact wind arrays")
+    emitted = np.asarray(result.metadata["kernel_emitted_mass_by_column"], dtype=np.float64)
+    retained_arr = np.asarray(result.metadata["kernel_mass_retained_by_column"], dtype=np.float64)
+    dropped_arr = np.asarray(result.metadata["dropped_mass_by_column"], dtype=np.float64)
+    conservation_error = float(np.max(np.abs(retained_arr + dropped_arr - emitted)))
+    if conservation_error > 1e-5:
+        raise RuntimeError(f"kernel mass conservation error {conservation_error:.3e} exceeds 1e-5")
+    if result.metadata["kernel_diagnostic_total_count"] <= result.metadata["kernel_diagnostic_stored_count"]:
+        raise RuntimeError("default response sanity should exercise explicit diagnostic truncation")
+    if not result.metadata["kernel_diagnostics_truncated"]:
+        raise RuntimeError("diagnostic truncation flag must be true when total count exceeds stored count")
+
+    impulse_only = TemporalBasis(
+        names=["impulse_t2"],
+        values=basis.values[:, :1],
+        metadata={"gate": "response", "purpose": "directional_arrival"},
+    )
+    north_wind = constant_direction(length=basis.values.shape[0], vx=0.0, vy=1.0)
+    north = build_lagged_response_matrix(
+        source_maps[2:3],
+        ["south_source"],
+        impulse_only,
+        observer,
+        north_wind,
+        response_config=response_config,
+        dispersion_config=dispersion_config,
+    )
+    north_rows = north.H_lag[(release_t + 8) * M:(release_t + 12) * M, 0].reshape(-1, M)
+    north_peak = float(north_rows[:, 2].max())
+    south_late_peak = float(north_rows[:, 3].max())
+    if north_peak <= south_late_peak:
+        raise RuntimeError("northward south-source impulse should reach north sensor more strongly at positive ages")
+
+    constant_basis = TemporalBasis(
+        names=["constant"],
+        values=np.ones((basis.values.shape[0], 1), dtype=np.float32),
+        metadata={"gate": "response", "purpose": "wind_diversity"},
+    )
+    two_vx = np.ones(basis.values.shape[0], dtype=np.float32)
+    two_vy = np.zeros_like(two_vx)
+    two_vx[30:] = 0.0
+    two_vy[30:] = 1.0
+    two_direction = WindSequence(
+        timestamps=wind.timestamps,
+        vx=two_vx,
+        vy=two_vy,
+        provider="two_direction_synthetic",
+        metadata={"switch_time_index": 30},
+    )
+    east_constant = build_lagged_response_matrix(
+        source_maps[3:4], ["interior_source"], constant_basis, observer, wind,
+        response_config=response_config, dispersion_config=dispersion_config,
+    )
+    two_constant = build_lagged_response_matrix(
+        source_maps[3:4], ["interior_source"], constant_basis, observer, two_direction,
+        response_config=response_config, dispersion_config=dispersion_config,
+    )
+    two_direction_max_difference = float(np.max(np.abs(two_constant.H_lag - east_constant.H_lag)))
+    if two_direction_max_difference <= 1e-6:
+        raise RuntimeError("two-direction fingerprint must differ from eastward-only fingerprint")
+
+    anisotropic_moments = _moment_case(0.8, 0.2)
+    larger_parallel_moments = _moment_case(1.1, 0.2)
+    larger_perp_moments = _moment_case(0.8, 0.5)
+    isotropic_moments = _moment_case(0.4, 0.4)
+    anisotropy_ratio = anisotropic_moments[0] / max(anisotropic_moments[1], 1e-12)
+    if anisotropy_ratio <= 1.25:
+        raise RuntimeError("anisotropic along-wind/crosswind moment ratio must exceed 1.25")
+    parallel_increase = larger_parallel_moments[0] - anisotropic_moments[0]
+    parallel_cross_change = abs(larger_parallel_moments[1] - anisotropic_moments[1])
+    if parallel_increase <= parallel_cross_change:
+        raise RuntimeError("increasing sigma_parallel must primarily increase the along-wind moment")
+    if larger_perp_moments[1] <= anisotropic_moments[1]:
+        raise RuntimeError("increasing sigma_perp must increase the crosswind moment")
+    isotropic_relative_difference = abs(isotropic_moments[0] - isotropic_moments[1]) / max(isotropic_moments)
+    if isotropic_relative_difference > 0.25:
+        raise RuntimeError("isotropic dispersion moments must agree within 25 percent")
 
     iso = build_lagged_response_matrix(
         source_maps,
@@ -261,6 +396,19 @@ def run_response_gate() -> dict[str, Any]:
         "east_edge_exit_count": int(exit_count),
         "east_edge_retained_mass": float(retained[east_edge_impulse_col]),
         "interior_retained_mass": float(retained[interior_impulse_col]),
+        "kernel_mass_conservation_error": conservation_error,
+        "kernel_diagnostic_total_count": result.metadata["kernel_diagnostic_total_count"],
+        "kernel_diagnostic_stored_count": result.metadata["kernel_diagnostic_stored_count"],
+        "kernel_diagnostics_truncated": result.metadata["kernel_diagnostics_truncated"],
+        "northward_north_sensor_peak": north_peak,
+        "northward_south_sensor_late_peak": south_late_peak,
+        "two_direction_max_difference": two_direction_max_difference,
+        "anisotropic_moments": list(anisotropic_moments),
+        "larger_parallel_moments": list(larger_parallel_moments),
+        "larger_perp_moments": list(larger_perp_moments),
+        "isotropic_moments": list(isotropic_moments),
+        "anisotropy_ratio": anisotropy_ratio,
+        "isotropic_relative_difference": isotropic_relative_difference,
         "metadata_keys_checked": sorted(required_metadata),
         "kernel_mass_summary_count": len(result.metadata["kernel_mass_summaries"]),
     }

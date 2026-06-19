@@ -32,6 +32,7 @@ class ResponseConfig:
     wind_interpolation: str = "linear"
     zero_wind_orientation: float = 0.0
     trim_initial_lag: bool = False
+    max_kernel_diagnostic_records: int | None = 500
 
 
 @dataclass(frozen=True)
@@ -155,6 +156,13 @@ def _validate_inputs(
         raise ValueError("kernel_truncation_radius must be positive")
     if config.baseline_policy != "zero_source":
         raise ValueError("Task 5 supports baseline_policy='zero_source' only")
+    if config.max_kernel_diagnostic_records is not None:
+        if (
+            isinstance(config.max_kernel_diagnostic_records, bool)
+            or not isinstance(config.max_kernel_diagnostic_records, (int, np.integer))
+            or config.max_kernel_diagnostic_records < 0
+        ):
+            raise ValueError("max_kernel_diagnostic_records must be None or a nonnegative integer")
     if dispersion.sigma_parallel <= 0 or dispersion.sigma_perp <= 0 or dispersion.min_dispersion_time <= 0:
         raise ValueError("dispersion parameters must be positive")
     return maps, names, sensors
@@ -175,8 +183,10 @@ def _advect(
 ) -> tuple[np.ndarray, bool, float | None, np.ndarray]:
     pos = np.asarray(start, dtype=np.float32).copy()
     if target_t == tau:
-        wind0 = sampler.sample(float(tau), pos)
-        return pos, False, None, np.asarray(wind0, dtype=np.float32)
+        wind0 = np.asarray(sampler.sample(float(tau), pos), dtype=np.float32)
+        if wind0.shape != (2,) or not np.isfinite(wind0).all():
+            raise ValueError("wind sampler must return finite vectors with shape (2,)")
+        return pos, False, None, wind0
     elapsed = 0.0
     duration = float(target_t - tau) * float(config.dt)
     wind_sum = np.zeros(2, dtype=np.float64)
@@ -317,10 +327,15 @@ def build_lagged_response_matrix(
 
     retained_by_col = np.zeros(K * B, dtype=np.float64)
     dropped_by_col = np.zeros(K * B, dtype=np.float64)
+    emitted_by_col = np.zeros(K * B, dtype=np.float64)
+    kernel_count_by_col = np.zeros(K * B, dtype=np.int64)
+    quadrature_clip_count_by_col = np.zeros(K * B, dtype=np.int64)
+    max_raw_retained_fraction_by_col = np.zeros(K * B, dtype=np.float64)
     exited_by_col = np.zeros(K * B, dtype=np.int64)
     released_exit_mass_by_col = np.zeros(K * B, dtype=np.float64)
     first_exit_by_release: list[dict[str, Any]] = []
     kernel_summaries: list[dict[str, Any]] = []
+    kernel_diagnostic_total_count = 0
 
     for k in range(K):
         cells = np.argwhere(maps[k] > float(config.source_cell_threshold))
@@ -362,7 +377,7 @@ def build_lagged_response_matrix(
                         sensor_values = _gaussian_at_points(sensors, pos, e_parallel, e_perp, var_parallel, var_perp)
                         row_base = (t - trim_start) * M
                         H[row_base: row_base + M, col] += (cell_mass * sensor_values).astype(np.float32)
-                        retained_kernel = _retained_kernel_mass(
+                        raw_retained_fraction = _retained_kernel_mass(
                             pos,
                             e_parallel,
                             e_perp,
@@ -372,11 +387,21 @@ def build_lagged_response_matrix(
                             Ny,
                             config.kernel_truncation_radius,
                         )
-                        retained_mass = cell_mass * max(retained_kernel, 0.0)
-                        dropped_mass = max(0.0, cell_mass - retained_mass)
+                        retained_fraction = float(np.clip(raw_retained_fraction, 0.0, 1.0))
+                        retained_mass = cell_mass * retained_fraction
+                        dropped_mass = cell_mass - retained_mass
+                        emitted_by_col[col] += cell_mass
                         retained_by_col[col] += retained_mass
                         dropped_by_col[col] += dropped_mass
-                        if len(kernel_summaries) < 500:
+                        kernel_count_by_col[col] += 1
+                        max_raw_retained_fraction_by_col[col] = max(
+                            max_raw_retained_fraction_by_col[col], raw_retained_fraction
+                        )
+                        if raw_retained_fraction < 0.0 or raw_retained_fraction > 1.0:
+                            quadrature_clip_count_by_col[col] += 1
+                        kernel_diagnostic_total_count += 1
+                        record_limit = config.max_kernel_diagnostic_records
+                        if record_limit is None or len(kernel_summaries) < record_limit:
                             kernel_summaries.append({
                                 "source_index": k,
                                 "basis_index": b,
@@ -385,6 +410,9 @@ def build_lagged_response_matrix(
                                 "cell": [int(ix), int(iy)],
                                 "age": age,
                                 "effective_age": effective_age,
+                                "emitted_mass": cell_mass,
+                                "raw_retained_fraction": raw_retained_fraction,
+                                "retained_fraction": retained_fraction,
                                 "retained_mass": retained_mass,
                                 "dropped_mass": dropped_mass,
                             })
@@ -408,8 +436,15 @@ def build_lagged_response_matrix(
         "column_index": col_index,
         "baseline_policy": config.baseline_policy,
         "baseline": baseline.astype(float).tolist(),
+        "kernel_emitted_mass_by_column": emitted_by_col.astype(float).tolist(),
+        "kernel_observation_count_by_column": kernel_count_by_col.astype(int).tolist(),
         "kernel_mass_retained_by_column": retained_by_col.astype(float).tolist(),
         "dropped_mass_by_column": dropped_by_col.astype(float).tolist(),
+        "kernel_diagnostic_total_count": int(kernel_diagnostic_total_count),
+        "kernel_diagnostic_stored_count": len(kernel_summaries),
+        "kernel_diagnostics_truncated": len(kernel_summaries) < kernel_diagnostic_total_count,
+        "kernel_quadrature_clip_count_by_column": quadrature_clip_count_by_col.astype(int).tolist(),
+        "max_raw_retained_fraction_by_column": max_raw_retained_fraction_by_col.astype(float).tolist(),
         "exit_count_by_column": exited_by_col.astype(int).tolist(),
         "released_mass_exited_by_column": released_exit_mass_by_col.astype(float).tolist(),
         "first_exit_by_release": first_exit_by_release,

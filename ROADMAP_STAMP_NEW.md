@@ -663,7 +663,7 @@ The default sanity setup should be fully synthetic and should not require New De
 grid size: 16x16
 timesteps: 40 to 80
 lag window: 8 to 16
-source count: 3
+source count: 4
 sensor count: 4
 seed: 123
 response_implementation: open_boundary_gaussian_puff
@@ -680,7 +680,8 @@ sources:
   west_source: compact Gaussian inventory centered near (3, 8)
   east_edge_source: compact Gaussian inventory centered near (14, 8)
   south_source: compact Gaussian inventory centered near (8, 3)
-  interior_source: optional compact Gaussian inventory centered near (8, 8)
+  interior_source: required compact Gaussian inventory centered near (8, 8),
+    used as the matched control for boundary-loss accounting
 
 sensors:
   west_sensor/upwind: near (1, 8)
@@ -733,6 +734,13 @@ It must verify:
   second moments after orientation into wind-aligned coordinates.
 - The boundary-loss case reports lower retained kernel mass than the matched
   interior case and does not renormalize the retained mass to one.
+- Every evaluated release kernel clips only numerical quadrature overshoot:
+  `retained_fraction = clip(raw_retained_fraction, 0, 1)`, then records
+  `retained_mass + dropped_mass = emitted_mass` within `1e-5`.
+- Detailed per-kernel diagnostic records may be capped by
+  `max_kernel_diagnostic_records`, but metadata must record total count, stored
+  count, and whether truncation occurred. Per-column emitted, retained, dropped,
+  exit, clipping, and kernel-count aggregates must remain complete.
 - If pure transport with no source reinjection is exposed in metadata, total
   in-domain mass is non-increasing after each puff release leaves the source
   time.

@@ -13,6 +13,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from model.iasa.activity import TemporalBasis  # noqa: E402
+import model.iasa as iasa_package  # noqa: E402
 from model.iasa.response import (  # noqa: E402
     BOUNDARY_MODE,
     RESPONSE_IMPLEMENTATION,
@@ -30,6 +31,29 @@ class PositionDependentWind:
 
     def sample(self, t_index: float, position_xy: np.ndarray) -> np.ndarray:
         return np.asarray([0.1 + 0.01 * position_xy[0], 0.0], dtype=np.float32)
+
+
+class RecordingWind:
+    provider = "recording_test"
+    metadata = {"kind": "test"}
+
+    def __init__(self, vector: tuple[float, float] = (1.0, 0.0)) -> None:
+        self.vector = np.asarray(vector, dtype=np.float32)
+        self.sample_times: list[float] = []
+
+    def sample(self, t_index: float, position_xy: np.ndarray) -> np.ndarray:
+        del position_xy
+        self.sample_times.append(float(t_index))
+        return self.vector.copy()
+
+
+class NonfiniteWind:
+    provider = "nonfinite_test"
+    metadata = {}
+
+    def sample(self, t_index: float, position_xy: np.ndarray) -> np.ndarray:
+        del t_index, position_xy
+        return np.asarray([np.nan, 0.0], dtype=np.float32)
 
 
 def impulse_basis(T: int, tau: int = 0) -> TemporalBasis:
@@ -75,6 +99,13 @@ class IasaResponseTests(unittest.TestCase):
             "column_index",
             "baseline_policy",
             "baseline",
+            "kernel_emitted_mass_by_column",
+            "kernel_observation_count_by_column",
+            "kernel_diagnostic_total_count",
+            "kernel_diagnostic_stored_count",
+            "kernel_diagnostics_truncated",
+            "kernel_quadrature_clip_count_by_column",
+            "max_raw_retained_fraction_by_column",
             "kernel_mass_retained_by_column",
             "dropped_mass_by_column",
             "exit_count_by_column",
@@ -109,6 +140,14 @@ class IasaResponseTests(unittest.TestCase):
         first_kernel = result.metadata["kernel_mass_summaries"][0]
         self.assertEqual(first_kernel["age"], 0.0)
         self.assertEqual(first_kernel["effective_age"], 0.25)
+        self.assertLessEqual(first_kernel["retained_fraction"], 1.0)
+        self.assertGreaterEqual(first_kernel["retained_fraction"], 0.0)
+        self.assertLessEqual(first_kernel["retained_mass"], first_kernel["emitted_mass"])
+        self.assertAlmostEqual(
+            first_kernel["retained_mass"] + first_kernel["dropped_mass"],
+            first_kernel["emitted_mass"],
+            places=5,
+        )
 
     def test_open_boundary_exit_stops_contribution_without_wrap(self) -> None:
         T = 12
@@ -176,6 +215,63 @@ class IasaResponseTests(unittest.TestCase):
         self.assertEqual(result.metadata["wind_provider"], "position_dependent_test")
         self.assertTrue(np.isfinite(result.H_lag).all())
 
+    def test_zero_source_and_zero_basis_have_zero_diagnostics(self) -> None:
+        T = 4
+        wind = constant_direction(length=T, vx=1.0, vy=0.0)
+        zero_source = build_lagged_response_matrix(
+            np.zeros((1, 8, 8), dtype=np.float32), ["zero"], impulse_basis(T), observer(), wind
+        )
+        zero_basis = TemporalBasis(names=["zero"], values=np.zeros((T, 1), dtype=np.float32), metadata={})
+        zero_activity = build_lagged_response_matrix(
+            single_source_map(), ["src"], zero_basis, observer(), wind
+        )
+        for result in (zero_source, zero_activity):
+            self.assertTrue(np.array_equal(result.H_lag, np.zeros_like(result.H_lag)))
+            self.assertEqual(result.metadata["kernel_diagnostic_total_count"], 0)
+            self.assertEqual(result.metadata["kernel_diagnostic_stored_count"], 0)
+            self.assertFalse(result.metadata["kernel_diagnostics_truncated"])
+            self.assertEqual(result.metadata["kernel_emitted_mass_by_column"], [0.0])
+            self.assertEqual(result.metadata["kernel_observation_count_by_column"], [0])
+
+    def test_fractional_final_substep_samples_without_overshoot(self) -> None:
+        sampler = RecordingWind()
+        build_lagged_response_matrix(
+            single_source_map(),
+            ["src"],
+            impulse_basis(2),
+            observer(),
+            sampler,
+            response_config=ResponseConfig(dt=1.0, lag_window_steps=2, substep_dt=0.3),
+        )
+        self.assertTrue(any(abs(t - 0.9) < 1e-7 for t in sampler.sample_times))
+        self.assertLessEqual(max(sampler.sample_times), 0.9 + 1e-7)
+
+    def test_diagnostic_truncation_metadata_and_package_export(self) -> None:
+        T = 6
+        result = build_lagged_response_matrix(
+            single_source_map(),
+            ["src"],
+            impulse_basis(T),
+            observer(),
+            constant_direction(length=T, vx=0.0, vy=0.0),
+            response_config=ResponseConfig(lag_window_steps=5, max_kernel_diagnostic_records=2),
+        )
+        self.assertEqual(result.metadata["kernel_diagnostic_total_count"], 5)
+        self.assertEqual(result.metadata["kernel_diagnostic_stored_count"], 2)
+        self.assertTrue(result.metadata["kernel_diagnostics_truncated"])
+        self.assertEqual(len(result.metadata["kernel_mass_summaries"]), 2)
+        for key in (
+            "kernel_emitted_mass_by_column",
+            "kernel_observation_count_by_column",
+            "kernel_mass_retained_by_column",
+            "dropped_mass_by_column",
+            "kernel_quadrature_clip_count_by_column",
+            "max_raw_retained_fraction_by_column",
+        ):
+            self.assertEqual(len(result.metadata[key]), result.H_lag.shape[1])
+        self.assertIs(iasa_package.WindSampler, __import__("model.iasa.response", fromlist=["WindSampler"]).WindSampler)
+        json.dumps(result.metadata)
+
     def test_trim_initial_lag_changes_row_count(self) -> None:
         T = 8
         result = build_lagged_response_matrix(
@@ -199,6 +295,42 @@ class IasaResponseTests(unittest.TestCase):
                 observer(),
                 constant_direction(length=4, vx=1.0, vy=0.0),
             )
+        with self.assertRaises(ValueError):
+            build_lagged_response_matrix(
+                np.zeros((8, 8), dtype=np.float32), ["src"], impulse_basis(4), observer(),
+                constant_direction(length=4, vx=1.0, vy=0.0),
+            )
+        bad_basis = impulse_basis(4)
+        bad_basis.values[0, 0] = np.nan
+        with self.assertRaises(ValueError):
+            build_lagged_response_matrix(
+                single_source_map(), ["src"], bad_basis, observer(),
+                constant_direction(length=4, vx=1.0, vy=0.0),
+            )
+        with self.assertRaises(ValueError):
+            build_lagged_response_matrix(
+                single_source_map(), ["src"], impulse_basis(4), observer(), NonfiniteWind(),
+            )
+        for dispersion in (
+            DispersionConfig(sigma_parallel=0.0),
+            DispersionConfig(sigma_perp=-1.0),
+            DispersionConfig(min_dispersion_time=0.0),
+        ):
+            with self.assertRaises(ValueError):
+                build_lagged_response_matrix(
+                    single_source_map(), ["src"], impulse_basis(4), observer(),
+                    constant_direction(length=4, vx=1.0, vy=0.0), dispersion_config=dispersion,
+                )
+        for config in (
+            ResponseConfig(lag_window_steps=0),
+            ResponseConfig(max_kernel_diagnostic_records=-1),
+            ResponseConfig(max_kernel_diagnostic_records=1.5),
+        ):
+            with self.assertRaises(ValueError):
+                build_lagged_response_matrix(
+                    single_source_map(), ["src"], impulse_basis(4), observer(),
+                    constant_direction(length=4, vx=1.0, vy=0.0), response_config=config,
+                )
         with self.assertRaises(ValueError):
             build_lagged_response_matrix(
                 single_source_map(),
