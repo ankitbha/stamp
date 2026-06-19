@@ -1,0 +1,213 @@
+from __future__ import annotations
+
+import json
+import sys
+import unittest
+from pathlib import Path
+
+import numpy as np
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from model.iasa.activity import TemporalBasis  # noqa: E402
+from model.iasa.response import (  # noqa: E402
+    BOUNDARY_MODE,
+    RESPONSE_IMPLEMENTATION,
+    DispersionConfig,
+    Observer,
+    ResponseConfig,
+    build_lagged_response_matrix,
+)
+from model.iasa.wind import constant_direction  # noqa: E402
+
+
+class PositionDependentWind:
+    provider = "position_dependent_test"
+    metadata = {"kind": "test"}
+
+    def sample(self, t_index: float, position_xy: np.ndarray) -> np.ndarray:
+        return np.asarray([0.1 + 0.01 * position_xy[0], 0.0], dtype=np.float32)
+
+
+def impulse_basis(T: int, tau: int = 0) -> TemporalBasis:
+    values = np.zeros((T, 1), dtype=np.float32)
+    values[tau, 0] = 1.0
+    return TemporalBasis(names=["impulse"], values=values, metadata={"tau": tau})
+
+
+def single_source_map(nx: int = 8, ny: int = 8, x: int = 2, y: int = 4) -> np.ndarray:
+    maps = np.zeros((1, nx, ny), dtype=np.float32)
+    maps[0, x, y] = 1.0
+    return maps
+
+
+def observer() -> Observer:
+    return Observer(sensor_ids=["upwind", "downwind"], sensor_xy=np.asarray([[1.0, 4.0], [5.0, 4.0]], dtype=np.float32))
+
+
+class IasaResponseTests(unittest.TestCase):
+    def test_response_shape_and_metadata(self) -> None:
+        T = 10
+        result = build_lagged_response_matrix(
+            single_source_map(),
+            ["src"],
+            impulse_basis(T),
+            observer(),
+            constant_direction(length=T, vx=1.0, vy=0.0),
+            response_config=ResponseConfig(dt=1.0, lag_window_steps=5, substep_dt=0.25),
+        )
+        self.assertEqual(result.H_lag.shape, (2 * T, 1))
+        self.assertEqual(result.metadata["boundary_mode"], BOUNDARY_MODE)
+        self.assertEqual(result.metadata["response_implementation"], RESPONSE_IMPLEMENTATION)
+        self.assertEqual(result.column_index[0]["source_name"], "src")
+        self.assertEqual(result.row_index[1]["sensor_id"], "downwind")
+        required_metadata = {
+            "response_config",
+            "dispersion_config",
+            "wind_provider",
+            "wind_metadata",
+            "wind_vx",
+            "wind_vy",
+            "row_index",
+            "column_index",
+            "baseline_policy",
+            "baseline",
+            "kernel_mass_retained_by_column",
+            "dropped_mass_by_column",
+            "exit_count_by_column",
+            "released_mass_exited_by_column",
+            "first_exit_by_release",
+            "kernel_mass_summaries",
+        }
+        self.assertFalse(required_metadata.difference(result.metadata))
+        self.assertEqual(result.metadata["row_index"], result.row_index)
+        self.assertEqual(result.metadata["column_index"], result.column_index)
+        self.assertEqual(result.metadata["baseline_policy"], "zero_source")
+        np.testing.assert_allclose(result.metadata["baseline"], result.baseline)
+        np.testing.assert_allclose(result.metadata["wind_vx"], np.ones(T, dtype=np.float32))
+        np.testing.assert_allclose(result.metadata["wind_vy"], np.zeros(T, dtype=np.float32))
+        self.assertEqual(len(result.metadata["kernel_mass_retained_by_column"]), result.H_lag.shape[1])
+        self.assertEqual(len(result.metadata["dropped_mass_by_column"]), result.H_lag.shape[1])
+        self.assertEqual(len(result.metadata["exit_count_by_column"]), result.H_lag.shape[1])
+        json.dumps(result.metadata)
+
+    def test_same_time_release_uses_min_dispersion_time(self) -> None:
+        T = 4
+        result = build_lagged_response_matrix(
+            single_source_map(x=2, y=4),
+            ["src"],
+            impulse_basis(T, tau=0),
+            Observer(sensor_ids=["source_sensor"], sensor_xy=np.asarray([[2.0, 4.0]], dtype=np.float32)),
+            constant_direction(length=T, vx=1.0, vy=0.0),
+            response_config=ResponseConfig(dt=1.0, lag_window_steps=3, substep_dt=0.5),
+            dispersion_config=DispersionConfig(sigma_parallel=0.7, sigma_perp=0.25, min_dispersion_time=0.25),
+        )
+        self.assertGreater(float(result.H_lag[0, 0]), 0.0)
+        first_kernel = result.metadata["kernel_mass_summaries"][0]
+        self.assertEqual(first_kernel["age"], 0.0)
+        self.assertEqual(first_kernel["effective_age"], 0.25)
+
+    def test_open_boundary_exit_stops_contribution_without_wrap(self) -> None:
+        T = 12
+        result = build_lagged_response_matrix(
+            single_source_map(nx=8, ny=8, x=7, y=4),
+            ["edge"],
+            impulse_basis(T, tau=0),
+            Observer(sensor_ids=["west", "east"], sensor_xy=np.asarray([[0.0, 4.0], [7.0, 4.0]], dtype=np.float32)),
+            constant_direction(length=T, vx=1.0, vy=0.0),
+            response_config=ResponseConfig(dt=1.0, lag_window_steps=8, substep_dt=0.25),
+        )
+        self.assertGreater(result.metadata["exit_count_by_column"][0], 0)
+        self.assertEqual(float(result.H_lag[4:, 0].max()), 0.0)
+
+    def test_boundary_mass_is_dropped_not_renormalized(self) -> None:
+        T = 4
+        cfg = ResponseConfig(dt=1.0, lag_window_steps=2, substep_dt=0.5)
+        wind = constant_direction(length=T, vx=0.0, vy=0.0)
+        interior = build_lagged_response_matrix(
+            single_source_map(nx=8, ny=8, x=4, y=4),
+            ["interior"],
+            impulse_basis(T),
+            observer(),
+            wind,
+            response_config=cfg,
+        )
+        boundary = build_lagged_response_matrix(
+            single_source_map(nx=8, ny=8, x=0, y=4),
+            ["boundary"],
+            impulse_basis(T),
+            observer(),
+            wind,
+            response_config=cfg,
+        )
+        self.assertLess(
+            boundary.metadata["kernel_mass_retained_by_column"][0],
+            interior.metadata["kernel_mass_retained_by_column"][0],
+        )
+        self.assertGreater(boundary.metadata["dropped_mass_by_column"][0], 0.0)
+
+    def test_anisotropic_dispersion_changes_response(self) -> None:
+        T = 8
+        common = dict(
+            source_maps=single_source_map(x=2, y=4),
+            source_names=["src"],
+            activity_basis=impulse_basis(T),
+            observer=observer(),
+            wind_sampler_or_sequence=constant_direction(length=T, vx=1.0, vy=0.0),
+            response_config=ResponseConfig(dt=1.0, lag_window_steps=6, substep_dt=0.25),
+        )
+        aniso = build_lagged_response_matrix(**common, dispersion_config=DispersionConfig(sigma_parallel=0.8, sigma_perp=0.2))
+        iso = build_lagged_response_matrix(**common, dispersion_config=DispersionConfig(sigma_parallel=0.4, sigma_perp=0.4))
+        self.assertFalse(np.allclose(aniso.H_lag, iso.H_lag))
+
+    def test_custom_position_dependent_sampler_is_supported(self) -> None:
+        T = 5
+        result = build_lagged_response_matrix(
+            single_source_map(),
+            ["src"],
+            impulse_basis(T),
+            observer(),
+            PositionDependentWind(),
+            response_config=ResponseConfig(dt=1.0, lag_window_steps=3, substep_dt=0.5),
+        )
+        self.assertEqual(result.metadata["wind_provider"], "position_dependent_test")
+        self.assertTrue(np.isfinite(result.H_lag).all())
+
+    def test_trim_initial_lag_changes_row_count(self) -> None:
+        T = 8
+        result = build_lagged_response_matrix(
+            single_source_map(),
+            ["src"],
+            impulse_basis(T),
+            observer(),
+            constant_direction(length=T, vx=1.0, vy=0.0),
+            response_config=ResponseConfig(dt=1.0, lag_window_steps=4, trim_initial_lag=True),
+        )
+        self.assertEqual(result.H_lag.shape, (2 * (T - 3), 1))
+        self.assertEqual(result.metadata["T_effective"], T - 3)
+        self.assertEqual(result.metadata["trim_start"], 3)
+
+    def test_validation_errors(self) -> None:
+        with self.assertRaises(ValueError):
+            build_lagged_response_matrix(
+                -single_source_map(),
+                ["src"],
+                impulse_basis(4),
+                observer(),
+                constant_direction(length=4, vx=1.0, vy=0.0),
+            )
+        with self.assertRaises(ValueError):
+            build_lagged_response_matrix(
+                single_source_map(),
+                ["src"],
+                impulse_basis(4),
+                Observer(sensor_ids=["bad"], sensor_xy=np.asarray([[99.0, 0.0]], dtype=np.float32)),
+                constant_direction(length=4, vx=1.0, vy=0.0),
+            )
+
+
+if __name__ == "__main__":
+    unittest.main()

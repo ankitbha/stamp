@@ -494,6 +494,16 @@ initial_condition policy
 baseline/background policy
 ```
 
+- Wind input should be mediated through a small sampler/provider interface:
+
+```text
+sample(t_index_or_float, position_xy) -> [Vx, Vy]
+```
+
+  The current city-level `Vx/Vy` sequence is one adapter. Later spatially
+  varying wind should plug into the same sampler interface without changing
+  downstream response, diagnostics, or fitting APIs.
+
 - The v1 response implementation should be the paper's open-boundary
   differentiable Gaussian puff approximation. Record
   `response_implementation="open_boundary_gaussian_puff"` and make it the
@@ -506,8 +516,11 @@ baseline/background policy
 z_i(a + substep_dt) = z_i(a) + substep_dt * w_a(z_i(a))
 ```
 
-- If the puff center exits the modeled domain, remove its remaining in-domain
-  mass. Do not reflect, wrap, clamp, or reinsert it.
+- Use grid-index coordinates with integer cell centers. The physical open
+  domain extents are `[-0.5, Nx - 0.5] x [-0.5, Ny - 0.5]`. If the puff center
+  exits those extents, remove its remaining in-domain mass. Do not reflect,
+  wrap, clamp, or reinsert it. The final advection substep should be fractional
+  when needed so the puff lands exactly at the requested observation time.
 - If the puff remains active, spread its contribution with an anisotropic
   Gaussian kernel centered at the advected puff location:
 
@@ -521,19 +534,29 @@ K_phi(x, z_i, Sigma_i) =
   puff trajectory:
 
 ```text
+age = (t - tau) * dt
+effective_age = max(age, min_dispersion_time)
+
 Sigma_i(t, tau) =
   R_i(t, tau) diag(
-    sigma_parallel^2 * max(t - tau, min_dispersion_time),
-    sigma_perp^2 * max(t - tau, min_dispersion_time)
+    sigma_parallel^2 * effective_age,
+    sigma_perp^2 * effective_age
   ) R_i(t, tau)^T
 ```
 
 - `R_i` should align the first covariance axis with the mean downwind direction
   when wind speed is nonzero; use a deterministic fallback orientation when the
   wind norm is near zero.
+- Same-time rows where `t == tau` are included. They use
+  `effective_age = min_dispersion_time`, so releases have a finite initial
+  Gaussian kernel rather than being dropped.
 - Kernel support may be truncated for efficiency, but mass outside the modeled
   domain or outside the truncated support must be reported and must not be
   renormalized back into the grid.
+- Do not infer mass by summing `H_lag` rows, because the same puff is observed
+  at multiple times. Retained and dropped mass summaries should be defined per
+  release kernel or per `(source, basis, release_time, observation_time)`, and
+  exit loss should be recorded separately per release event.
 - The response config should expose at least:
 
 ```text
@@ -563,7 +586,7 @@ zero_wind_orientation
 - Produce:
 
 ```text
-H_lag: [m * T_effective, K_basis]
+H_lag: [m * T, K_basis] by default
 row_index metadata: sensor id, time index, lag policy
 source_names
 source_basis metadata
@@ -577,6 +600,14 @@ kernel_mass_retained summaries
 dropped_mass summaries
 exit_time summaries
 ```
+
+  Optional initial-lag trimming may produce `T_effective`; if used, the row
+  metadata must record the trim policy. The default Task 5 builder should keep
+  all `T` observation times.
+- Persist `row_index`, `column_index`, `baseline_policy`, and the row-aligned
+  baseline vector inside the response metadata as well as exposing convenient
+  result fields. Saving `H_lag` with metadata alone must preserve enough
+  provenance to reconstruct every row and fitted coefficient.
 
 - Make baseline subtraction explicit. Recommended default:
   - Run a zero-source or background-only baseline.
@@ -616,12 +647,14 @@ exit_time summaries
 Task 5 should also create the reusable tiny sanity runner that later tasks extend. Put it under `experiments/iasa_pol/sanity.py` or `scripts/run_iasa_sanity.py`, and support:
 
 ```text
+--gate task3a
 --gate response
 --gate projection
 --gate diagnostics
 --gate fit
 --gate merge
 --gate all
+--strict-all
 ```
 
 The default sanity setup should be fully synthetic and should not require New Delhi data or ImputeFormer training:
@@ -674,10 +707,12 @@ raise a clear error naming the failed metric and expected range. Use the real
 public APIs rather than private helper-only shortcuts.
 
 Gate S1, completed as part of Task 5, builds `H_lag` for the shared toy
-geometry with constant temporal bases and open-boundary Gaussian puff transport.
+geometry with impulse and constant temporal bases and open-boundary Gaussian
+puff transport.
 It must verify:
 
-- `H_lag` is nonzero and has shape `(num_sensors * num_times, num_sources)`.
+- `H_lag` is nonzero and has shape
+  `(num_sensors * num_times, num_source_basis_columns)`.
 - Metadata records `boundary_mode="open"`,
   `response_implementation="open_boundary_gaussian_puff"`, wind sequence, lag
   policy, source columns, sensor/time row index, dispersion parameters,
