@@ -1,0 +1,224 @@
+\begin{thebibliography}{32}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Banks \& Kunisch(2012)Banks and Kunisch]{banks2012estimation}
+Banks, H.~T. and Kunisch, K.
+\newblock \emph{Estimation techniques for distributed parameter systems}.
+\newblock Springer Science \& Business Media, 2012.
+
+\bibitem[Belis et~al.(2013)Belis, Karagulian, Larsen, and
+  Hopke]{belis2013critical}
+Belis, C., Karagulian, F., Larsen, B.~R., and Hopke, P.
+\newblock Critical review and meta-analysis of ambient particulate matter
+  source apportionment using receptor models in europe.
+\newblock \emph{Atmospheric Environment}, 69:\penalty0 94--108, 2013.
+
+\bibitem[Belis et~al.(2019)Belis, Favez, Mircea, Diapouli, Manousakas,
+  Vratolis, Gilardoni, Paglione, Decesari, Mocnik, et~al.]{belis2019european}
+Belis, C., Favez, O., Mircea, M., Diapouli, E., Manousakas, M., Vratolis, S.,
+  Gilardoni, S., Paglione, M., Decesari, S., Mocnik, G., et~al.
+\newblock European guide on air pollution source apportionment with receptor
+  models—revised version 2019.
+\newblock \emph{Publications Office, LU}, 2019.
+
+\bibitem[Bhardwaj et~al.(2025)Bhardwaj, Balashankar, and
+  Subramanian]{bhardwaj2025fieldformer}
+Bhardwaj, A., Balashankar, A., and Subramanian, L.
+\newblock Fieldformer: Physics-informed transformers for spatio-temporal field
+  reconstruction from sparse sensors.
+\newblock \emph{arXiv preprint arXiv:2510.03589}, 2025.
+
+\bibitem[Carrassi et~al.(2018)Carrassi, Bocquet, Bertino, and
+  Evensen]{carrassi2018data}
+Carrassi, A., Bocquet, M., Bertino, L., and Evensen, G.
+\newblock Data assimilation in the geosciences: An overview of methods, issues,
+  and perspectives.
+\newblock \emph{Wiley Interdisciplinary Reviews: Climate Change}, 9\penalty0
+  (5):\penalty0 e535, 2018.
+
+\bibitem[Chen \& Chen(1984)Chen and Chen]{chen1984linear}
+Chen, C.-T. and Chen, C.-T.
+\newblock \emph{Linear system theory and design}, volume 301.
+\newblock Holt, Rinehart and Winston New York, 1984.
+
+\bibitem[Chen et~al.(2023)Chen, Xu, Wu, and Huang]{chen2023group}
+Chen, L., Xu, J., Wu, B., and Huang, J.
+\newblock Group-aware graph neural network for nationwide city air quality
+  forecasting.
+\newblock \emph{ACM Transactions on Knowledge Discovery from Data}, 18\penalty0
+  (3):\penalty0 1--20, 2023.
+
+\bibitem[Colton et~al.(1990)Colton, Ewing, Rundell, et~al.]{colton1990inverse}
+Colton, D.~L., Ewing, R.~E., Rundell, W., et~al.
+\newblock \emph{Inverse problems in partial differential equations}, volume~42.
+\newblock Siam, 1990.
+
+\bibitem[Columbia~University(2018)]{ColumbiaUniversity2018}
+Columbia~University, C. f. I. E. S. I. N. .~C.
+\newblock Gridded population of the world, version 4 (gpwv4): Population
+  density, revision 11, 20230129 2018.
+\newblock URL \url{https://doi.org/10.7927/H49C6VHW}.
+
+\bibitem[CPCB(2023)]{cpcb}
+CPCB.
+\newblock Air quality data.
+\newblock \url{https://cpcb.nic.in/}, 2023.
+
+\bibitem[CPCB(2025)]{cpcb_portal}
+CPCB.
+\newblock Cpcb data portal.
+\newblock
+  \url{https://app.cpcbccr.com/ccr/\#/caaqm-dashboard-all/caaqm-landing/caaqm-comparison-data},
+  2025.
+
+\bibitem[Engl et~al.(1996)Engl, Hanke, and Neubauer]{engl1996regularization}
+Engl, H.~W., Hanke, M., and Neubauer, A.
+\newblock \emph{Regularization of inverse problems}, volume 375.
+\newblock Springer Science \& Business Media, 1996.
+
+\bibitem[{Google}(2024)]{google_maps}
+{Google}.
+\newblock Google maps.
+\newblock \url{https://maps.google.com}, 2024.
+\newblock Accessed: 2026-03-30.
+
+\bibitem[Guttikunda \& Calori(2013)Guttikunda and Calori]{GUTTIKUNDA2013101}
+Guttikunda, S.~K. and Calori, G.
+\newblock A gis based emissions inventory at 1 km × 1 km spatial
+  resolution for air pollution analysis in delhi, india.
+\newblock \emph{Atmospheric Environment}, 67:\penalty0 101--111, 2013.
+\newblock ISSN 1352-2310.
+\newblock \doi{https://doi.org/10.1016/j.atmosenv.2012.10.040}.
+\newblock URL
+  \url{https://www.sciencedirect.com/science/article/pii/S1352231012010229}.
+
+\bibitem[Hopke(2016)]{hopke2016review}
+Hopke, P.~K.
+\newblock Review of receptor modeling methods for source apportionment.
+\newblock \emph{Journal of the Air \& Waste Management Association},
+  66\penalty0 (3):\penalty0 237--259, 2016.
+
+\bibitem[Hopke et~al.(2020)Hopke, Dai, Li, and Feng]{hopke2020global}
+Hopke, P.~K., Dai, Q., Li, L., and Feng, Y.
+\newblock Global review of recent source apportionments for airborne
+  particulate matter.
+\newblock \emph{Science of The Total Environment}, 740:\penalty0 140091, 2020.
+
+\bibitem[Iyer et~al.(2022)Iyer, Balashankar, Aeberhard, Bhattacharyya, Rusconi,
+  Jose, Soans, Sudarshan, Pande, and Subramanian]{iyer2022modeling}
+Iyer, S.~R., Balashankar, A., Aeberhard, W.~H., Bhattacharyya, S., Rusconi, G.,
+  Jose, L., Soans, N., Sudarshan, A., Pande, R., and Subramanian, L.
+\newblock Modeling fine-grained spatio-temporal pollution maps with low-cost
+  sensors.
+\newblock \emph{npj Climate and Atmospheric Science}, 5\penalty0 (1):\penalty0
+  76, 2022.
+
+\bibitem[Karagulian et~al.(2015)Karagulian, Belis, Dora, Pr{\"u}ss-Ust{\"u}n,
+  Bonjour, Adair-Rohani, and Amann]{karagulian2015contributions}
+Karagulian, F., Belis, C.~A., Dora, C. F.~C., Pr{\"u}ss-Ust{\"u}n, A.~M.,
+  Bonjour, S., Adair-Rohani, H., and Amann, M.
+\newblock Contributions to cities' ambient particulate matter (pm): A
+  systematic review of local source contributions at global level.
+\newblock \emph{Atmospheric environment}, 120:\penalty0 475--483, 2015.
+
+\bibitem[Li et~al.(2017)Li, Yu, Shahabi, and Liu]{li2017diffusion}
+Li, Y., Yu, R., Shahabi, C., and Liu, Y.
+\newblock Diffusion convolutional recurrent neural network: Data-driven traffic
+  forecasting.
+\newblock \emph{arXiv preprint arXiv:1707.01926}, 2017.
+
+\bibitem[Li et~al.(2020)Li, Kovachki, Azizzadenesheli, Liu, Bhattacharya,
+  Stuart, and Anandkumar]{li2020fourier}
+Li, Z., Kovachki, N., Azizzadenesheli, K., Liu, B., Bhattacharya, K., Stuart,
+  A., and Anandkumar, A.
+\newblock Fourier neural operator for parametric partial differential
+  equations.
+\newblock \emph{arXiv preprint arXiv:2010.08895}, 2020.
+
+\bibitem[Li et~al.(2024)Li, Zheng, Kovachki, Jin, Chen, Liu, Azizzadenesheli,
+  and Anandkumar]{li2024physics}
+Li, Z., Zheng, H., Kovachki, N., Jin, D., Chen, H., Liu, B., Azizzadenesheli,
+  K., and Anandkumar, A.
+\newblock Physics-informed neural operator for learning partial differential
+  equations.
+\newblock \emph{ACM/IMS Journal of Data Science}, 1\penalty0 (3):\penalty0
+  1--27, 2024.
+
+\bibitem[Ljung et~al.(1987)]{ljung1987theory}
+Ljung, L. et~al.
+\newblock Theory for the user.
+\newblock \emph{System identification}, 1987.
+
+\bibitem[Mircea et~al.(2020)Mircea, Calori, Pirovano, BELIS,
+  et~al.]{mircea2020european}
+Mircea, M., Calori, G., Pirovano, G., BELIS, C., et~al.
+\newblock European guide on air pollution source apportionment for particulate
+  matter with source oriented models and their combined use with receptor
+  models.
+\newblock 2020.
+
+\bibitem[Paatero \& Tapper(1994)Paatero and Tapper]{paatero1994positive}
+Paatero, P. and Tapper, U.
+\newblock Positive matrix factorization: A non-negative factor model with
+  optimal utilization of error estimates of data values.
+\newblock \emph{Environmetrics}, 5\penalty0 (2):\penalty0 111--126, 1994.
+
+\bibitem[Pant \& Harrison(2012)Pant and Harrison]{pant2012critical}
+Pant, P. and Harrison, R.~M.
+\newblock Critical review of receptor modelling for particulate matter: a case
+  study of india.
+\newblock \emph{Atmospheric Environment}, 49:\penalty0 1--12, 2012.
+
+\bibitem[Raissi et~al.(2019)Raissi, Perdikaris, and
+  Karniadakis]{raissi2019physics}
+Raissi, M., Perdikaris, P., and Karniadakis, G.~E.
+\newblock Physics-informed neural networks: A deep learning framework for
+  solving forward and inverse problems involving nonlinear partial differential
+  equations.
+\newblock \emph{Journal of Computational physics}, 378:\penalty0 686--707,
+  2019.
+
+\bibitem[Tarantola(2005)]{tarantola2005inverse}
+Tarantola, A.
+\newblock \emph{Inverse problem theory and methods for model parameter
+  estimation}.
+\newblock SIAM, 2005.
+
+\bibitem[Viana et~al.(2008)Viana, Kuhlbusch, Querol, Alastuey, Harrison, Hopke,
+  Winiwarter, Vallius, Szidat, Pr{\'e}v{\^o}t, et~al.]{viana2008source}
+Viana, M., Kuhlbusch, T.~A., Querol, X., Alastuey, A., Harrison, R.~M., Hopke,
+  P.~K., Winiwarter, W., Vallius, M., Szidat, S., Pr{\'e}v{\^o}t, A.~S., et~al.
+\newblock Source apportionment of particulate matter in europe: a review of
+  methods and results.
+\newblock \emph{Journal of aerosol science}, 39\penalty0 (10):\penalty0
+  827--849, 2008.
+
+\bibitem[Wang et~al.(2023)Wang, Sun, Jiang, Zeng, and Liu]{wang2023kalman}
+Wang, B., Sun, Z., Jiang, X., Zeng, J., and Liu, R.
+\newblock Kalman filter and its application in data assimilation.
+\newblock \emph{Atmosphere}, 14\penalty0 (8):\penalty0 1319, 2023.
+
+\bibitem[Watson et~al.(2002)Watson, Zhu, Chow, Engelbrecht, Fujita, and
+  Wilson]{watson2002receptor}
+Watson, J.~G., Zhu, T., Chow, J.~C., Engelbrecht, J., Fujita, E.~M., and
+  Wilson, W.~E.
+\newblock Receptor modeling application framework for particle source
+  apportionment.
+\newblock \emph{Chemosphere}, 49\penalty0 (9):\penalty0 1093--1136, 2002.
+
+\bibitem[Wu et~al.(2019)Wu, Pan, Long, Jiang, and Zhang]{wu2019graph}
+Wu, Z., Pan, S., Long, G., Jiang, J., and Zhang, C.
+\newblock Graph wavenet for deep spatial-temporal graph modeling.
+\newblock \emph{arXiv preprint arXiv:1906.00121}, 2019.
+
+\bibitem[Yu et~al.(2017)Yu, Yin, and Zhu]{yu2017spatio}
+Yu, B., Yin, H., and Zhu, Z.
+\newblock Spatio-temporal graph convolutional networks: A deep learning
+  framework for traffic forecasting.
+\newblock \emph{arXiv preprint arXiv:1709.04875}, 2017.
+
+\end{thebibliography}

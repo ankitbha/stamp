@@ -1,0 +1,48 @@
+This is BibTeX, Version 0.99d (TeX Live 2022/dev/Debian)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: main.aux
+The style file: icml2026/icml2026.bst
+Database file #1: refs.bib
+Warning--empty journal in mircea2020european
+You've used 32 entries,
+            2773 wiz_defined-function locations,
+            785 strings with 11546 characters,
+and the built_in function-call counts, 15921 in all, are:
+= -- 1310
+> -- 1240
+< -- 15
++ -- 419
+- -- 387
+* -- 1387
+:= -- 2568
+add.period$ -- 100
+call.type$ -- 32
+change.case$ -- 215
+chr.to.int$ -- 32
+cite$ -- 65
+duplicate$ -- 632
+empty$ -- 1123
+format.name$ -- 430
+if$ -- 3223
+int.to.chr$ -- 1
+int.to.str$ -- 1
+missing$ -- 33
+newline$ -- 172
+num.names$ -- 128
+pop$ -- 435
+preamble$ -- 1
+purify$ -- 188
+quote$ -- 0
+skip$ -- 522
+stack$ -- 0
+substring$ -- 359
+swap$ -- 35
+text.length$ -- 3
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 327
+warning$ -- 1
+while$ -- 121
+width$ -- 0
+write$ -- 416
+(There was 1 warning)
