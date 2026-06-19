@@ -1,0 +1,752 @@
+% \section{Wind-Conditioned Source Apportionment}
+% \label{sec:wind_conditioned_source_apportionment}
+
+% Section~\ref{sec:problem_setup} formulated source apportionment as a
+% lagged inverse problem over known source inventories. We now describe how
+% the lagged source-response matrix is constructed in practice from sparse
+% wind observations, source inventories, a physically constrained transport
+% operator, and background correction. The output of this section is a
+% projected source-response matrix and a nonnegative estimate of source
+% contributions. Section~\ref{sec:identifiability_theory} then analyzes
+% when these estimates are identifiable.
+
+% \subsection{Method Overview}
+
+% The proposed apportionment model has four stages. First, sparse wind
+% measurements are interpolated to the spatial grid. Second, the gridded
+% wind field is used to construct an open-boundary lagged transport
+% operator that maps emissions released at earlier times to concentrations
+% at later sensor times. Third, the transported source inventories are
+% sampled at the sensor locations to form source fingerprints. Fourth,
+% background and temporal components are removed before estimating
+% nonnegative source activity multipliers.
+
+% The central object is the projected lagged source-response matrix
+% \begin{equation}
+% \widetilde H
+% :=
+% P_Q^\perp H_{1:T}^{\mathrm{lag}},
+% \qquad
+% \widetilde{\mathbf Y}
+% :=
+% P_Q^\perp \mathbf Y,
+% \label{eq:projected_HY_def}
+% \end{equation}
+% where \(H_{1:T}^{\mathrm{lag}}\) encodes the wind-conditioned response of
+% each source group, and \(P_Q^\perp\) removes low-dimensional background
+% and temporal components. The source contribution vector is then estimated
+% by solving a constrained inverse problem of the form
+% \begin{equation}
+% \widehat{\boldsymbol\theta}
+% =
+% \arg\min_{\boldsymbol\theta\ge 0}
+% \left\|
+% \widetilde{\mathbf Y}
+% -
+% \widetilde H\boldsymbol\theta
+% \right\|_2^2
+% +
+% \lambda R(\boldsymbol\theta).
+% \label{eq:projected_nnls_estimator_overview}
+% \end{equation}
+
+% \subsection{Coordinate-Aware Wind Field Estimation}
+
+% Wind is typically observed at a small number of monitoring locations and
+% must be estimated on the full concentration grid. Let
+% \[
+% X_{\mathrm{wind}}
+% =
+% \{\mathbf z_1,\ldots,\mathbf z_p\}
+% \]
+% denote the locations at which wind measurements are available, and let
+% \(\mathbf w_t^{\mathrm{obs}}(\mathbf z_i)\in\mathbb R^2\) denote the
+% observed horizontal wind vector at time \(t\). We estimate a gridded wind
+% field
+% \[
+% \widehat{\mathbf w}_t(\mathbf x),
+% \qquad
+% \mathbf x\in\Omega,
+% \]
+% using a coordinate-aware interpolation model
+% \begin{equation}
+% \widehat{\mathbf w}_{1:T}
+% =
+% f_\phi
+% \left(
+% \mathbf w_{1:T}^{\mathrm{obs}},
+% X_{\mathrm{wind}},
+% X_{\mathrm{grid}}
+% \right).
+% \label{eq:wind_interpolation_model}
+% \end{equation}
+
+% The interpolation model may be implemented using kriging, inverse-distance
+% weighting, a graph interpolation model, or a local transformer-style
+% model over nearby wind observations. Since the measurements are hourly,
+% we do not require a long-horizon temporal sequence model. Instead, the
+% model may use a short temporal patch around each hour together with
+% spatial coordinates. This is important because wind interpolation is not
+% determined by locality alone: terrain, urban geometry, and coordinates
+% can affect the wind field even when nearby observations are sparse.
+
+% In practice, we use a residual parameterization around a physically
+% reasonable baseline:
+% \begin{equation}
+% \widehat{\mathbf w}_t(\mathbf x)
+% =
+% \mathbf w_t^{0}(\mathbf x)
+% +
+% \Delta_\phi(\mathbf x,t),
+% \label{eq:wind_residual_parameterization}
+% \end{equation}
+% where \(\mathbf w_t^{0}\) is a baseline interpolation, such as kriging or
+% reanalysis-guided interpolation, and \(\Delta_\phi\) is a bounded learned
+% correction. The wind model is first trained using wind measurements alone:
+% \begin{equation}
+% \begin{aligned}
+% \mathcal L_{\mathrm{wind}}
+% =
+% &\sum_{t}
+% \sum_{\mathbf z_i\in X_{\mathrm{wind}}}
+% \left\|
+% \widehat{\mathbf w}_t(\mathbf z_i)
+% -
+% \mathbf w_t^{\mathrm{obs}}(\mathbf z_i)
+% \right\|_2^2
+% \\
+% &+
+% \lambda_{\mathrm{smooth}}
+% \mathcal R_{\mathrm{smooth}}(\widehat{\mathbf w})
+% +
+% \lambda_{\Delta}
+% \|\Delta_\phi\|_2^2 .
+% \end{aligned}
+% \label{eq:wind_pretraining_loss}
+% \end{equation}
+% We use a spatial smoothness regularizer on the gridded wind field:
+% \begin{equation}
+% \mathcal R_{\mathrm{smooth}}(\widehat{\mathbf w})
+% =
+% \sum_t
+% \sum_{(g,g')\in \mathcal E_{\mathrm{grid}}}
+% \left\|
+% \widehat{\mathbf w}_t(\mathbf x_g)
+% -
+% \widehat{\mathbf w}_t(\mathbf x_{g'})
+% \right\|_2^2,
+% \label{eq:wind_spatial_smoothness}
+% \end{equation}
+% where \(\mathcal E_{\mathrm{grid}}\) denotes neighboring grid-cell pairs.
+% This term discourages physically implausible cell-to-cell oscillations in
+% the interpolated wind field while still allowing spatial variation driven
+% by the observed wind measurements and coordinates.
+
+% The final term \(\|\Delta_\phi\|_2^2\) penalizes deviation from the
+% baseline wind interpolation in the residual parameterization
+% \(\widehat{\mathbf w}_t=\mathbf w_t^0+\Delta_\phi\). This pretraining
+% step prevents the wind field from becoming an unconstrained latent
+% variable that adapts only to fit pollution sensors.
+
+% \subsection{Open-Boundary Lagged Plume Response}
+
+% We now define the transport operator used to map source emissions to
+% concentration fields. Let \(G_{t,\tau}^{\partial}\) denote the
+% open-boundary transport response from release time \(\tau\) to sensor
+% time \(t\), where \(\tau\le t\). The superscript \(\partial\) indicates
+% that the computational domain is open: pollutant mass that is advected or
+% dispersed outside \(\Omega\) leaves the accounting and is not reflected,
+% wrapped around, or redistributed inside the domain.
+
+% For a nonnegative emission vector \(\mathbf z\in\mathbb R^q_+\), the
+% transport operator satisfies
+% \begin{equation}
+% G_{t,\tau}^{\partial}\mathbf z \ge 0,
+% \qquad
+% \mathbf 1^\top
+% G_{t,\tau}^{\partial}\mathbf z
+% \le
+% \mathbf 1^\top \mathbf z.
+% \label{eq:open_boundary_mass_nonincrease}
+% \end{equation}
+% Thus, the operator preserves nonnegativity and is mass non-increasing
+% over the modeled domain.
+
+% We instantiate \(G_{t,\tau}^{\partial}\) using a differentiable
+% lagged puff/plume approximation. Consider a unit emission released from
+% source-grid cell \(i\) at location \(\mathbf r_i\) and time \(\tau\).
+% The puff center is initialized as
+% \begin{equation}
+% \mathbf z_i(\tau)=\mathbf r_i.
+% \end{equation}
+% For intermediate times \(a\in[\tau,t]\), the puff center is advected by
+% the interpolated wind field:
+% \begin{equation}
+% \frac{d\mathbf z_i(a)}{da}
+% =
+% \widehat{\mathbf w}_a(\mathbf z_i(a)).
+% \label{eq:puff_center_advection}
+% \end{equation}
+% In a discrete implementation with substep size \(\delta a\), this becomes
+% \begin{equation}
+% \mathbf z_i^{r+1}
+% =
+% \mathbf z_i^r
+% +
+% \delta a\,
+% \widehat{\mathbf w}_{a_r}(\mathbf z_i^r).
+% \label{eq:discrete_puff_center_advection}
+% \end{equation}
+% If the puff center exits \(\Omega\), the corresponding in-domain mass is
+% removed. If the puff remains inside \(\Omega\), its contribution at time
+% \(t\) is spread using a Gaussian dispersion kernel
+% % \begin{equation}
+% % K_\psi
+% % \left(
+% % \mathbf x;
+% % \mathbf z_i(t),
+% % \Sigma_i(t,\tau)
+% % \right)
+% % =
+% % \frac{1}{2\pi |\Sigma_i(t,\tau)|^{1/2}}
+% % \exp\left(
+% % -\frac{1}{2}
+% % (\mathbf x-\mathbf z_i(t))^\top
+% % \Sigma_i(t,\tau)^{-1}
+% % (\mathbf x-\mathbf z_i(t))
+% % \right),
+% % \label{eq:gaussian_puff_kernel}
+% % \end{equation}
+% \begin{equation}
+% K_\psi(\mathbf x;\mathbf z_i,\Sigma_i)
+% =
+% \frac{
+% \exp\!\left(
+% -\frac{1}{2}\|\mathbf x-\mathbf z_i\|_{\Sigma_i^{-1}}^2
+% \right)
+% }{
+% 2\pi |\Sigma_i|^{1/2}
+% }.
+% \label{eq:gaussian_puff_kernel}
+% \end{equation}
+% \[
+% \|\mathbf a\|_{\Sigma^{-1}}^2 := \mathbf a^\top \Sigma^{-1}\mathbf a .
+% \]
+% where \(\psi\) denotes dispersion parameters and
+% \(\Sigma_i(t,\tau)\) controls downwind and crosswind spread. A simple
+% choice is
+% \begin{equation}
+% \Sigma_i(t,\tau)
+% =
+% R_i(t,\tau)
+% \begin{bmatrix}
+% \sigma_{\parallel}^2(t-\tau) & 0\\
+% 0 & \sigma_{\perp}^2(t-\tau)
+% \end{bmatrix}
+% R_i(t,\tau)^\top,
+% \label{eq:anisotropic_dispersion_covariance}
+% \end{equation}
+% where \(R_i(t,\tau)\) aligns the covariance with the mean wind direction
+% along the puff trajectory. The dispersion scales
+% \(\sigma_{\parallel}\) and \(\sigma_{\perp}\) may be fixed from plume
+% physics or calibrated within physically plausible bounds.
+
+% Let \(\{\mathbf x_g\}_{g=1}^n\) denote the concentration-grid cell
+% centers. The response of the grid field to a unit release from source
+% cell \(i\) is
+% \begin{equation}
+% \left[
+% G_{t,\tau}^{\partial}
+% \left(
+% \widehat{\mathbf w}_{\tau:t};\psi
+% \right)
+% \mathbf e_i
+% \right]_g
+% =
+% \chi_i(t,\tau)
+% K_\psi
+% \left(
+% \mathbf x_g;
+% \mathbf z_i(t),
+% \Sigma_i(t,\tau)
+% \right)
+% \Delta V_g,
+% \label{eq:puff_operator_column}
+% \end{equation}
+% where \(\mathbf e_i\) is the \(i\)-th source basis vector,
+% \(\Delta V_g\) is the grid-cell area or volume factor, and
+% \(\chi_i(t,\tau)\in\{0,1\}\) indicates whether the puff remains active in
+% the open domain. Kernel mass outside \(\Omega\) is not renormalized, so
+% dispersion across the boundary naturally removes mass from the modeled
+% domain.
+
+% This construction implements a
+% mass-accounting transport response. Faster winds move the puff center
+% farther during a fixed time interval, while dispersion controls how
+% broadly the emitted mass is distributed across grid cells. The sensor
+% signal then depends on whether the advected and dispersed plume overlaps
+% the monitoring locations at later times.
+
+% \subsection{Lagged Inventory-to-Sensor Response}
+
+% Let \(S\in\mathbb R^{q\times K}\) be the source-inventory matrix, where
+% the \(k\)-th column \(\mathbf s_k\) represents the spatial pattern of
+% source group \(k\). For a fixed source activity vector
+% \(\boldsymbol\theta\in\mathbb R^K_+\), emissions released during an
+% interval are proportional to \(S\boldsymbol\theta\).
+
+% At sensor time \(t\), emissions released at earlier times
+% \(t-\ell\) may still contribute to the observed concentration. Let
+% \(\mathcal L_t=\{0,\ldots,\min(L,t-1)\}\) be the available lag set. The
+% lagged source-response matrix is
+% \begin{equation}
+% H_t^{\mathrm{lag}}
+% =
+% \sum_{\ell\in\mathcal L_t}
+% \mathcal O
+% G_{t,t-\ell}^{\partial}
+% \left(
+% \widehat{\mathbf w}_{t-\ell:t};\psi
+% \right)
+% S
+% \in\mathbb R^{m\times K}.
+% \label{eq:method_lagged_response_matrix}
+% \end{equation}
+% Stacking over time gives
+% \begin{equation}
+% H_{1:T}^{\mathrm{lag}}
+% =
+% \begin{bmatrix}
+% H_1^{\mathrm{lag}}\\
+% H_2^{\mathrm{lag}}\\
+% \vdots\\
+% H_T^{\mathrm{lag}}
+% \end{bmatrix}
+% \in
+% \mathbb R^{mT\times K}.
+% \label{eq:method_stacked_lagged_response_matrix}
+% \end{equation}
+
+% The \(k\)-th column of \(H_{1:T}^{\mathrm{lag}}\) is the finite-horizon
+% sensor fingerprint of source group \(k\) under the estimated wind field,
+% open-boundary transport, and chosen lag window. This fingerprint is not
+% only spatial but spatio-temporal: it records when and where emissions
+% from a source group become visible at the sparse sensor network.
+
+% \subsection{Background and Temporal Correction}
+
+% Observed pollution includes regional background, time-of-day variation,
+% seasonal trends, low-frequency drift, and sensor offsets that are not
+% explained by the local source inventory. We represent these components
+% using a low-dimensional background-correction basis
+% \begin{equation}
+% Q\in\mathbb R^{mT\times r}.
+% \end{equation}
+% The columns of \(Q\) may include cubic spline basis functions over
+% time-of-day, day-level intercepts, regional background trends, and
+% sensor-specific offsets.
+
+% The observation model is
+% \begin{equation}
+% \mathbf Y
+% =
+% H_{1:T}^{\mathrm{lag}}\boldsymbol\theta
+% +
+% Q\boldsymbol\gamma
+% +
+% \mathbf E,
+% \label{eq:method_background_model}
+% \end{equation}
+% where \(\boldsymbol\gamma\in\mathbb R^r\) are background-correction
+% coefficients. To separate the local source-response signal from the
+% background subspace, we use the projection
+% \begin{equation}
+% P_Q^\perp
+% =
+% I
+% -
+% Q Q^\dagger,
+% \label{eq:method_background_projection}
+% \end{equation}
+% where \(Q^\dagger\) denotes the Moore--Penrose pseudoinverse. Applying
+% this projection gives
+% \begin{equation}
+% \widetilde{\mathbf Y}
+% =
+% P_Q^\perp \mathbf Y,
+% \qquad
+% \widetilde H
+% =
+% P_Q^\perp H_{1:T}^{\mathrm{lag}}.
+% \label{eq:method_projected_data_matrix}
+% \end{equation}
+
+% The choice of \(Q\) must be deliberately low-dimensional. If the
+% background basis is too flexible, it may absorb source-driven variation
+% and reduce the identifiable source signal. In our implementation, the
+% background correction is therefore restricted to smooth temporal
+% components and low-rank sensor offsets rather than arbitrary
+% high-frequency per-sensor curves.
+
+% \subsection{Source Activity Estimation}
+
+% Given the projected data and response matrix, we estimate source
+% contributions by solving a nonnegative regularized least-squares problem:
+% \begin{equation}
+% \widehat{\boldsymbol\theta}
+% =
+% \arg\min_{\boldsymbol\theta\ge 0}
+% \left\|
+% \widetilde{\mathbf Y}
+% -
+% \widetilde H\boldsymbol\theta
+% \right\|_2^2
+% +
+% \lambda R(\boldsymbol\theta).
+% \label{eq:method_source_estimator}
+% \end{equation}
+% The regularizer \(R\) can encode weak prior information about source
+% activity. In the simplest case,
+% \begin{equation}
+% R(\boldsymbol\theta)
+% =
+% \|\boldsymbol\theta\|_2^2,
+% \label{eq:ridge_source_regularizer}
+% \end{equation}
+% which stabilizes estimation when source fingerprints are nearly
+% collinear. If prior activity levels \(\boldsymbol\theta_0\) are available,
+% we may instead use
+% \begin{equation}
+% R(\boldsymbol\theta)
+% =
+% \|\boldsymbol\theta-\boldsymbol\theta_0\|_2^2.
+% \label{eq:inventory_prior_regularizer}
+% \end{equation}
+% Other choices, such as sparsity penalties, can be used when only a small
+% number of source groups are expected to dominate the observed signal.
+
+% Equivalently, one may fit source and background coefficients jointly:
+% \begin{equation}
+% (\widehat{\boldsymbol\theta},\widehat{\boldsymbol\gamma})
+% =
+% \arg\min_{\boldsymbol\theta\ge 0,\boldsymbol\gamma}
+% \left\|
+% \mathbf Y
+% -
+% H_{1:T}^{\mathrm{lag}}\boldsymbol\theta
+% -
+% Q\boldsymbol\gamma
+% \right\|_2^2
+% +
+% \lambda R(\boldsymbol\theta).
+% \label{eq:joint_source_background_fit}
+% \end{equation}
+% The projected form in \eqref{eq:method_source_estimator} is useful
+% because it makes explicit which part of the source-response matrix
+% remains after background correction. This projected matrix is the object
+% used for the identifiability analysis in the next section.
+
+% \subsection{Constrained End-to-End Refinement}
+
+% The core estimator treats the wind field, transport parameters, source
+% inventories, and background basis as fixed when estimating
+% \(\boldsymbol\theta\). This is the most interpretable setting. However,
+% when wind interpolation or dispersion parameters are uncertain, we allow
+% a constrained refinement stage after the initial fit.
+
+% Let \(\phi_0\) denote the pretrained wind-interpolation parameters and
+% \(\psi_0\) denote initial plume or dispersion parameters. We refine
+% \((\phi,\psi,\boldsymbol\theta,\boldsymbol\gamma)\) by minimizing
+% \begin{align}
+% \mathcal L_{\mathrm{refine}}
+% =
+% &
+% \left\|
+% \mathbf Y
+% -
+% H_{1:T}^{\mathrm{lag}}(\phi,\psi)\boldsymbol\theta
+% -
+% Q\boldsymbol\gamma
+% \right\|_2^2
+% +
+% \lambda_\theta R(\boldsymbol\theta)
+% \nonumber\\
+% &
+% +
+% \lambda_w
+% \left\|
+% \widehat{\mathbf w}_{1:T}^{\,\phi}
+% -
+% \widehat{\mathbf w}_{1:T}^{\,\phi_0}
+% \right\|_2^2
+% +
+% \lambda_\psi
+% \|\psi-\psi_0\|_2^2
+% \nonumber \\
+% &
+% +
+% \lambda_{\mathrm{smooth}}
+% \mathcal R_{\mathrm{smooth}}(\widehat{\mathbf w}^{\,\phi}),
+% \label{eq:constrained_refinement_loss}
+% \end{align}
+% subject to
+% \begin{equation}
+% \boldsymbol\theta\ge 0,
+% \qquad
+% \psi\in\Psi_{\mathrm{phys}},
+% \qquad
+% \left\|
+% \widehat{\mathbf w}_{1:T}^{\,\phi}
+% -
+% \widehat{\mathbf w}_{1:T}^{\,\phi_0}
+% \right\|_\infty
+% \le
+% \epsilon_w.
+% \label{eq:refinement_constraints}
+% \end{equation}
+% Here \(\Psi_{\mathrm{phys}}\) denotes physically plausible bounds on
+% dispersion and plume parameters.
+
+% This refinement is intentionally constrained. Without such constraints,
+% the wind field and plume parameters can become flexible latent variables
+% that fit sparse pollution sensors while weakening the interpretability of
+% the inferred source contributions. In experiments, we therefore report
+% both the fixed-operator estimate and the constrained-refinement estimate.
+
+% % \subsection{Outputs of the Apportionment Model}
+
+% % The method produces the following quantities:
+% % \begin{enumerate}[leftmargin=*]
+% %     \item source contribution estimates
+% %     \(\widehat{\boldsymbol\theta}\);
+% %     \item fitted sensor trajectories
+% %     \[
+% %     \widehat{\mathbf Y}
+% %     =
+% %     H_{1:T}^{\mathrm{lag}}\widehat{\boldsymbol\theta}
+% %     +
+% %     Q\widehat{\boldsymbol\gamma};
+% %     \]
+% %     \item projected residuals
+% %     \[
+% %     \widetilde{\mathbf r}
+% %     =
+% %     \widetilde{\mathbf Y}
+% %     -
+% %     \widetilde H\widehat{\boldsymbol\theta};
+% %     \]
+% %     \item projected source fingerprints, given by the columns of
+% %     \(\widetilde H\).
+% % \end{enumerate}
+
+% The outputs of this approach are not sufficient by themselves to justify source-level claims. A source estimate may fit the sensor data well while still being
+% unstable if the corresponding source fingerprints are weak, collinear, or
+% absorbed by background correction. The next section therefore studies the
+% rank, conditioning, visibility, and coherence of \(\widetilde H\), which
+% determine the identifiable resolution of the source apportionment
+% problem.
+
+
+\section{Wind-Conditioned Response Construction and Estimation}
+\label{sec:wind_conditioned_source_apportionment}
+
+Section~\ref{sec:problem_setup} defines the projected inverse problem.  This
+section describes how the response matrix is constructed in practice and how
+source activities are estimated once the response has been formed.
+
+\subsection{Coordinate-Aware Wind Field Estimation}
+\label{subsec:wind_field_estimation}
+
+Wind is usually observed at a small number of locations and must be estimated
+on the concentration grid.  Let
+\(X_{\mathrm{wind}}=\{\mathbf z_1,\ldots,\mathbf z_p\}\) be the wind-monitoring
+locations, and let \(\mathbf w_t^{\mathrm{obs}}(\mathbf z_i)\in\mathbb R^2\)
+denote the observed horizontal wind vector at time \(t\).  We estimate a
+gridded wind field by
+\begin{equation}
+\widehat{\mathbf w}_{1:T}
+= f_\phi(\mathbf w_{1:T}^{\mathrm{obs}},X_{\mathrm{wind}},X_{\mathrm{grid}}).
+\label{eq:wind_interpolator}
+\end{equation}
+The interpolator may be kriging, inverse-distance weighting, graph
+interpolation, or a local attention model over nearby wind observations.  Since
+hourly wind observations already provide temporal structure, the interpolator
+uses a short temporal patch and explicit coordinates rather than an unconstrained
+long-horizon sequence model.
+
+We use a residual parameterization around a physically reasonable baseline,
+\begin{equation}
+\widehat{\mathbf w}_t(\mathbf x)
+= \mathbf w_t^0(\mathbf x)+\Delta_\phi(\mathbf x,t),
+\label{eq:wind_residual}
+\end{equation}
+where \(\mathbf w_t^0\) is a baseline interpolation or reanalysis-guided wind
+field, and \(\Delta_\phi\) is a bounded correction.  The wind model is trained on
+wind measurements before fitting pollution sensors:
+\begin{equation}
+\begin{aligned}
+\mathcal L_{\mathrm{wind}}
+={}&
+\sum_t\sum_{\mathbf z_i\in X_{\mathrm{wind}}}
+\left\|
+\widehat{\mathbf w}_t(\mathbf z_i)
+-
+\mathbf w_t^{\mathrm{obs}}(\mathbf z_i)
+\right\|_2^2 \\
+&+
+\lambda_{\mathrm{sm}}R_{\mathrm{sm}}(\widehat{\mathbf w})
++
+\lambda_\Delta\|\Delta_\phi\|_2^2 .
+\end{aligned}
+\label{eq:wind_loss}
+\end{equation}
+A grid smoothness penalty,
+\begin{equation}
+R_{\mathrm{sm}}(\widehat{\mathbf w})
+=\sum_t\sum_{(g,g')\in E_{\mathrm{grid}}}
+\|\widehat{\mathbf w}_t(\mathbf x_g)-\widehat{\mathbf w}_t(\mathbf x_{g'})\|_2^2,
+\label{eq:wind_smoothness}
+\end{equation}
+discourages cell-to-cell oscillations while allowing spatial variation driven by
+measurements and coordinates.  The residual penalty prevents wind from becoming
+a flexible latent variable chosen only to fit pollution sensors.
+
+\subsection{Open-Boundary Lagged Plume Response}
+\label{subsec:plume_response}
+
+The transport response \(G_{t,\tau}^{\partial}\) maps emissions released at
+\(\tau\le t\) to the concentration field at time \(t\).  For any nonnegative
+emission vector \(\mathbf z\in\mathbb R_+^q\), the open-boundary response obeys
+\begin{equation}
+G_{t,\tau}^{\partial}\mathbf z\ge 0,
+\qquad
+\mathbf 1^\top G_{t,\tau}^{\partial}\mathbf z\le \mathbf 1^\top\mathbf z.
+\label{eq:mass_nonincreasing}
+\end{equation}
+Thus the operator preserves nonnegativity and is mass non-increasing inside the
+modeled domain.
+
+We instantiate this response with a differentiable puff approximation.  For a
+unit release from source cell \(i\) at location \(\mathbf r_i\) and release time
+\(\tau\), the puff center is initialized as \(\mathbf z_i(\tau)=\mathbf r_i\) and
+advected by the interpolated wind field,
+\begin{equation}
+\frac{d\mathbf z_i(a)}{da}=\widehat{\mathbf w}_a(\mathbf z_i(a)),
+\qquad a\in[\tau,t].
+\label{eq:puff_ode}
+\end{equation}
+With substep size \(\delta a\), this is discretized as
+\begin{equation}
+\mathbf z_i^{r+1}=\mathbf z_i^r+\delta a\,\widehat{\mathbf w}_{a_r}(\mathbf z_i^r).
+\label{eq:puff_discrete}
+\end{equation}
+If the puff exits \(\Omega\), its in-domain mass is removed.  Otherwise its
+contribution is spread with an anisotropic Gaussian kernel
+\begin{equation}
+K_\psi(\mathbf x;\mathbf z_i,\Sigma_i)
+=\frac{\exp\left(-\frac12\|\mathbf x-\mathbf z_i\|_{\Sigma_i^{-1}}^2\right)}
+{2\pi |\Sigma_i|^{1/2}},
+\label{eq:gaussian_kernel}
+\end{equation}
+where \(\psi\) denotes dispersion parameters.  A simple covariance model is
+\begin{equation}
+\Sigma_i(t,\tau)
+= R_i(t,\tau)
+\begin{bmatrix}
+\sigma_\parallel^2(t-\tau) & 0\\
+0 & \sigma_\perp^2(t-\tau)
+\end{bmatrix}
+R_i(t,\tau)^\top,
+\label{eq:dispersion_covariance}
+\end{equation}
+with \(R_i\) aligned to the mean wind direction along the trajectory.  The grid
+response to a unit release is
+\begin{equation}
+\left[G_{t,\tau}^{\partial}(\widehat{\mathbf w}_{\tau:t};\psi)\mathbf e_i\right]_g
+=\chi_i(t,\tau)K_\psi(\mathbf x_g;\mathbf z_i(t),\Sigma_i(t,\tau))\Delta V_g,
+\label{eq:grid_response}
+\end{equation}
+where \(\chi_i(t,\tau)\) indicates whether the puff remains active in the open
+domain and \(\Delta V_g\) is the grid-cell area or volume.  Kernel mass outside
+\(\Omega\) is not renormalized.
+
+\subsection{Response Matrix and Source Activity Fit}
+\label{subsec:response_and_fit}
+
+Given the estimated wind field and source inventory, the lagged source response
+is constructed as in Section~\ref{sec:problem_setup}:
+\begin{equation}
+\begin{aligned}
+&H_t^{\mathrm{lag}}
+=\sum_{\ell\in\mathcal L_t}
+O G_{t,t-\ell}^{\partial}(\widehat{\mathbf w}_{t-\ell:t};\psi)S, \\
+&H_{1:T}^{\mathrm{lag}}=[H_1^{\mathrm{lag}};\ldots;H_T^{\mathrm{lag}}].
+\end{aligned}
+\label{eq:constructed_response}
+\end{equation}
+Background correction gives
+\begin{equation}
+\widetilde Y=P_Q^\perp Y,
+\qquad
+\widetilde H=P_Q^\perp H_{1:T}^{\mathrm{lag}}.
+\label{eq:constructed_projected_response}
+\end{equation}
+Source activities are then estimated by nonnegative regularized least squares,
+\begin{equation}
+\widehat{\boldsymbol\theta}
+=\arg\min_{\boldsymbol\theta\ge 0}
+\|\widetilde Y-\widetilde H\boldsymbol\theta\|_2^2
++\lambda R(\boldsymbol\theta).
+\label{eq:nnls_estimator}
+\end{equation}
+The regularizer can be ridge stabilization,
+\begin{equation}
+R(\boldsymbol\theta)=\|\boldsymbol\theta\|_2^2,
+\label{eq:ridge_regularizer}
+\end{equation}
+or a weak prior around inventory-derived activity levels,
+\begin{equation}
+R(\boldsymbol\theta)=\|\boldsymbol\theta-\boldsymbol\theta_0\|_2^2.
+\label{eq:prior_regularizer}
+\end{equation}
+Equivalently, one may fit background and source coefficients jointly:
+\begin{equation}
+(\widehat{\boldsymbol\theta},\widehat{\boldsymbol\gamma})
+=\arg\min_{\boldsymbol\theta\ge 0,\boldsymbol\gamma}
+\|Y-H_{1:T}^{\mathrm{lag}}\boldsymbol\theta-Q\boldsymbol\gamma\|_2^2
++\lambda R(\boldsymbol\theta).
+\label{eq:joint_fit}
+\end{equation}
+The projected formulation is used for identifiability because it exposes the
+part of each source fingerprint that remains after background correction.
+
+\subsection{Constrained End-to-End Refinement}
+\label{subsec:constrained_refinement}
+
+The most interpretable estimator fixes wind fields and transport parameters
+before fitting source activity.  When wind interpolation or dispersion is
+uncertain, we optionally refine wind residuals and dispersion parameters under
+explicit constraints.  Let \(\phi_0\) and \(\psi_0\) denote the pretrained wind
+and initial dispersion parameters.  The refinement objective is
+\begin{align}
+\mathcal L_{\mathrm{refine}}
+=&\|Y-H_{1:T}^{\mathrm{lag}}(\phi,\psi)\boldsymbol\theta-Q\boldsymbol\gamma\|_2^2
++\lambda_\theta R(\boldsymbol\theta) \nonumber\\
+&+\lambda_w\|\widehat{\mathbf w}_{1:T}^{\phi}-\widehat{\mathbf w}_{1:T}^{\phi_0}\|_2^2
++\lambda_\psi\|\psi-\psi_0\|_2^2 \nonumber\\
+&+\lambda_{\mathrm{sm}}R_{\mathrm{sm}}(\widehat{\mathbf w}^{\phi}),
+\label{eq:refinement_objective}
+\end{align}
+subject to
+\begin{equation}
+\boldsymbol\theta\ge 0,
+\quad
+\psi\in\Psi_{\mathrm{phys}},
+\quad
+\|\widehat{\mathbf w}_{1:T}^{\phi}-\widehat{\mathbf w}_{1:T}^{\phi_0}\|_\infty\le \epsilon_w.
+\label{eq:refinement_constraints}
+\end{equation}
+This refinement is accepted only as a constrained local correction.  Without
+these restrictions, wind and plume parameters could fit sparse pollution sensors
+while weakening the physical and source-level interpretation of
+\(\widehat{\boldsymbol\theta}\).

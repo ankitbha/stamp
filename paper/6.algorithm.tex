@@ -1,0 +1,545 @@
+% \section{Identifiability-Aware Apportionment Method}
+% \label{sec:identifiability_aware_method}
+
+% Sections~\ref{sec:wind_conditioned_source_apportionment}
+% and~\ref{sec:identifiability_theory} define the apportionment estimator
+% and the diagnostics that determine whether its outputs are identifiable.
+% We now combine these components into an identifiability-aware source
+% apportionment method. The method estimates source contributions, audits
+% the projected source-response matrix, merges ambiguous source groups when
+% necessary, and reports only the source resolution supported by the
+% available sensors, wind fields, source inventories, and background
+% correction.
+
+% We refer to this procedure as Identifiability-Aware Source Apportionment
+% (IASA).
+
+% \subsection{Inputs and Outputs}
+
+% The method takes as input sparse pollution observations
+% \(\mathbf Y\), sensor locations \(X_{\mathrm{sens}}\), sparse wind
+% observations \(\mathbf w^{\mathrm{obs}}_{1:T}\), source inventories
+% \(S\in\mathbb R^{q\times K}\), a background-correction basis
+% \(Q\), a maximum lag \(L\), and a physically constrained open-boundary
+% transport operator \(G^\partial\). It also takes thresholds
+% \(\tau_\sigma\), \(\tau_\rho\), and \(\tau_v\), which control effective
+% rank, pairwise ambiguity, and source visibility.
+
+% The outputs are:
+% \begin{enumerate}[leftmargin=*]
+%     \item source contribution estimates at the identifiable source
+%     resolution;
+%     \item fitted sensor trajectories and projected residuals;
+%     \item uncertainty intervals for reported contributions;
+%     \item identifiability diagnostics, including rank, effective rank,
+%     singular values, visibility, and pairwise coherence;
+%     \item a list of source groups that are weakly visible or should be
+%     merged.
+% \end{enumerate}
+
+% \subsection{IASA Algorithm}
+
+% The IASA procedure is summarized as follows:
+% \begin{enumerate}[leftmargin=*]
+%     \item \textbf{Estimate gridded wind fields.}
+%     Estimate
+%     \[
+%     \widehat{\mathbf w}_{1:T}
+%     =
+%     f_\phi(
+%     \mathbf w^{\mathrm{obs}}_{1:T},
+%     X_{\mathrm{wind}},
+%     X_{\mathrm{grid}}
+%     ).
+%     \]
+
+%     \item \textbf{Construct lagged open-boundary responses.}
+%     For each time \(t\), construct
+%     \[
+%     H_t^{\mathrm{lag}}
+%     =
+%     \sum_{\ell\in\mathcal L_t}
+%     \mathcal O
+%     G_{t,t-\ell}^{\partial}
+%     (
+%     \widehat{\mathbf w}_{t-\ell:t}
+%     )
+%     S .
+%     \]
+
+%     \item \textbf{Stack the finite-horizon response.}
+%     Form
+%     \[
+%     H_{1:T}^{\mathrm{lag}}
+%     =
+%     \begin{bmatrix}
+%     H_1^{\mathrm{lag}}\\
+%     \vdots\\
+%     H_T^{\mathrm{lag}}
+%     \end{bmatrix}.
+%     \]
+
+%     \item \textbf{Apply background correction.}
+%     Compute
+%     \[
+%     \widetilde{\mathbf Y}
+%     =
+%     P_Q^\perp \mathbf Y,
+%     \qquad
+%     \widetilde H
+%     =
+%     P_Q^\perp H_{1:T}^{\mathrm{lag}}.
+%     \]
+
+%     \item \textbf{Estimate source contributions.}
+%     Solve
+%     \[
+%     \widehat{\boldsymbol\theta}
+%     =
+%     \arg\min_{\boldsymbol\theta\ge 0}
+%     \left\|
+%     \widetilde{\mathbf Y}
+%     -
+%     \widetilde H\boldsymbol\theta
+%     \right\|_2^2
+%     +
+%     \lambda R(\boldsymbol\theta).
+%     \]
+
+%     \item \textbf{Compute projected source fingerprints.}
+%     Write
+%     \[
+%     \widetilde H
+%     =
+%     \begin{bmatrix}
+%     \widetilde{\mathbf h}_1 &
+%     \cdots &
+%     \widetilde{\mathbf h}_K
+%     \end{bmatrix}.
+%     \]
+
+%     \item \textbf{Compute identifiability diagnostics.}
+%     Compute singular values, effective rank, source visibility \(v_k\),
+%     and pairwise coherence \(\rho_{ij}\).
+
+%     \item \textbf{Flag weakly visible sources.}
+%     Mark
+%     \[
+%     \mathcal W
+%     =
+%     \{k:v_k<\tau_v\}.
+%     \]
+
+%     \item \textbf{Flag ambiguous source pairs.}
+%     Mark
+%     \[
+%     \mathcal A
+%     =
+%     \{(i,j):\rho_{ij}>\tau_\rho\}.
+%     \]
+
+%     \item \textbf{Merge ambiguous groups if needed.}
+%     If \(\mathcal A\neq\emptyset\), merge source groups connected by
+%     high-coherence edges, reconstruct \(S^{\mathcal G}\), recompute
+%     \(\widetilde H^{\mathcal G}\), and refit the merged source
+%     contributions.
+
+%     \item \textbf{Report uncertainty and diagnostics.}
+%     Report source contributions, uncertainty intervals, residuals,
+%     visibility scores, coherence values, and merge recommendations.
+% \end{enumerate}
+
+% % \subsection{Identifiability Audit}
+
+% % After fitting the source activity vector, IASA audits the projected
+% % response matrix
+% % \[
+% % \widetilde H
+% % =
+% % P_Q^\perp H_{1:T}^{\mathrm{lag}}.
+% % \]
+% % The singular values of \(\widetilde H\) determine the number of source
+% % directions that are recoverable above the noise floor. We compute
+% % \begin{equation}
+% % r_{\mathrm{eff}}(\tau_\sigma)
+% % =
+% % \#\{i:\sigma_i(\widetilde H)>\tau_\sigma\}.
+% % \label{eq:iasa_effective_rank}
+% % \end{equation}
+% % If \(r_{\mathrm{eff}}(\tau_\sigma)<K\), then the current source
+% % partition is too fine for the available sensing regime. In that case,
+% % the method does not interpret all \(K\) source groups separately.
+
+% % For each source group, IASA computes the projected visibility
+% % \begin{equation}
+% % v_k
+% % =
+% % \|\widetilde{\mathbf h}_k\|_2,
+% % \label{eq:iasa_visibility}
+% % \end{equation}
+% % where \(\widetilde{\mathbf h}_k\) is the \(k\)-th column of
+% % \(\widetilde H\). Sources with \(v_k<\tau_v\) are marked as weakly
+% % visible. Such sources may be present in the inventory, but their
+% % contribution is not strongly expressed in the sparse sensor network under
+% % the observed wind regime.
+
+% % IASA also computes pairwise projected fingerprint coherence:
+% % \begin{equation}
+% % \rho_{ij}
+% % =
+% % \frac{
+% % |\widetilde{\mathbf h}_i^\top \widetilde{\mathbf h}_j|
+% % }{
+% % \|\widetilde{\mathbf h}_i\|_2
+% % \|\widetilde{\mathbf h}_j\|_2
+% % }.
+% % \label{eq:iasa_coherence}
+% % \end{equation}
+% % Pairs with \(\rho_{ij}>\tau_\rho\) are treated as ambiguous because their
+% % sensor-time fingerprints are nearly proportional.
+
+% % \subsection{Source Merge Rule}
+
+% % When two or more source groups are highly coherent, IASA reports their
+% % combined contribution rather than unstable separate estimates. We form a
+% % graph whose nodes are source groups and whose edges connect ambiguous
+% % pairs:
+% % \begin{equation}
+% % (i,j)\in E_{\mathrm{amb}}
+% % \quad
+% % \Longleftrightarrow
+% % \quad
+% % \rho_{ij}>\tau_\rho.
+% % \label{eq:ambiguity_graph}
+% % \end{equation}
+% % The connected components of this graph define a coarser source partition
+% % \[
+% % \mathcal G
+% % =
+% % \{G_1,\ldots,G_M\}.
+% % \]
+% % For each merged group \(G_a\), the merged source inventory is
+% % \begin{equation}
+% % \mathbf s_{G_a}
+% % =
+% % \sum_{k\in G_a}\mathbf s_k.
+% % \label{eq:merged_source_group}
+% % \end{equation}
+% % The merged inventory matrix is
+% % \begin{equation}
+% % S^{\mathcal G}
+% % =
+% % \begin{bmatrix}
+% % \mathbf s_{G_1} &
+% % \mathbf s_{G_2} &
+% % \cdots &
+% % \mathbf s_{G_M}
+% % \end{bmatrix}.
+% % \label{eq:iasa_merged_inventory}
+% % \end{equation}
+
+% % The source-response matrix is then rebuilt using \(S^{\mathcal G}\), and
+% % the source activity vector is refit:
+% % \begin{equation}
+% % \widehat{\boldsymbol\theta}^{\mathcal G}
+% % =
+% % \arg\min_{\boldsymbol\theta^{\mathcal G}\ge 0}
+% % \left\|
+% % \widetilde{\mathbf Y}
+% % -
+% % \widetilde H^{\mathcal G}\boldsymbol\theta^{\mathcal G}
+% % \right\|_2^2
+% % +
+% % \lambda R(\boldsymbol\theta^{\mathcal G}).
+% % \label{eq:merged_source_estimator}
+% % \end{equation}
+
+% % This procedure can be repeated until the remaining source groups satisfy
+% % the effective-rank and coherence thresholds:
+% % \begin{equation}
+% % r_{\mathrm{eff}}
+% % (\widetilde H^{\mathcal G};\tau_\sigma)
+% % =
+% % M,
+% % \qquad
+% % \max_{a\neq b}
+% % \rho_{ab}^{\mathcal G}
+% % \le
+% % \tau_\rho.
+% % \label{eq:iasa_merge_stopping_condition}
+% % \end{equation}
+% % Thus, IASA reports the finest source grouping that is supported by the
+% % projected lagged response matrix.
+
+% \subsection{Uncertainty Reporting}
+
+% IASA attaches uncertainty estimates to the reported source contributions.
+% Let
+% \begin{equation}
+% \widetilde{\mathbf r}
+% =
+% \widetilde{\mathbf Y}
+% -
+% \widetilde H\widehat{\boldsymbol\theta}
+% \label{eq:iasa_residual}
+% \end{equation}
+% denote the projected residual. A residual variance estimate is
+% \begin{equation}
+% \widehat\sigma^2
+% =
+% \frac{
+% \|\widetilde{\mathbf r}\|_2^2
+% }{
+% \max(mT-r_{\mathrm{eff}}(\tau_\sigma),1)
+% }.
+% \label{eq:residual_variance_estimate}
+% \end{equation}
+% For an unconstrained or active-set least-squares approximation, the
+% covariance of the active source estimates can be approximated by
+% \begin{equation}
+% \widehat{\operatorname{Cov}}
+% (\widehat{\boldsymbol\theta}_{\mathcal A})
+% =
+% \widehat\sigma^2
+% \left(
+% \widetilde H_{\mathcal A}^\top
+% \widetilde H_{\mathcal A}
+% +
+% \lambda I
+% \right)^\dagger,
+% \label{eq:iasa_covariance}
+% \end{equation}
+% where \(\mathcal A=\{k:\widehat\theta_k>\tau_\theta\}\) is the active set
+% and \(\widetilde H_{\mathcal A}\) contains the corresponding columns of
+% \(\widetilde H\).
+
+% When wind interpolation uncertainty is available, IASA can also report
+% ensemble intervals. Given wind samples
+% \[
+% \widehat{\mathbf w}_{1:T}^{(b)},
+% \qquad
+% b=1,\ldots,B,
+% \]
+% we construct response matrices
+% \(\widetilde H^{(b)}\), refit source contributions
+% \(\widehat{\boldsymbol\theta}^{(b)}\), and report empirical quantiles of
+% \[
+% \left\{
+% \widehat{\boldsymbol\theta}^{(b)}
+% \right\}_{b=1}^B.
+% \]
+% This captures uncertainty induced by wind interpolation and transport
+% response construction.
+
+% \subsection{Constrained Refinement}
+
+% The default IASA estimate fixes the wind field and transport parameters
+% before estimating source contributions. Optionally, IASA can perform a
+% constrained refinement stage in which wind residuals and dispersion
+% parameters are adjusted slightly to improve sensor fit. This refinement
+% uses the objective from Section~\ref{sec:wind_conditioned_source_apportionment},
+% but it is accepted only if it does not degrade identifiability.
+
+% Let \(\widetilde H_0\) be the projected response matrix before
+% refinement and \(\widetilde H_{\mathrm{ref}}\) the projected response
+% matrix after refinement. We require
+% \begin{equation}
+% \sigma_{\min}(\widetilde H_{\mathrm{ref}})
+% \ge
+% (1-\eta_{\mathrm{id}})
+% \sigma_{\min}(\widetilde H_0)
+% \label{eq:refinement_sigma_constraint}
+% \end{equation}
+% and
+% \begin{equation}
+% \max_{i\neq j}
+% \rho_{ij}^{\mathrm{ref}}
+% \le
+% \tau_\rho^{\mathrm{ref}}.
+% \label{eq:refinement_coherence_constraint}
+% \end{equation}
+% These checks prevent end-to-end refinement from improving predictive fit
+% by making the source fingerprints less separable.
+
+% \subsection{Reporting Protocol}
+
+% The final output of IASA is not only a vector of source contributions.
+% For each reported source group \(G_a\), the method reports
+% \begin{equation}
+% \widehat\theta_{G_a},
+% \qquad
+% \operatorname{CI}(\widehat\theta_{G_a}),
+% \qquad
+% v_{G_a},
+% \qquad
+% \max_{b\neq a}\rho_{ab}^{\mathcal G}.
+% \end{equation}
+% A source contribution is marked reliable only if its visibility is above
+% threshold, its uncertainty interval is sufficiently narrow, and its
+% coherence with other reported groups is below the ambiguity threshold.
+
+% The reporting protocol therefore distinguishes three cases:
+% \begin{enumerate}[leftmargin=*]
+%     \item \textbf{Identifiable source contribution:} the source group has
+%     sufficient visibility, low ambiguity, and stable uncertainty.
+%     \item \textbf{Weakly visible source:} the source group has a small
+%     projected fingerprint and should not be interpreted strongly.
+%     \item \textbf{Ambiguous source group:} the source group is highly
+%     coherent with another group and should be merged or reported with an
+%     ambiguity warning.
+% \end{enumerate}
+
+% This makes source apportionment an identifiable-resolution reporting
+% problem. The method estimates source contributions where the sensor data
+% support them, and coarsens or qualifies the attribution when the projected
+% lagged source-response matrix does not support fine-grained separation.
+
+
+
+
+
+
+
+
+\section{Identifiability-Aware Apportionment Method}
+\label{sec:identifiability_aware_method}
+
+We combine the estimator from Section~\ref{sec:wind_conditioned_source_apportionment}
+with the diagnostics from Section~\ref{sec:identifiability_theory}.  The result
+is an identifiability-aware source apportionment procedure, abbreviated IASA,
+that estimates source contributions only at the resolution supported by the
+projected response matrix.
+
+\subsection{Inputs and Outputs}
+\label{subsec:iasa_inputs_outputs}
+
+IASA takes sparse pollution observations \(Y\), sensor locations
+\(X_{\mathrm{sens}}\), wind observations \(\mathbf w_{1:T}^{\mathrm{obs}}\), source
+inventories \(S\in\mathbb R^{q\times K}\), a background basis \(Q\), a maximum
+lag \(L\), and an open-boundary transport response \(G^\partial\).  It also uses
+thresholds \(\tau_\sigma\), \(\tau_\rho\), and \(\tau_v\) for effective rank,
+pairwise ambiguity, and visibility.
+
+The outputs are source contribution estimates at the identifiable grouping,
+fitted trajectories and residuals, uncertainty intervals, singular-value and
+coherence diagnostics, low-visibility flags, and merge recommendations.
+
+\subsection{Procedure}
+\label{subsec:iasa_procedure}
+
+The procedure is:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Estimate wind.}  Construct
+    \(\widehat{\mathbf w}_{1:T}=f_\phi(\mathbf w_{1:T}^{\mathrm{obs}},
+    X_{\mathrm{wind}},X_{\mathrm{grid}})\).
+    \item \textbf{Build lagged responses.}  For each time \(t\), compute
+    \[
+    H_t^{\mathrm{lag}}=
+    \sum_{\ell\in\mathcal L_t}
+    O G_{t,t-\ell}^{\partial}(\widehat{\mathbf w}_{t-\ell:t})S.
+    \]
+    \item \textbf{Stack and project.}  Form \(H_{1:T}^{\mathrm{lag}}\), then
+    compute
+    \[
+    \widetilde Y=P_Q^\perp Y,
+    \qquad
+    \widetilde H=P_Q^\perp H_{1:T}^{\mathrm{lag}}.
+    \]
+    \item \textbf{Fit source activities.}  Solve
+    \[
+    \widehat{\boldsymbol\theta}
+    =\arg\min_{\boldsymbol\theta\ge0}
+    \|\widetilde Y-\widetilde H\boldsymbol\theta\|_2^2
+    +\lambda R(\boldsymbol\theta).
+    \]
+    \item \textbf{Audit identifiability.}  Compute singular values,
+    \(r_{\mathrm{eff}}(\tau_\sigma)\), visibility \(v_k\), background absorption
+    \(a_k\), and coherence \(\rho_{ij}\).
+    \item \textbf{Flag unsupported groups.}  Mark weakly visible sources
+    \(\mathcal W=\{k:v_k<\tau_v\}\) and ambiguous pairs
+    \(\mathcal A=\{(i,j):\rho_{ij}>\tau_\rho\}\).
+    \item \textbf{Merge when necessary.}  If \(\mathcal A\ne\emptyset\), merge
+    source groups connected by high-coherence edges, reconstruct the merged
+    inventory \(S^{\mathcal G}\), recompute \(\widetilde H^{\mathcal G}\), and
+    refit contributions at the merged resolution.
+    \item \textbf{Report.}  Return source estimates, uncertainty intervals,
+    residuals, diagnostics, and the final source grouping.
+\end{enumerate}
+
+This procedure separates two questions: which source vector best fits the
+projected sensor data, and which components of that vector are supported by the
+geometry of \(\widetilde H\).
+
+\subsection{Uncertainty Reporting}
+\label{subsec:uncertainty_reporting}
+
+Let
+\begin{equation}
+\widetilde r=\widetilde Y-\widetilde H\widehat{\boldsymbol\theta}
+\label{eq:projected_residual}
+\end{equation}
+be the projected residual.  A residual variance estimate is
+\begin{equation}
+\widehat\sigma^2
+=
+\frac{\|\widetilde r\|_2^2}{\max(mT-r_{\mathrm{eff}}(\tau_\sigma),1)}.
+\label{eq:residual_variance}
+\end{equation}
+For an unconstrained or active-set approximation, let
+\(\mathcal A_\theta=\{k:\widehat\theta_k>\tau_\theta\}\) and let
+\(\widetilde H_{\mathcal A_\theta}\) contain the active columns.  The covariance
+of the active estimates is approximated by
+\begin{equation}
+\operatorname{Cov}(\widehat{\boldsymbol\theta}_{\mathcal A_\theta})
+=
+\widehat\sigma^2
+(\widetilde H_{\mathcal A_\theta}^\top
+\widetilde H_{\mathcal A_\theta}+\lambda I)^\dagger.
+\label{eq:active_covariance}
+\end{equation}
+When wind ensembles are available, IASA also constructs response matrices
+\(\widetilde H^{(b)}\), refits \(\widehat{\boldsymbol\theta}^{(b)}\), and reports
+empirical quantiles across ensemble members.  These intervals capture
+uncertainty induced by wind interpolation and transport-response construction.
+
+\subsection{Acceptance Criteria for Refinement}
+\label{subsec:refinement_acceptance}
+
+The constrained refinement in Section~\ref{subsec:constrained_refinement} is
+accepted only if it improves fit without degrading separability.  Let
+\(\widetilde H_0\) be the projected response before refinement and
+\(\widetilde H_{\mathrm{ref}}\) after refinement.  We require
+\begin{equation}
+\sigma_{\min}(\widetilde H_{\mathrm{ref}})
+\ge
+(1-\eta_{\mathrm{id}})\sigma_{\min}(\widetilde H_0)
+\label{eq:refinement_smin_check}
+\end{equation}
+and
+\begin{equation}
+\max_{i\ne j}\rho_{ij}^{\mathrm{ref}}
+\le \tau_\rho^{\mathrm{ref}}.
+\label{eq:refinement_coherence_check}
+\end{equation}
+These checks prevent end-to-end tuning from improving sensor fit by making
+source fingerprints less distinguishable.
+
+\subsection{Reporting Protocol}
+\label{subsec:reporting_protocol}
+
+For each reported source group \(G_a\), IASA reports
+\begin{equation}
+\widehat\theta_{G_a},
+\qquad
+\mathrm{CI}(\widehat\theta_{G_a}),
+\qquad
+v_{G_a},
+\qquad
+\max_{b\ne a}\rho^{\mathcal G}_{ab}.
+\label{eq:reported_quantities}
+\end{equation}
+A source contribution is marked reliable only when its visibility is above
+threshold, its uncertainty interval is sufficiently narrow, and its coherence
+with other reported groups is below the ambiguity threshold.  Otherwise IASA
+labels the source as weakly visible, ambiguous with another source group, or
+merged into a coarser identifiable group.

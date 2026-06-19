@@ -1,0 +1,801 @@
+% \section{Identifiability Theory for Source Apportionment}
+% \label{sec:identifiability_theory}
+
+% Section~\ref{sec:wind_conditioned_source_apportionment} constructs a
+% lagged wind-conditioned inverse problem for estimating source activity.
+% However, a good sensor fit alone does not imply that the inferred source
+% contributions are uniquely determined by the observations. In this
+% section, we characterize when inventory-based source apportionment is
+% identifiable from sparse sensor data.
+
+% The central object is the projected lagged source-response matrix
+% \begin{equation}
+% \widetilde H
+% :=
+% P_Q^\perp H_{1:T}^{\mathrm{lag}}
+% \in
+% \mathbb R^{mT\times K},
+% \qquad
+% \widetilde{\mathbf Y}
+% :=
+% P_Q^\perp \mathbf Y
+% \in
+% \mathbb R^{mT}.
+% \label{eq:theory_projected_matrix}
+% \end{equation}
+% The projected observation model is
+% \begin{equation}
+% \widetilde{\mathbf Y}
+% =
+% \widetilde H\boldsymbol\theta
+% +
+% \widetilde{\mathbf E},
+% \qquad
+% \widetilde{\mathbf E}:=P_Q^\perp\mathbf E.
+% \label{eq:projected_identifiability_model}
+% \end{equation}
+% Thus, identifiability is governed not by the raw response matrix
+% \(H_{1:T}^{\mathrm{lag}}\), but by the response that remains after
+% background and temporal correction.
+
+% \subsection{Exact Identifiability}
+
+% We first consider the noiseless case. The source contribution vector
+% \(\boldsymbol\theta\) is exactly identifiable if no other source
+% contribution vector produces the same projected sensor trajectory.
+
+% \begin{definition}[Exact identifiability]
+% The source contribution vector \(\boldsymbol\theta\) is identifiable from
+% \(\widetilde{\mathbf Y}\) if
+% \begin{equation}
+% \widetilde H\boldsymbol\theta_1
+% =
+% \widetilde H\boldsymbol\theta_2
+% \quad
+% \Longrightarrow
+% \quad
+% \boldsymbol\theta_1=\boldsymbol\theta_2 .
+% \end{equation}
+% \end{definition}
+
+% \begin{proposition}[Identifiability of inventory-based apportionment]
+% \label{prop:exact_identifiability}
+% In the noiseless projected model
+% \begin{equation}
+% \widetilde{\mathbf Y}
+% =
+% \widetilde H\boldsymbol\theta,
+% \end{equation}
+% the source contribution vector is identifiable for all
+% \(\boldsymbol\theta\in\mathbb R^K\) if and only if
+% \begin{equation}
+% \operatorname{rank}(\widetilde H)=K.
+% \label{eq:full_rank_condition}
+% \end{equation}
+% \end{proposition}
+
+% \begin{proof}
+% If \(\operatorname{rank}(\widetilde H)=K\), then
+% \(\ker(\widetilde H)=\{\mathbf 0\}\). Therefore
+% \(\widetilde H\boldsymbol\theta_1=
+% \widetilde H\boldsymbol\theta_2\) implies
+% \(\widetilde H(\boldsymbol\theta_1-\boldsymbol\theta_2)=0\), and hence
+% \(\boldsymbol\theta_1=\boldsymbol\theta_2\).
+
+% Conversely, if \(\operatorname{rank}(\widetilde H)<K\), then there exists
+% a nonzero vector \(\Delta\boldsymbol\theta\in\ker(\widetilde H)\). Hence
+% \[
+% \widetilde H\boldsymbol\theta
+% =
+% \widetilde H(\boldsymbol\theta+\Delta\boldsymbol\theta),
+% \]
+% so the source contribution vector is not uniquely determined.
+% \end{proof}
+
+% The full-rank condition is the global linear identifiability condition.
+% Since source activities are constrained to be nonnegative in our
+% apportionment model, nonnegativity can sometimes remove some ambiguous
+% directions. However, full column rank remains the cleanest sufficient
+% condition for stable source-level interpretation. If
+% \(\operatorname{rank}(\widetilde H)<K\), then any source activity vector
+% in the interior of the nonnegative cone can be perturbed slightly along a
+% null direction while remaining nonnegative, producing the same projected
+% observations.
+
+% \subsection{Noise-Robust Identifiability}
+
+% In practice, observations contain sensor noise, wind interpolation error,
+% source-inventory uncertainty, and transport-model approximation error.
+% Even when \(\widetilde H\) has full rank, recovery may be unstable if its
+% columns are nearly linearly dependent.
+
+% Let
+% \[
+% \sigma_1(\widetilde H)
+% \ge
+% \sigma_2(\widetilde H)
+% \ge
+% \cdots
+% \ge
+% \sigma_K(\widetilde H)
+% \]
+% denote the singular values of \(\widetilde H\). The smallest singular
+% value controls the worst-case amplification of observation error.
+
+% \begin{proposition}[Noise-robust apportionment]
+% \label{prop:noise_robust_apportionment}
+% Assume
+% \[
+% \widetilde{\mathbf Y}
+% =
+% \widetilde H\boldsymbol\theta
+% +
+% \widetilde{\mathbf E}
+% \]
+% and \(\operatorname{rank}(\widetilde H)=K\). Let
+% \(\widehat{\boldsymbol\theta}_{\mathrm{LS}}\) be the unconstrained
+% least-squares estimate. Then
+% \begin{equation}
+% \left\|
+% \widehat{\boldsymbol\theta}_{\mathrm{LS}}
+% -
+% \boldsymbol\theta
+% \right\|_2
+% \le
+% \frac{
+% \|\widetilde{\mathbf E}\|_2
+% }{
+% \sigma_{\min}(\widetilde H)
+% }.
+% \label{eq:ls_noise_bound}
+% \end{equation}
+% If \(\widehat{\boldsymbol\theta}\) is the nonnegative least-squares
+% estimate and the true \(\boldsymbol\theta\ge 0\), then
+% \begin{equation}
+% \left\|
+% \widehat{\boldsymbol\theta}
+% -
+% \boldsymbol\theta
+% \right\|_2
+% \le
+% \frac{
+% 2\|\widetilde{\mathbf E}\|_2
+% }{
+% \sigma_{\min}(\widetilde H)
+% }.
+% \label{eq:nnls_noise_bound}
+% \end{equation}
+% \end{proposition}
+
+% \begin{proof}
+% For the unconstrained least-squares estimator,
+% \[
+% \widehat{\boldsymbol\theta}_{\mathrm{LS}}
+% -
+% \boldsymbol\theta
+% =
+% (\widetilde H^\top \widetilde H)^{-1}
+% \widetilde H^\top \widetilde{\mathbf E}.
+% \]
+% Taking norms gives
+% \[
+% \left\|
+% \widehat{\boldsymbol\theta}_{\mathrm{LS}}
+% -
+% \boldsymbol\theta
+% \right\|_2
+% \le
+% \|\widetilde H^\dagger\|_2
+% \|\widetilde{\mathbf E}\|_2
+% =
+% \frac{\|\widetilde{\mathbf E}\|_2}
+% {\sigma_{\min}(\widetilde H)}.
+% \]
+
+% For nonnegative least squares, the true
+% \(\boldsymbol\theta\ge 0\) is feasible. By optimality,
+% \[
+% \|\widetilde{\mathbf Y}-\widetilde H\widehat{\boldsymbol\theta}\|_2
+% \le
+% \|\widetilde{\mathbf Y}-\widetilde H\boldsymbol\theta\|_2
+% =
+% \|\widetilde{\mathbf E}\|_2.
+% \]
+% Therefore
+% \[
+% \|\widetilde H(\widehat{\boldsymbol\theta}-\boldsymbol\theta)\|_2
+% \le
+% 2\|\widetilde{\mathbf E}\|_2.
+% \]
+% Since \(\widetilde H\) has full column rank,
+% \[
+% \|\widetilde H(\widehat{\boldsymbol\theta}-\boldsymbol\theta)\|_2
+% \ge
+% \sigma_{\min}(\widetilde H)
+% \|\widehat{\boldsymbol\theta}-\boldsymbol\theta\|_2,
+% \]
+% which proves the claim.
+% \end{proof}
+
+% This result shows that source apportionment may be formally identifiable
+% but practically unreliable when \(\sigma_{\min}(\widetilde H)\) is small.
+
+% \subsection{Identifiability Scores}
+
+% \paragraph{Identifiability Score} We define the primary identifiability score as
+% \begin{equation}
+% \mathcal I
+% :=
+% \sigma_{\min}(\widetilde H).
+% \label{eq:identifiability_score}
+% \end{equation}
+% Larger \(\mathcal I\) implies stronger separation between source
+% fingerprints and lower worst-case sensitivity to noise.
+
+% \paragraph{Condition Number} We also define the condition number
+% \begin{equation}
+% \kappa(\widetilde H)
+% =
+% \frac{
+% \sigma_{\max}(\widetilde H)
+% }{
+% \sigma_{\min}(\widetilde H)
+% }.
+% \label{eq:condition_number}
+% \end{equation}
+% Large \(\kappa(\widetilde H)\) indicates that some linear combinations of
+% source groups are much harder to estimate than others.
+
+% \paragraph{Effective Rank} For a noise-dependent threshold \(\tau_\sigma>0\), we define the
+% effective rank
+% \begin{equation}
+% r_{\mathrm{eff}}(\tau_\sigma)
+% =
+% \#\left\{
+% i:
+% \sigma_i(\widetilde H)>\tau_\sigma
+% \right\}.
+% \label{eq:effective_rank}
+% \end{equation}
+% If
+% \begin{equation}
+% r_{\mathrm{eff}}(\tau_\sigma)<K,
+% \end{equation}
+% then the sensor network does not support reliable estimation of all
+% \(K\) source groups at the given noise level.
+
+% \paragraph{Source Visibility}
+
+% Rank and conditioning describe global identifiability. We also need
+% source-specific diagnostics. Let
+% \[
+% \widetilde{\mathbf h}_k
+% :=
+% P_Q^\perp
+% \mathbf h_k^{\mathrm{lag}}
+% \]
+% denote the projected lagged fingerprint of source group \(k\), where
+% \(\mathbf h_k^{\mathrm{lag}}\) is the \(k\)-th column of
+% \(H_{1:T}^{\mathrm{lag}}\). We define the visibility of source group
+% \(k\) as
+% \begin{equation}
+% v_k
+% :=
+% \|\widetilde{\mathbf h}_k\|_2.
+% \label{eq:source_visibility}
+% \end{equation}
+% A small value of \(v_k\) means that source group \(k\) has little
+% measurable effect on the sensor network after lagged transport and
+% background correction. Such a source may be physically present in the
+% inventory but weakly observed by the sensing geometry and wind regime.
+
+% % We can also define normalized visibility
+% % \begin{equation}
+% % \bar v_k
+% % =
+% % \frac{
+% % \|\widetilde{\mathbf h}_k\|_2
+% % }{
+% % \|\mathbf s_k\|_2
+% % +
+% % \varepsilon
+% % },
+% % \label{eq:normalized_visibility}
+% % \end{equation}
+% % which measures observable sensor response per unit inventory magnitude.
+
+% \paragraph{Pairwise Source Ambiguity}
+
+% Two source groups may both be visible but still difficult to separate if
+% their projected fingerprints are nearly proportional. We quantify this
+% using projected source-fingerprint coherence:
+% \begin{equation}
+% \rho_{ij}
+% =
+% \frac{
+% \left|
+% \widetilde{\mathbf h}_i^\top
+% \widetilde{\mathbf h}_j
+% \right|
+% }{
+% \|\widetilde{\mathbf h}_i\|_2
+% \|\widetilde{\mathbf h}_j\|_2
+% }.
+% \label{eq:projected_fingerprint_coherence}
+% \end{equation}
+% Values \(\rho_{ij}\approx 1\) indicate that source groups \(i\) and \(j\)
+% produce nearly collinear sensor-time signatures after background
+% correction.
+
+% This captures a common ambiguity in sparse air-quality apportionment: a
+% strong distant source and a weak nearby source can generate similar
+% sensor readings if their lagged wind-conditioned fingerprints are nearly
+% proportional. In this case, the sensor data may constrain the combined
+% effect of the sources but not their separate contributions.
+
+% % To express this scale-invariant ambiguity directly, define the ray
+% % distance
+% % \begin{equation}
+% % d^{\mathrm{ray}}_{ij}
+% % =
+% % \min_{c\in\mathbb R}
+% % \frac{
+% % \left\|
+% % \widetilde{\mathbf h}_i
+% % -
+% % c\widetilde{\mathbf h}_j
+% % \right\|_2
+% % }{
+% % \|\widetilde{\mathbf h}_i\|_2
+% % }.
+% % \label{eq:ray_distance}
+% % \end{equation}
+% % For nonzero projected fingerprints, this satisfies
+% % \begin{equation}
+% % d^{\mathrm{ray}}_{ij}
+% % =
+% % \sqrt{1-\rho_{ij}^2}.
+% % \label{eq:ray_distance_coherence_relation}
+% % \end{equation}
+% % Thus, high coherence is equivalent to small ray distance.
+
+% \subsection{Background Correction Can Reduce Identifiability}
+
+% The background-correction projection changes the source-response matrix.
+% A source group that appears visible in the raw response matrix may become
+% weakly visible after projection if its fingerprint lies close to the
+% background-correction subspace.
+
+% For source group \(k\), the removed fraction is
+% \begin{equation}
+% a_k
+% =
+% \frac{
+% \|P_Q\mathbf h_k^{\mathrm{lag}}\|_2
+% }{
+% \|\mathbf h_k^{\mathrm{lag}}\|_2
+% },
+% \qquad
+% P_Q:=QQ^\dagger.
+% \label{eq:background_absorption_fraction}
+% \end{equation}
+% If \(a_k\approx 1\), then most of the source fingerprint can be explained
+% by the background-correction basis. The projected visibility
+% \(\|\widetilde{\mathbf h}_k\|_2\) will be small even if the raw
+% fingerprint is large.
+
+% This is why identifiability must be assessed using
+% \(\widetilde H=P_Q^\perp H_{1:T}^{\mathrm{lag}}\), not the unprojected
+% matrix \(H_{1:T}^{\mathrm{lag}}\).
+
+% \subsection{Operator Error and Wind Uncertainty}
+
+% The response matrix itself may be imperfect because wind fields,
+% dispersion parameters, source inventories, and plume approximations are
+% estimated. Let \(H^\star\) be the true lagged response matrix and
+% \(\widehat H\) the constructed response matrix. After background
+% projection, define
+% \[
+% \widetilde H^\star=P_Q^\perp H^\star,
+% \qquad
+% \widehat{\widetilde H}=P_Q^\perp \widehat H.
+% \]
+% Suppose
+% \begin{equation}
+% \left\|
+% \widehat{\widetilde H}
+% -
+% \widetilde H^\star
+% \right\|_2
+% \le
+% \delta_H.
+% \label{eq:operator_error_bound}
+% \end{equation}
+% Then the projected observations satisfy
+% \begin{equation}
+% \widetilde{\mathbf Y}
+% =
+% \widehat{\widetilde H}\boldsymbol\theta
+% +
+% \left[
+% \widetilde{\mathbf E}
+% +
+% (\widetilde H^\star-\widehat{\widetilde H})
+% \boldsymbol\theta
+% \right].
+% \label{eq:operator_error_as_noise}
+% \end{equation}
+% Thus, response-matrix error acts like an additional observation error.
+
+% \begin{proposition}[Error bound under response-matrix perturbation]
+% \label{prop:operator_error_bound}
+% Assume \(\widehat{\widetilde H}\) has full column rank and
+% \[
+% \left\|
+% \widehat{\widetilde H}
+% -
+% \widetilde H^\star
+% \right\|_2
+% \le
+% \delta_H.
+% \]
+% Then the unconstrained least-squares estimate using
+% \(\widehat{\widetilde H}\) satisfies
+% \begin{equation}
+% \left\|
+% \widehat{\boldsymbol\theta}
+% -
+% \boldsymbol\theta
+% \right\|_2
+% \le
+% \frac{
+% \|\widetilde{\mathbf E}\|_2
+% +
+% \delta_H\|\boldsymbol\theta\|_2
+% }{
+% \sigma_{\min}(\widehat{\widetilde H})
+% }.
+% \label{eq:operator_error_theta_bound}
+% \end{equation}
+% \end{proposition}
+
+% This bound shows that wind interpolation uncertainty and plume-model
+% error reduce attribution reliability in the same way as sensor noise:
+% their effect is amplified when the projected response matrix is
+% ill-conditioned.
+
+% \subsection{Identifiable Source Resolution and Merging}
+
+% When source fingerprints are weak or highly coherent, reporting separate
+% source contributions can be misleading. Instead, the source partition
+% should be coarsened until the projected response matrix is sufficiently
+% well-conditioned.
+
+% Let \(\mathcal G=\{G_1,\ldots,G_M\}\) be a partition of the \(K\) source
+% groups into \(M\) merged groups. The merged inventory matrix is
+% \begin{equation}
+% S^{\mathcal G}
+% =
+% \begin{bmatrix}
+% \sum_{k\in G_1}\mathbf s_k &
+% \sum_{k\in G_2}\mathbf s_k &
+% \cdots &
+% \sum_{k\in G_M}\mathbf s_k
+% \end{bmatrix}.
+% \label{eq:merged_inventory_matrix}
+% \end{equation}
+% Using \(S^{\mathcal G}\), we construct a merged projected response matrix
+% \(\widetilde H^{\mathcal G}\).
+
+% We say that a source partition is identifiable at threshold
+% \(\tau_\sigma\) if
+% \begin{equation}
+% r_{\mathrm{eff}}
+% \left(
+% \widetilde H^{\mathcal G};
+% \tau_\sigma
+% \right)
+% =
+% M
+% \label{eq:identifiable_partition_condition}
+% \end{equation}
+% and
+% \begin{equation}
+% \max_{a\neq b}
+% \rho_{ab}^{\mathcal G}
+% \le
+% \tau_\rho,
+% \label{eq:merged_coherence_condition}
+% \end{equation}
+% where \(\rho_{ab}^{\mathcal G}\) is the coherence between merged group
+% fingerprints and \(\tau_\rho\in(0,1)\) is a user-specified ambiguity
+% threshold.
+
+% This gives a practical reporting rule:
+
+% \begin{quote}
+% Report source contributions at the finest source grouping whose projected
+% lagged response matrix is sufficiently well-conditioned and whose
+% pairwise source-fingerprint coherence remains below the ambiguity
+% threshold.
+% \end{quote}
+
+% If two source groups have \(\rho_{ij}>\tau_\rho\), they should be treated
+% as ambiguous under the current sensor layout, wind regime, and background
+% correction. The combined contribution may be identifiable even when the
+% separate contributions are not.
+
+% \subsection{Summary of Identifiability Diagnostics}
+
+% The theory suggests that an apportionment method should report the
+% following diagnostics in addition to source contribution estimates:
+% \begin{enumerate}[leftmargin=*]
+%     \item rank of \(\widetilde H\);
+%     \item smallest singular value
+%     \(\sigma_{\min}(\widetilde H)\);
+%     \item condition number \(\kappa(\widetilde H)\);
+%     \item effective rank \(r_{\mathrm{eff}}(\tau_\sigma)\);
+%     \item source visibility \(v_k\);
+%     \item background absorption fraction \(a_k\);
+%     \item pairwise coherence \(\rho_{ij}\);
+%     % \item ray distance \(d^{\mathrm{ray}}_{ij}\);
+%     \item source groups recommended for merging.
+% \end{enumerate}
+
+% Together, these quantities define the identifiable resolution of the
+% source apportionment problem. Sparse sensors may support reliable
+% estimation of broad source categories while failing to support
+% fine-grained separation between highly coherent source groups. The role
+% of the method is therefore not only to estimate
+% \(\boldsymbol\theta\), but also to report which components of
+% \(\boldsymbol\theta\) are defensible from the available observations.
+
+
+
+\section{Identifiability Theory for Source Apportionment}
+\label{sec:identifiability_theory}
+
+We now characterize when the source activity vector is determined by the
+projected observations.  Throughout this section,
+\begin{equation}
+\widetilde Y=\widetilde H\boldsymbol\theta+\widetilde E,
+\qquad
+\widetilde H=P_Q^\perp H_{1:T}^{\mathrm{lag}}\in\mathbb R^{mT\times K}.
+\label{eq:theory_projected_model}
+\end{equation}
+The analysis is conditional on the constructed wind field, transport operator,
+source inventories, lag window, and background basis.
+
+\subsection{Exact Identifiability}
+\label{subsec:exact_identifiability}
+
+\begin{definition}[Exact identifiability]
+The source activity vector is identifiable from \(\widetilde Y\) if
+\begin{equation}
+\widetilde H\boldsymbol\theta_1=\widetilde H\boldsymbol\theta_2
+\quad\Longrightarrow\quad
+\boldsymbol\theta_1=\boldsymbol\theta_2.
+\label{eq:exact_identifiability_definition}
+\end{equation}
+\end{definition}
+
+\begin{proposition}[Identifiability of inventory-based apportionment]
+\label{prop:rank_identifiability}
+In the noiseless projected model \(\widetilde Y=\widetilde H\boldsymbol\theta\),
+\(\boldsymbol\theta\in\mathbb R^K\) is identifiable for all source activity
+vectors if and only if
+\begin{equation}
+\operatorname{rank}(\widetilde H)=K.
+\label{eq:rank_condition}
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+If \(\operatorname{rank}(\widetilde H)=K\), then
+\(\ker(\widetilde H)=\{0\}\), so
+\(\widetilde H(\boldsymbol\theta_1-\boldsymbol\theta_2)=0\) implies
+\(\boldsymbol\theta_1=\boldsymbol\theta_2\).  Conversely, if
+\(\operatorname{rank}(\widetilde H)<K\), there exists a nonzero
+\(\Delta\boldsymbol\theta\in\ker(\widetilde H)\).  Then
+\(\widetilde H\boldsymbol\theta=\widetilde H(\boldsymbol\theta+
+\Delta\boldsymbol\theta)\), so the source vector is not uniquely determined.
+\end{proof}
+
+Nonnegativity can remove some null directions at the boundary of the feasible
+cone.  However, if \(\operatorname{rank}(\widetilde H)<K\), any activity vector
+in the interior of \(\mathbb R_+^K\) can be perturbed slightly along a null
+direction while remaining feasible.  Full column rank is therefore the clean
+condition for source-level interpretation.
+
+\subsection{Noise-Robust Identifiability}
+\label{subsec:noise_robust_identifiability}
+
+Let \(\sigma_1(\widetilde H)\ge\cdots\ge\sigma_K(\widetilde H)\) be the singular
+values of \(\widetilde H\).  Even with full rank, small singular values amplify
+noise.
+
+\begin{proposition}[Noise-robust apportionment]
+\label{prop:noise_robust}
+Assume \(\widetilde Y=\widetilde H\boldsymbol\theta+\widetilde E\) and
+\(\operatorname{rank}(\widetilde H)=K\).  Let
+\(\widehat{\boldsymbol\theta}_{\mathrm{LS}}\) be the unconstrained least-squares
+estimate.  Then
+\begin{equation}
+\|\widehat{\boldsymbol\theta}_{\mathrm{LS}}-\boldsymbol\theta\|_2
+\le
+\frac{\|\widetilde E\|_2}{\sigma_{\min}(\widetilde H)}.
+\label{eq:ls_noise_bound}
+\end{equation}
+If \(\widehat{\boldsymbol\theta}\) is the nonnegative least-squares estimate and
+\(\boldsymbol\theta\ge0\), then
+\begin{equation}
+\|\widehat{\boldsymbol\theta}-\boldsymbol\theta\|_2
+\le
+\frac{2\|\widetilde E\|_2}{\sigma_{\min}(\widetilde H)}.
+\label{eq:nnls_noise_bound}
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+For least squares,
+\(\widehat{\boldsymbol\theta}_{\mathrm{LS}}-\boldsymbol\theta=
+\widetilde H^\dagger\widetilde E\), giving
+\(\|\widehat{\boldsymbol\theta}_{\mathrm{LS}}-\boldsymbol\theta\|_2\le
+\|\widetilde H^\dagger\|_2\|\widetilde E\|_2=
+\|\widetilde E\|_2/\sigma_{\min}(\widetilde H)\).  For nonnegative least
+squares, the true \(\boldsymbol\theta\) is feasible, so optimality gives
+\(\|\widetilde Y-\widetilde H\widehat{\boldsymbol\theta}\|_2\le
+\|\widetilde E\|_2\).  Hence
+\(\|\widetilde H(\widehat{\boldsymbol\theta}-\boldsymbol\theta)\|_2\le
+2\|\widetilde E\|_2\).  The lower singular-value bound completes the proof.
+\end{proof}
+
+Thus \(\sigma_{\min}(\widetilde H)\) measures worst-case robustness: source
+apportionment can be exactly identifiable but practically unstable when this
+quantity is small.
+
+\subsection{Identifiability Diagnostics}
+\label{subsec:identifiability_diagnostics}
+
+The primary identifiability score is
+\begin{equation}
+\mathcal I = \sigma_{\min}(\widetilde H).
+\label{eq:identifiability_score}
+\end{equation}
+We also use the condition number
+\begin{equation}
+\kappa(\widetilde H)=
+\frac{\sigma_{\max}(\widetilde H)}{\sigma_{\min}(\widetilde H)},
+\label{eq:condition_number}
+\end{equation}
+and, for a noise-dependent threshold \(\tau_\sigma\), the effective rank
+\begin{equation}
+r_{\mathrm{eff}}(\tau_\sigma)
+=\#\{i:\sigma_i(\widetilde H)>\tau_\sigma\}.
+\label{eq:effective_rank}
+\end{equation}
+If \(r_{\mathrm{eff}}(\tau_\sigma)<K\), the sensor network does not support
+reliable estimation of all \(K\) source groups at that noise level.
+
+For source-specific diagnostics, let \(\widetilde{\mathbf h}_k\) be the
+projected fingerprint of source group \(k\).  Its visibility is
+\begin{equation}
+v_k=\|\widetilde{\mathbf h}_k\|_2.
+\label{eq:visibility}
+\end{equation}
+A small \(v_k\) means that the source has little measurable effect after
+transport and background correction.  Pairwise ambiguity is measured by
+projected fingerprint coherence,
+\begin{equation}
+\rho_{ij}
+=
+\frac{|\widetilde{\mathbf h}_i^\top\widetilde{\mathbf h}_j|}
+{\|\widetilde{\mathbf h}_i\|_2\|\widetilde{\mathbf h}_j\|_2}.
+\label{eq:pairwise_coherence}
+\end{equation}
+Values near one indicate that two source groups produce nearly proportional
+sensor-time signatures.  In that case, the data may constrain their combined
+contribution better than their separate contributions.
+
+\subsection{Background Absorption}
+\label{subsec:background_absorption}
+
+Background correction can improve robustness by removing broad temporal
+variation, but it can also remove source-driven signal.  Let \(P_Q=QQ^\dagger\).
+For source group \(k\), define the background absorption fraction
+\begin{equation}
+a_k=
+\frac{\|P_Q\mathbf h_k^{\mathrm{lag}}\|_2}
+{\|\mathbf h_k^{\mathrm{lag}}\|_2}.
+\label{eq:background_absorption}
+\end{equation}
+If \(a_k\approx 1\), most of the raw source fingerprint lies in the background
+space, and the projected visibility \(v_k\) will be small even if the raw
+fingerprint is large.  This is why identifiability must be assessed after
+projection.
+
+\subsection{Response-Matrix Perturbations}
+\label{subsec:operator_error}
+
+The constructed response matrix can be wrong because of wind interpolation,
+transport approximation, dispersion parameters, or inventory error.  Let
+\(\widetilde H^\star\) be the true projected response and
+\(\widehat{\widetilde H}\) the constructed one, with
+\begin{equation}
+\|\widehat{\widetilde H}-\widetilde H^\star\|_2\le\delta_H.
+\label{eq:operator_perturbation}
+\end{equation}
+Then
+\begin{equation}
+\widetilde Y
+=\widehat{\widetilde H}\boldsymbol\theta
++\left[\widetilde E+(\widetilde H^\star-\widehat{\widetilde H})\boldsymbol\theta\right].
+\label{eq:operator_error_as_noise}
+\end{equation}
+Response error therefore acts like additional observation error.
+
+\begin{proposition}[Perturbation bound]
+\label{prop:operator_perturbation}
+Assume \(\widehat{\widetilde H}\) has full column rank and
+\(\|\widehat{\widetilde H}-\widetilde H^\star\|_2\le\delta_H\).  The
+unconstrained least-squares estimate using \(\widehat{\widetilde H}\) satisfies
+\begin{equation}
+\|\widehat{\boldsymbol\theta}-\boldsymbol\theta\|_2
+\le
+\frac{\|\widetilde E\|_2+\delta_H\|\boldsymbol\theta\|_2}
+{\sigma_{\min}(\widehat{\widetilde H})}.
+\label{eq:operator_error_bound}
+\end{equation}
+\end{proposition}
+
+The effect of wind and transport uncertainty is therefore most damaging when
+the projected response matrix is already ill-conditioned.
+
+\subsection{Identifiable Source Resolution}
+\label{subsec:source_merging}
+
+When source fingerprints are weak or highly coherent, separate estimates can be
+misleading.  Let \(\mathcal G=\{G_1,\ldots,G_M\}\) be a partition of the original
+\(K\) source groups into merged groups, with merged inventory
+\begin{equation}
+S^{\mathcal G}
+=
+\left[
+\sum_{k\in G_1}\mathbf s_k\;
+\sum_{k\in G_2}\mathbf s_k\;
+\cdots\;
+\sum_{k\in G_M}\mathbf s_k
+\right].
+\label{eq:merged_inventory}
+\end{equation}
+Let \(\widetilde H^{\mathcal G}\) be the corresponding projected response.  We
+say that \(\mathcal G\) is identifiable at thresholds \(\tau_\sigma\) and
+\(\tau_\rho\) if
+\begin{equation}
+r_{\mathrm{eff}}(\widetilde H^{\mathcal G};\tau_\sigma)=M,
+\qquad
+\max_{a\ne b}\rho^{\mathcal G}_{ab}\le \tau_\rho.
+\label{eq:merged_identifiability}
+\end{equation}
+The reporting rule is to use the finest partition satisfying these conditions,
+while flagging low-visibility groups.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Identifiability diagnostics reported with source estimates.}
+\label{tab:diagnostics}
+\begin{tabular}{lll}
+\toprule
+Diagnostic & Interpretation & Action \\
+\midrule
+\(\operatorname{rank}(\widetilde H)\) & exact separability & require full rank \\
+\(\sigma_{\min}(\widetilde H)\) & noise robustness & flag instability \\
+\(\kappa(\widetilde H)\) & error amplification & compare settings \\
+\(r_{\mathrm{eff}}\) & noise-level resolution & reduce grouping \\
+\(v_k\) & source visibility & flag weak sources \\
+\(a_k\) & background absorption & warn after projection \\
+\(\rho_{ij}\) & pairwise ambiguity & merge coherent groups \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,577 @@
+% \section{Problem Setup: Sparse Sensors, Wind, and Source Apportionment}
+% \label{sec:problem_setup}
+
+% \paragraph{City-Scale Pollution as a Transport System}
+
+% We consider city-scale air pollution as a spatio-temporal transport
+% process over a spatial domain \(\Omega \subset \mathbb{R}^d\). Let
+% \(u(\mathbf x,t)\in \mathbb R\) denote the pollutant concentration
+% field at location \(\mathbf x\) and time \(t\). The evolution of
+% \(u\) is governed by a combination of transport, dispersion, source
+% emissions, and background variation. A generic continuous-time
+% description is
+% \begin{equation}
+% \frac{\partial u}{\partial t}
+% =
+% \mathcal F_{\eta}
+% \left(
+% u,\mathbf x,t;\mathbf w(t)
+% \right)
+% +
+% s(\mathbf x,t)
+% +
+% b(\mathbf x,t),
+% \label{eq:generic_pollution_dynamics}
+% \end{equation}
+% where \(\mathbf w(t)\) denotes the meteorological state, including wind
+% speed and direction, \(s(\mathbf x,t)\) denotes source emissions,
+% \(b(\mathbf x,t)\) denotes background or regional pollution, and
+% \(\eta\) represents physical parameters such as dispersion rates,
+% mixing assumptions, or plume-model parameters.
+
+% In practice, the exact dynamics \(\mathcal F_{\eta}\) are only
+% partially known. City-scale transport models rely on simplified physics,
+% coarse meteorological inputs, approximate boundary conditions, and
+% imperfect source inventories. Thus, source apportionment from sparse
+% sensors is not simply a supervised prediction problem: it is an inverse
+% problem with sparse concentration observations, sparse wind observations,
+% partial physical knowledge, finite transport delays, and background
+% temporal variation.
+
+% \paragraph{Spatial Discretization and Sparse Observation Operator}
+
+% We discretize the concentration field on \(n\) spatial grid cells, so
+% that the concentration field at time \(t\) is represented by
+% \begin{equation}
+% \mathbf u_t \in \mathbb R^n .
+% \end{equation}
+% The full concentration field is not observed. Instead, measurements are
+% available at a small number of fixed monitoring stations. Let
+% \[
+% X_{\mathrm{sens}}
+% =
+% \{\mathbf x_1,\ldots,\mathbf x_m\}
+% \]
+% denote the sensor locations, with \(m \ll n\). The observation operator
+% \(\mathcal O\) maps the latent concentration field to sensor readings:
+% \begin{equation}
+% \mathbf y_t
+% =
+% \mathcal O(\mathbf u_t)
+% +
+% \boldsymbol\epsilon_t
+% \in \mathbb R^m,
+% \label{eq:sparse_sensor_observation}
+% \end{equation}
+% where \(\boldsymbol\epsilon_t\) denotes sensor noise. When sensors are
+% located on grid cells, \(\mathcal O\) selects the corresponding entries
+% of \(\mathbf u_t\); more generally, \(\mathcal O\) may interpolate the
+% field to sensor locations.
+
+% Stacking observations over a finite horizon \(t=1,\ldots,T\), we obtain
+% \begin{equation}
+% \mathbf Y
+% =
+% \begin{bmatrix}
+% \mathbf y_1\\
+% \vdots\\
+% \mathbf y_T
+% \end{bmatrix}
+% \in
+% \mathbb R^{mT}.
+% \label{eq:stacked_sensor_observations}
+% \end{equation}
+% Since \(m\) is typically much smaller than the number of spatial grid
+% cells, the observation operator is highly non-invertible. Consequently,
+% many distinct latent concentration fields, source configurations, and
+% background patterns may be consistent with the same sparse sensor
+% trajectory.
+
+% \paragraph{Known Source Inventories}
+
+% Rather than attempting to recover an arbitrary fine-scale unknown source
+% field, we focus on inventory-based source apportionment. We assume that
+% a set of \(K\) known or proxy source maps is available:
+% \begin{equation}
+% S
+% =
+% \begin{bmatrix}
+% \mathbf s_1 & \mathbf s_2 & \cdots & \mathbf s_K
+% \end{bmatrix}
+% \in
+% \mathbb R^{q\times K},
+% \label{eq:source_inventory_matrix}
+% \end{equation}
+% where each column \(\mathbf s_k\in\mathbb R^q\) represents the spatial
+% emission pattern of a source group, such as traffic, industrial activity,
+% brick kilns, population-related emissions, road dust, or other inventory
+% categories. Here \(q\) denotes the number of source-grid cells. Often
+% \(q=n\), but we keep the notation separate because source inventories
+% and concentration fields may be represented at different spatial
+% resolutions.
+
+% The goal of source apportionment is to estimate the contribution of each
+% source group to the observed concentration signal. Let
+% \(\boldsymbol\theta\in\mathbb R^K\) denote the source contribution or
+% activity vector. In the simplest setting, \(\boldsymbol\theta\) is assumed
+% constant over the observation window, with
+% \begin{equation}
+% \boldsymbol\theta \ge 0.
+% \end{equation}
+% More generally, source activity may vary over time. We begin with the
+% constant-window case and discuss time-varying extensions later.
+
+% \paragraph{Lagged Wind-Conditioned Transport Response}
+
+% Meteorology determines not only the direction and spread of pollutant
+% transport, but also the delay with which emissions become visible at the
+% sensor network. Emissions released at time \(t-\ell\) may contribute to
+% sensor readings at time \(t\) only after being transported by the
+% intervening wind field. Thus, the source-to-sensor response is generally
+% not instantaneous.
+
+% Let \(L\) denote the maximum transport lag considered over the observation
+% window. For each sensor time \(t\) and lag \(\ell\), we define a lagged
+% transport operator
+% \begin{equation}
+% G_{t,t-\ell}
+% \left(
+% \mathbf w_{t-\ell:t}
+% \right)
+% \in
+% \mathbb R^{n\times q},
+% \label{eq:lagged_transport_operator}
+% \end{equation}
+% which maps emissions released on the source grid at time \(t-\ell\) to
+% their induced concentration field on the concentration grid at time \(t\),
+% after transport under the wind sequence \(\mathbf w_{t-\ell:t}\). This
+% operator may be constructed from a time-stepping advection--diffusion
+% solver, a Gaussian plume model with travel-time correction, a
+% wind-shifted kernel, or a learned surrogate constrained by physical
+% structure.
+
+% For times near the beginning of the observation window, only lags that
+% fall within the available history are included. Define
+% \begin{equation}
+% \mathcal L_t
+% =
+% \{0,1,\ldots,\min(L,t-1)\}.
+% \label{eq:available_lag_set}
+% \end{equation}
+% The lagged source-response matrix at sensor time \(t\) is then
+% \begin{equation}
+% H_t^{\mathrm{lag}}
+% :=
+% \sum_{\ell\in \mathcal L_t}
+% \mathcal O
+% G_{t,t-\ell}
+% \left(
+% \mathbf w_{t-\ell:t}
+% \right)
+% S
+% \in
+% \mathbb R^{m\times K}.
+% \label{eq:lagged_source_response_matrix}
+% \end{equation}
+% The \(k\)-th column of \(H_t^{\mathrm{lag}}\) is the cumulative
+% sensor-space fingerprint of source group \(k\) at time \(t\), accounting
+% for emissions from recent past times that can reach the sensors within
+% the transport-lag window.
+
+% This lagged formulation includes the instantaneous model as a special
+% case. When \(L=0\), we recover
+% \begin{equation}
+% H_t^{\mathrm{lag}}
+% =
+% \mathcal O G_{t,t}(\mathbf w_t)S.
+% \end{equation}
+
+% \paragraph{Finite-Horizon Lagged Source Apportionment Model}
+
+% After background and temporal correction, the sensor observation at time
+% \(t\) is modeled as
+% \begin{equation}
+% \tilde{\mathbf y}_t
+% =
+% H_t^{\mathrm{lag}}\boldsymbol\theta
+% +
+% \boldsymbol\epsilon_t,
+% \label{eq:single_time_lagged_apportionment}
+% \end{equation}
+% where \(\tilde{\mathbf y}_t\) denotes the corrected concentration signal.
+% Stacking over time gives
+% \begin{equation}
+% \tilde{\mathbf Y}
+% =
+% H_{1:T}^{\mathrm{lag}}\boldsymbol\theta
+% +
+% \mathbf E,
+% \label{eq:stacked_lagged_apportionment_model}
+% \end{equation}
+% where
+% \begin{equation}
+% H_{1:T}^{\mathrm{lag}}
+% =
+% \begin{bmatrix}
+% H_1^{\mathrm{lag}}\\
+% H_2^{\mathrm{lag}}\\
+% \vdots\\
+% H_T^{\mathrm{lag}}
+% \end{bmatrix}
+% \in
+% \mathbb R^{mT\times K}.
+% \label{eq:stacked_lagged_source_response_matrix}
+% \end{equation}
+
+% The matrix \(H_{1:T}^{\mathrm{lag}}\) is the central object in our
+% analysis. It encodes how known source groups appear at the sparse sensor
+% network under the observed wind sequence, after accounting for finite
+% transport delays. Source groups are distinguishable only if their
+% lagged wind-conditioned fingerprints are sufficiently independent in
+% stacked sensor space.
+
+% \paragraph{Background and Temporal Confounding}
+
+% Real air-quality observations include background pollution, regional
+% transport, time-of-day effects, seasonal variation, low-frequency drift,
+% and sensor offsets that are not explained by the local source inventory.
+% We model these effects using a low-dimensional background-correction
+% basis
+% \begin{equation}
+% Q\in\mathbb R^{mT\times r},
+% \end{equation}
+% with coefficients \(\boldsymbol\gamma\in\mathbb R^r\). The observation
+% model becomes
+% \begin{equation}
+% \mathbf Y
+% =
+% H_{1:T}^{\mathrm{lag}}\boldsymbol\theta
+% +
+% Q\boldsymbol\gamma
+% +
+% \mathbf E.
+% \label{eq:lagged_apportionment_with_background}
+% \end{equation}
+
+% This background component is important for identifiability. A source
+% group may appear distinguishable before background correction, but become
+% confounded once time-of-day or regional background variation is allowed
+% to explain part of the signal. To account for this, we project the data
+% and source-response matrix onto the orthogonal complement of the
+% background-correction space. Let
+% \begin{equation}
+% P_Q^\perp
+% =
+% I
+% -
+% Q(Q^\top Q)^{-1}Q^\top
+% \label{eq:background_projection}
+% \end{equation}
+% denote the background-removal projection. If \(Q^\top Q\) is singular or
+% ill-conditioned, the inverse can be replaced with a pseudoinverse. The
+% corrected inverse problem is
+% \begin{equation}
+% P_Q^\perp \mathbf Y
+% =
+% P_Q^\perp H_{1:T}^{\mathrm{lag}}\boldsymbol\theta
+% +
+% P_Q^\perp\mathbf E.
+% \label{eq:projected_lagged_apportionment_model}
+% \end{equation}
+% Thus, source apportionment should be analyzed using the projected lagged
+% response matrix \(P_Q^\perp H_{1:T}^{\mathrm{lag}}\), rather than the raw
+% response matrix \(H_{1:T}^{\mathrm{lag}}\).
+
+% \paragraph{Lagged Source Fingerprints and Ambiguity}
+
+% Let
+% \begin{equation}
+% \mathbf h_k^{\mathrm{lag}}
+% =
+% \begin{bmatrix}
+% \displaystyle
+% \sum_{\ell\in \mathcal L_1}
+% \mathcal O
+% G_{1,1-\ell}
+% \left(
+% \mathbf w_{1-\ell:1}
+% \right)
+% \mathbf s_k\\[1.2em]
+% \displaystyle
+% \sum_{\ell\in \mathcal L_2}
+% \mathcal O
+% G_{2,2-\ell}
+% \left(
+% \mathbf w_{2-\ell:2}
+% \right)
+% \mathbf s_k\\
+% \vdots\\
+% \displaystyle
+% \sum_{\ell\in \mathcal L_T}
+% \mathcal O
+% G_{T,T-\ell}
+% \left(
+% \mathbf w_{T-\ell:T}
+% \right)
+% \mathbf s_k
+% \end{bmatrix}
+% \in
+% \mathbb R^{mT}
+% \label{eq:lagged_source_fingerprint}
+% \end{equation}
+% denote the finite-horizon lagged sensor fingerprint of source group \(k\).
+% The columns of \(H_{1:T}^{\mathrm{lag}}\) are precisely these
+% fingerprints:
+% \begin{equation}
+% H_{1:T}^{\mathrm{lag}}
+% =
+% \begin{bmatrix}
+% \mathbf h_1^{\mathrm{lag}} &
+% \mathbf h_2^{\mathrm{lag}} &
+% \cdots &
+% \mathbf h_K^{\mathrm{lag}}
+% \end{bmatrix}.
+% \end{equation}
+
+% Two kinds of ambiguity arise naturally. First, a source group may be
+% weakly visible if its projected fingerprint has small norm:
+% \begin{equation}
+% \left\|
+% P_Q^\perp
+% \mathbf h_k^{\mathrm{lag}}
+% \right\|
+% \approx 0.
+% \end{equation}
+% Such a source has little measurable effect on the sensor network under
+% the available wind regime and background correction. Second, two source
+% groups may be difficult to separate even if both are visible, if their
+% projected fingerprints are nearly proportional:
+% \begin{equation}
+% P_Q^\perp \mathbf h_i^{\mathrm{lag}}
+% \approx
+% c\,
+% P_Q^\perp \mathbf h_j^{\mathrm{lag}}
+% \quad
+% \text{for some } c>0.
+% \end{equation}
+% This captures the amplitude--distance ambiguity in source apportionment:
+% a strong distant source and a weak nearby source may produce similar
+% sensor readings after transport attenuation and background correction.
+
+% We quantify pairwise source ambiguity using projected fingerprint
+% coherence:
+% \begin{equation}
+% \rho_{ij}
+% =
+% \frac{
+% \left|
+% \left(
+% P_Q^\perp \mathbf h_i^{\mathrm{lag}}
+% \right)^\top
+% \left(
+% P_Q^\perp \mathbf h_j^{\mathrm{lag}}
+% \right)
+% \right|
+% }{
+% \left\|
+% P_Q^\perp \mathbf h_i^{\mathrm{lag}}
+% \right\|
+% \left\|
+% P_Q^\perp \mathbf h_j^{\mathrm{lag}}
+% \right\|
+% }.
+% \label{eq:projected_lagged_source_fingerprint_coherence}
+% \end{equation}
+% Values \(\rho_{ij}\approx 1\) indicate that source groups \(i\) and \(j\)
+% are nearly indistinguishable up to a scaling factor. In practice, such
+% source groups should not be interpreted separately without additional
+% sensing, stronger priors, or a coarser source grouping.
+
+% \paragraph{Identifiability Objective}
+
+% The goal of this work is not merely to estimate source contributions,
+% but to determine when such estimates are identifiable from the available
+% sensors, wind observations, source inventories, background correction,
+% and transport-lag model. In the projected lagged model
+% \eqref{eq:projected_lagged_apportionment_model}, exact identifiability of
+% \(\boldsymbol\theta\) requires
+% \begin{equation}
+% \operatorname{rank}
+% \left(
+% P_Q^\perp H_{1:T}^{\mathrm{lag}}
+% \right)
+% =
+% K.
+% \label{eq:lagged_rank_identifiability_condition}
+% \end{equation}
+% Noise-robust identifiability further depends on the conditioning of
+% \(P_Q^\perp H_{1:T}^{\mathrm{lag}}\), especially its smallest singular
+% value:
+% \begin{equation}
+% \sigma_{\min}
+% \left(
+% P_Q^\perp H_{1:T}^{\mathrm{lag}}
+% \right).
+% \label{eq:lagged_sigma_min_identifiability}
+% \end{equation}
+
+% This perspective reframes sparse-sensor source apportionment as an
+% identifiability problem. Known inventories make the problem meaningful,
+% but they do not guarantee separability. Source contributions can be
+% reliably estimated only when lagged wind-conditioned source fingerprints
+% remain sufficiently independent after accounting for sparse sensing, wind
+% uncertainty, background variation, model approximation, and finite
+% transport delays.
+
+
+\section{Problem Setup: Sparse Sensors, Wind, and Source Apportionment}
+\label{sec:problem_setup}
+
+We formalize source apportionment as a finite-dimensional inverse problem in
+which known source inventories are transported to a sparse sensor network under
+a wind-conditioned lagged operator.  This section defines the observation
+model, the inventory parameterization, the background correction, and the
+projected response matrix used throughout the paper.
+
+\paragraph{City-scale transport model.}
+Let \(u(\mathbf x,t)\in \mathbb R\) denote the pollutant concentration field on
+\(\Omega\subset \mathbb R^d\).  A generic continuous-time model is
+\begin{equation}
+\frac{\partial u}{\partial t}
+= \mathcal F_\eta(u,\mathbf x,t;w(t)) + s(\mathbf x,t)+b(\mathbf x,t),
+\label{eq:continuous_transport}
+\end{equation}
+where \(w(t)\) is the meteorological state, \(s\) is local source emission,
+\(b\) is background or regional pollution, and \(\eta\) denotes transport and
+dispersion parameters.  The exact dynamics may be approximated by a plume
+model, an advection--diffusion solver, or a learned surrogate constrained by
+transport structure.
+
+\paragraph{Sparse observations.}
+Discretize the concentration field on \(n\) grid cells, so that
+\(\mathbf u_t\in \mathbb R^n\).  Let
+\(X_{\mathrm{sens}}=\{\mathbf x_1,\ldots,\mathbf x_m\}\) be the fixed sensor
+locations with \(m\ll n\).  The observation operator
+\(O:\mathbb R^n\to \mathbb R^m\) samples or interpolates the latent field at
+these locations:
+\begin{equation}
+\mathbf y_t = O\mathbf u_t + \boldsymbol\epsilon_t,
+\qquad \mathbf y_t\in \mathbb R^m .
+\label{eq:sensor_obs}
+\end{equation}
+Stacking over \(t=1,\ldots,T\) gives
+\begin{equation}
+Y = [\mathbf y_1^\top,\ldots,\mathbf y_T^\top]^\top \in \mathbb R^{mT}.
+\label{eq:stacked_observations}
+\end{equation}
+Because \(m\) is small relative to the field dimension, many latent fields and
+source configurations can be consistent with the same sensor trajectory.
+
+\paragraph{Inventory-based source parameterization.}
+We assume a set of \(K\) known or
+proxy source maps,
+\begin{equation}
+S = [\mathbf s_1\;\mathbf s_2\;\cdots\;\mathbf s_K]\in \mathbb R^{q\times K},
+\label{eq:inventory_matrix}
+\end{equation}
+where \(\mathbf s_k\in\mathbb R^q\) is the spatial pattern of source group
+\(k\).  The source grid dimension \(q\) may differ from the concentration-grid
+dimension \(n\).  Over a fixed observation window, source activity is represented
+by a nonnegative vector
+\begin{equation}
+\boldsymbol\theta\in \mathbb R_+^K,
+\label{eq:source_activity}
+\end{equation}
+so that emissions are proportional to \(S\boldsymbol\theta\).  Time-varying
+activity can be handled by replacing \(\boldsymbol\theta\) with a sequence or a
+low-dimensional temporal basis; the constant-window model is the basic object
+analyzed here.
+
+\paragraph{Lagged wind-conditioned response.}
+Emissions released at time \(t-\ell\) may affect sensors at time \(t\) only
+after being transported by the intervening wind field.  Let
+\begin{equation}
+G_{t,t-\ell}^{\partial}(w_{t-\ell:t})\in \mathbb R^{n\times q}
+\label{eq:lagged_operator}
+\end{equation}
+map emissions released on the source grid at time \(t-\ell\) to the
+concentration grid at time \(t\).  The superscript \(\partial\) denotes an
+open-boundary operator: mass transported outside \(\Omega\) leaves the modeled
+domain rather than being reflected or wrapped around.  For a maximum lag \(L\),
+define
+\begin{equation}
+\mathcal L_t = \{0,1,\ldots,\min(L,t-1)\}.
+\label{eq:lag_set}
+\end{equation}
+The source-to-sensor response at time \(t\) is
+\begin{equation}
+H_t^{\mathrm{lag}}
+= \sum_{\ell\in\mathcal L_t}
+O G_{t,t-\ell}^{\partial}(w_{t-\ell:t}) S
+\in \mathbb R^{m\times K}.
+\label{eq:time_response}
+\end{equation}
+Stacking over the finite horizon gives
+\begin{equation}
+H_{1:T}^{\mathrm{lag}}
+=
+\begin{bmatrix}
+H_1^{\mathrm{lag}}\\
+H_2^{\mathrm{lag}}\\
+\vdots\\
+H_T^{\mathrm{lag}}
+\end{bmatrix}
+\in \mathbb R^{mT\times K}.
+\label{eq:stacked_response}
+\end{equation}
+The \(k\)-th column of \(H_{1:T}^{\mathrm{lag}}\) is the finite-horizon
+sensor-space fingerprint of source group \(k\).
+
+\paragraph{Background and temporal correction.}
+Observed concentrations include components not explained by the local source
+inventory, including regional background, smooth temporal trends, and
+sensor-specific offsets.  We represent these components with a low-dimensional
+basis
+\begin{equation}
+Q\in \mathbb R^{mT\times r}, \qquad \boldsymbol\gamma\in \mathbb R^r,
+\label{eq:background_basis}
+\end{equation}
+and write
+\begin{equation}
+Y = H_{1:T}^{\mathrm{lag}}\boldsymbol\theta + Q\boldsymbol\gamma + E.
+\label{eq:model_with_background}
+\end{equation}
+Let
+\begin{equation}
+P_Q^\perp = I - QQ^\dagger
+\label{eq:background_projection}
+\end{equation}
+be the projection onto the orthogonal complement of the background space, with
+\(Q^\dagger\) denoting the Moore--Penrose pseudoinverse.  The corrected inverse
+problem is
+\begin{equation}
+\widetilde Y = \widetilde H\boldsymbol\theta + \widetilde E,
+\qquad
+\widetilde Y=P_Q^\perp Y,
+\qquad
+\widetilde H=P_Q^\perp H_{1:T}^{\mathrm{lag}}.
+\label{eq:projected_model}
+\end{equation}
+All identifiability diagnostics in this paper are computed from
+\(\widetilde H\), not from the raw inventory matrix or the unprojected response.
+
+\paragraph{Projected source fingerprints.}
+Writing
+\begin{equation}
+H_{1:T}^{\mathrm{lag}}
+=[\mathbf h_1^{\mathrm{lag}}\;\cdots\;\mathbf h_K^{\mathrm{lag}}],
+\qquad
+\widetilde H=[\widetilde{\mathbf h}_1\;\cdots\;\widetilde{\mathbf h}_K],
+\label{eq:source_fingerprints}
+\end{equation}
+we have
+\(\widetilde{\mathbf h}_k=P_Q^\perp\mathbf h_k^{\mathrm{lag}}\).  These
+projected fingerprints encode the observable effect of each source group after
+wind transport, lag, sparse sensing, and background correction.  Source
+apportionment is well posed only to the extent that these fingerprints are
+visible and separable.
