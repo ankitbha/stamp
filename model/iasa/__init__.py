@@ -1,5 +1,14 @@
 """Identifiability-aware source apportionment primitives."""
 
+from model.iasa.background import BackgroundBasisConfig, BackgroundBasisResult, build_background_basis
+from model.iasa.projection import (
+    BackgroundProjector,
+    ProjectionConfig,
+    ProjectionResult,
+    fit_background_projector,
+    project_response_and_observations,
+)
+
 from model.iasa.response import (
     BOUNDARY_MODE,
     RESPONSE_IMPLEMENTATION,
@@ -15,11 +24,19 @@ from model.iasa.response import (
 __all__ = [
     "BOUNDARY_MODE",
     "RESPONSE_IMPLEMENTATION",
+    "BackgroundBasisConfig",
+    "BackgroundBasisResult",
+    "BackgroundProjector",
     "CityWindSampler",
     "DispersionConfig",
     "Observer",
+    "ProjectionConfig",
+    "ProjectionResult",
     "ResponseConfig",
     "ResponseMatrixResult",
     "WindSampler",
+    "build_background_basis",
     "build_lagged_response_matrix",
+    "fit_background_projector",
+    "project_response_and_observations",
 ]

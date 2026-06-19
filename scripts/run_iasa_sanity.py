@@ -19,6 +19,8 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from model.iasa.activity import TemporalBasis  # noqa: E402
+from model.iasa.background import BackgroundBasisConfig, build_background_basis  # noqa: E402
+from model.iasa.projection import fit_background_projector, project_response_and_observations  # noqa: E402
 from model.iasa.response import (  # noqa: E402
     DispersionConfig,
     Observer,
@@ -154,6 +156,17 @@ def _response_sanity_inputs() -> tuple[np.ndarray, list[str], TemporalBasis, Obs
     return source_maps, source_names, basis, observer, response_config, dispersion_config
 
 
+def _build_response_sanity_result() -> tuple[Any, np.ndarray, Observer, TemporalBasis]:
+    source_maps, source_names, basis, observer, response_config, dispersion_config = _response_sanity_inputs()
+    wind = constant_direction(length=basis.values.shape[0], vx=1.0, vy=0.0)
+    result = build_lagged_response_matrix(
+        source_maps, source_names, basis, observer, wind,
+        response_config=response_config, dispersion_config=dispersion_config,
+    )
+    timestamps = np.datetime64("2026-06-01T00:00") + np.arange(basis.values.shape[0]) * np.timedelta64(1, "h")
+    return result, timestamps, observer, basis
+
+
 def _dense_grid_observer(nx: int, ny: int) -> Observer:
     xy = np.asarray([(float(x), float(y)) for x in range(nx) for y in range(ny)], dtype=np.float32)
     ids = [f"cell_{x}_{y}" for x in range(nx) for y in range(ny)]
@@ -209,15 +222,7 @@ def _moment_case(sigma_parallel: float, sigma_perp: float) -> tuple[float, float
 def run_response_gate() -> dict[str, Any]:
     source_maps, source_names, basis, observer, response_config, dispersion_config = _response_sanity_inputs()
     wind = constant_direction(length=basis.values.shape[0], vx=1.0, vy=0.0)
-    result = build_lagged_response_matrix(
-        source_maps,
-        source_names,
-        basis,
-        observer,
-        wind,
-        response_config=response_config,
-        dispersion_config=dispersion_config,
-    )
+    result, _, _, _ = _build_response_sanity_result()
     H = result.H_lag
     expected_shape = (len(observer.sensor_ids) * basis.values.shape[0], len(source_names) * len(basis.names))
     if H.shape != expected_shape:
@@ -414,6 +419,122 @@ def run_response_gate() -> dict[str, Any]:
     }
 
 
+def run_projection_gate() -> dict[str, Any]:
+    response, timestamps, observer, _ = _build_response_sanity_result()
+    expected_columns = [
+        (source, basis)
+        for source in ("west_source", "east_edge_source", "south_source", "interior_source")
+        for basis in ("impulse_t2", "constant")
+    ]
+    actual_columns = [(item["source_name"], item["basis_name"]) for item in response.column_index]
+    if actual_columns != expected_columns:
+        raise RuntimeError("Task 5 response column order changed")
+
+    normal_config = BackgroundBasisConfig(
+        include_constant=True, temporal_polynomial_degree=1, daily_harmonics=1,
+        max_background_rank=8, basis_mode="normal",
+    )
+    normal = build_background_basis(response.row_index, timestamps, observer.sensor_xy, normal_config)
+    if normal.column_names != ["constant", "time_polynomial_1", "daily_sin_1", "daily_cos_1"]:
+        raise RuntimeError("normal Gate S2 background columns changed")
+    c_true = np.asarray([1.0, 0.5, 0.0, 0.25, 0.75, 0.0, 0.4, 0.2], dtype=np.float64)
+    beta = np.asarray([0.3, -0.1, 0.2, 0.15], dtype=np.float64)
+    Y = np.asarray(response.H_lag, dtype=np.float64) @ c_true + normal.Q @ beta
+    projected = project_response_and_observations(
+        response.H_lag, Y, normal, response.row_index, response.column_index,
+    )
+    projector = fit_background_projector(normal)
+
+    empty = build_background_basis(
+        response.row_index, timestamps, observer.sensor_xy,
+        BackgroundBasisConfig(include_constant=False),
+    )
+    empty_projection = project_response_and_observations(
+        response.H_lag, Y, empty, response.row_index, response.column_index,
+    )
+    np.testing.assert_allclose(empty_projection.H_tilde, response.H_lag, rtol=0.0, atol=0.0)
+    np.testing.assert_allclose(empty_projection.Y_tilde, Y, rtol=0.0, atol=0.0)
+
+    expected_y_tilde = projected.H_tilde @ c_true
+    np.testing.assert_allclose(projected.Y_tilde, expected_y_tilde, rtol=1e-6, atol=1e-8)
+    np.testing.assert_allclose(projected.H_removed + projected.H_tilde, response.H_lag, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(projected.Y_removed + projected.Y_tilde, Y, rtol=1e-10, atol=1e-12)
+    reconstructed = np.asarray(response.H_lag, dtype=np.float64) - projector.U_r @ (
+        projector.U_r.T @ np.asarray(response.H_lag, dtype=np.float64)
+    )
+    np.testing.assert_allclose(reconstructed, projected.H_tilde, rtol=0.0, atol=1e-12)
+    if projector.effective_rank != 4:
+        raise RuntimeError("normal Gate S2 background must have effective rank four")
+
+    redundant = build_background_basis(
+        response.row_index, timestamps, observer.sensor_xy,
+        BackgroundBasisConfig(include_constant=False, basis_mode="stress"),
+        user_basis=np.column_stack([normal.Q, normal.Q[:, 0]]),
+        user_basis_names=normal.column_names + ["constant_duplicate"],
+    )
+    redundant_projection = project_response_and_observations(
+        response.H_lag, Y, redundant, response.row_index, response.column_index,
+    )
+    if redundant_projection.metadata["effective_rank"] != 4:
+        raise RuntimeError("redundant background must retain effective rank four")
+    np.testing.assert_allclose(redundant_projection.H_tilde, projected.H_tilde, rtol=1e-10, atol=1e-12)
+
+    stress_column_index = 7
+    source_like = np.asarray(response.H_lag[:, stress_column_index], dtype=np.float64)
+    source_like /= max(float(np.linalg.norm(source_like)), np.finfo(np.float64).eps)
+    stress = build_background_basis(
+        response.row_index, timestamps, observer.sensor_xy,
+        BackgroundBasisConfig(include_constant=False, basis_mode="stress"),
+        user_basis=np.column_stack([normal.Q, source_like]),
+        user_basis_names=normal.column_names + ["stress_interior_source_constant"],
+    )
+    stress_projection = project_response_and_observations(
+        response.H_lag, Y, stress, response.row_index, response.column_index,
+    )
+    normal_visibility = projected.metadata["H_visibility_ratio_by_column"]
+    normal_absorption = projected.metadata["H_absorption_ratio_by_column"]
+    stress_visibility = stress_projection.metadata["H_visibility_ratio_by_column"]
+    stress_absorption = stress_projection.metadata["H_absorption_ratio_by_column"]
+    if min(normal_visibility) < 0.8 or max(normal_absorption) > 0.6:
+        raise RuntimeError("normal background removes too much source response")
+    if stress_visibility[stress_column_index] >= normal_visibility[stress_column_index]:
+        raise RuntimeError("stress source-like background must lower target visibility")
+    if stress_absorption[stress_column_index] <= normal_absorption[stress_column_index]:
+        raise RuntimeError("stress source-like background must increase target absorption")
+    if projected.metadata["H_orthogonality_residual"] > 1e-6:
+        raise RuntimeError("projected response is not orthogonal to the background")
+    if projected.metadata["Y_orthogonality_residual"] > 1e-6:
+        raise RuntimeError("projected observations are not orthogonal to the background")
+    if projected.metadata["idempotence_residual"] > 1e-8:
+        raise RuntimeError("background projection is not idempotent")
+
+    return {
+        "status": "ok",
+        "gate": "projection",
+        "H_lag_shape": list(response.H_lag.shape),
+        "H_tilde_shape": list(projected.H_tilde.shape),
+        "column_mapping": actual_columns,
+        "c_true": c_true.tolist(),
+        "beta": beta.tolist(),
+        "normal_background_columns": normal.column_names,
+        "normal_effective_rank": projector.effective_rank,
+        "redundant_effective_rank": redundant_projection.metadata["effective_rank"],
+        "stress_effective_rank": stress_projection.metadata["effective_rank"],
+        "H_orthogonality_residual": projected.metadata["H_orthogonality_residual"],
+        "Y_orthogonality_residual": projected.metadata["Y_orthogonality_residual"],
+        "idempotence_residual": projected.metadata["idempotence_residual"],
+        "normal_visibility_ratio_by_column": normal_visibility,
+        "normal_absorption_ratio_by_column": normal_absorption,
+        "stress_visibility_ratio_by_column": stress_visibility,
+        "stress_absorption_ratio_by_column": stress_absorption,
+        "stress_label": "stress_interior_source_constant",
+        "stress_target_column": stress_column_index,
+        "empty_basis_no_op": True,
+        "exact_background_removal": True,
+        "saved_U_r_reconstruction": True,
+    }
+
+
 def run_sanity(*, start: str, end: str) -> dict[str, Any]:
     return run_task3a_sanity(start=start, end=end)
 
@@ -433,16 +554,19 @@ def main() -> None:
         result = run_task3a_sanity(start=args.start, end=args.end)
     elif args.gate == "response":
         result = run_response_gate()
+    elif args.gate == "projection":
+        result = run_projection_gate()
     elif args.gate == "all":
         result = {
             "status": "ok",
             "gate": "all",
             "task3a": run_task3a_sanity(start=args.start, end=args.end),
             "response": run_response_gate(),
-            "skipped_gates": ["projection", "diagnostics", "fit", "merge"],
+            "projection": run_projection_gate(),
+            "skipped_gates": ["diagnostics", "fit", "merge"],
         }
         if args.strict_all:
-            raise NotImplementedError("Strict all-gate mode requires Tasks 6-9 gates.")
+            raise NotImplementedError("Strict all-gate mode requires Tasks 7-9 gates.")
     else:
         raise NotImplementedError(f"Gate {args.gate!r} is implemented by a later roadmap task.")
     print(json.dumps(result, indent=2, sort_keys=True))
