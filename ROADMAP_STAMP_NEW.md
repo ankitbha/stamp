@@ -767,9 +767,11 @@ thresholds, not the qualitative checks.
 
 **Objective**
 
-Implement background correction and projected inverse problem:
+Implement the paper's low-dimensional background model and projected inverse
+problem:
 
 ```text
+Y = H_lag c + Q beta + E
 H_tilde = P_Q_perp H_lag
 Y_tilde = P_Q_perp Y
 ```
@@ -782,33 +784,69 @@ Y_tilde = P_Q_perp Y
 
 **Implementation details**
 
-- Implement background basis constructors:
-  - constant offset
-  - per-sensor intercepts
-  - global temporal trend
-  - low-order temporal polynomial
-  - optional user-provided basis
-- Represent `Q` as a matrix with rows aligned to the stacked sensor-time observation vector.
-- Implement stable orthogonal projection using QR or SVD:
+- Implement low-dimensional background basis constructors for the components
+  used in the paper:
+  - global constant offset
+  - centered global linear trend and optional low-order temporal polynomial
+  - smooth time-of-day variation using a small number of sine/cosine harmonics
+  - day-level intercepts with one reference level removed or centered
+  - regional spatial trends from standardized sensor coordinates
+  - optional sensor-specific offsets
+  - optional user-provided basis with the same row-alignment contract
+- Keep the normal paper-facing basis deliberately low-dimensional. Default
+  constructors must use only timestamps, day labels, sensor identifiers, and
+  sensor coordinates; they must never derive normal background columns from
+  `H_lag`, source inventories, or fitted source signals. Expose a configurable
+  rank cap with a paper-facing default of `max_background_rank=8`, and reject a
+  normal basis whose effective rank exceeds that cap. Deliberately
+  over-flexible or source-like bases are allowed only in labeled stress tests.
+- Construct `Q in R^(mT x r)` from the Task 5 time-major `row_index`. Require
+  `len(row_index) == H_lag.shape[0] == Y.shape[0] == Q.shape[0]`, preserve the
+  exact row metadata, and fail on a sensor/time ordering mismatch rather than
+  silently projecting misaligned arrays.
+- Implement the Moore-Penrose projection with rank-revealing SVD. Determine the
+  effective rank using a recorded numerical tolerance, retain the corresponding
+  orthonormal basis `U_r`, and apply:
 
 ```text
-P_Q_perp X = X - Q (Q^+ X)
+P_Q_perp X = X - U_r (U_r.T X)
 ```
 
-- Apply the same projection to `H_lag` and stacked observations.
-- Save projection metadata: basis type, rank of `Q`, and removed dimensions.
+  A pivoted rank-revealing QR implementation is acceptable only if it uses the
+  same explicit rank tolerance. Ordinary unpivoted QR is not sufficient because
+  combinations such as a global constant plus all sensor intercepts are
+  linearly dependent.
+- Apply the same fitted background subspace to `H_lag` and stacked observations.
+- Preserve `Q` or `U_r`, `H_removed = H_lag - H_tilde`, and
+  `Y_removed = Y - Y_tilde` so Task 7 can reproduce the paper's background
+  absorption statistic. Saving metadata alone is not sufficient.
+- Save projection metadata containing basis names and types, requested and
+  effective rank, singular values, rank tolerance, rank cap, projection method,
+  dependent/discarded columns, input and output shapes, and the exact
+  sensor-time row ordering.
+- The equivalent joint source/background fit from the paper is deferred to the
+  fitting task. Task 6 owns the projected formulation used for all downstream
+  identifiability diagnostics.
 
 **Outputs and artifacts**
 
 - `H_tilde`
 - `Y_tilde`
-- `Q` metadata
+- `Q` and/or the effective orthonormal basis `U_r`
+- `H_removed` and `Y_removed`
+- complete background-basis and projection metadata
 
 **Acceptance checks**
 
 - Projected columns are numerically orthogonal to `Q`.
 - With empty `Q`, projected outputs equal inputs.
 - With constant `Q`, a constant observation vector projects close to zero.
+- Duplicate or linearly dependent background columns produce the same projector
+  as their independent span and do not change the effective rank.
+- Projection is idempotent within tolerance.
+- Normal background constructors respect the rank cap, contain no source-derived
+  columns, and retain the required visibility of every designed source column.
+- `Q`, `H_lag`, `Y`, and all projected outputs carry identical row ordering.
 
 **Sanity experiment requirements**
 
@@ -816,25 +854,46 @@ Gate S2, completed as part of Task 6, extends the Task 5 sanity runner with `--g
 
 ```text
 Y = H_lag c_true + Q beta
-c_true = [1.0, 0.5, 0.0]
-Q = per-sensor intercepts or one global constant plus one linear time trend
+c_true = [1.0, 0.5, 0.0, 0.25, 0.75, 0.0, 0.4, 0.2]
+Q_normal = [global constant, centered linear trend,
+            first daily sine harmonic, first daily cosine harmonic]
+beta = [0.3, -0.1, 0.2, 0.15]
 ```
+
+The eight entries of `c_true` follow the exact source-major `(source, basis)`
+ordering in the Task 5 `column_index`; Gate S2 must assert this mapping rather
+than relying on an undocumented hard-coded order. `Q_normal` has requested and
+effective rank four, is built independently of `H_lag`, and is below the normal
+rank cap.
 
 Project both `H_lag` and `Y` to produce `H_tilde` and `Y_tilde`. The gate must verify:
 
 - Empty `Q` returns unchanged `H_lag` and `Y`.
 - With nonempty `Q`, projected columns and projected observations are numerically orthogonal to `Q`.
 - The known background component `Q beta` is removed from `Y_tilde`.
-- Source columns are not accidentally erased in the normal background case.
-- In a deliberately over-flexible `Q` case that includes a source-like column, the affected source visibility drops and a warning or high absorption score is produced.
+- Source columns are not accidentally erased in the normal low-dimensional
+  background case.
+- A redundant-basis case containing duplicate or dependent columns yields the
+  same projection as its independent span and records the reduced effective
+  rank.
+- In a deliberately over-flexible `Q` case that adds a normalized source-like
+  column from `H_lag`, the affected source visibility drops, background
+  absorption increases, and the case is explicitly labeled as a stress test.
+- The saved `U_r`, removed components, and metadata reproduce the projection and
+  provide Task 7 with everything needed to compute per-source background
+  absorption.
 
 Suggested pass/fail tolerances:
 
 ```text
 ||Q.T @ H_tilde||_max <= 1e-6 * max(1, ||H_lag||)
 ||Q.T @ Y_tilde||_max <= 1e-6 * max(1, ||Y||)
-normal_projection_visibility_ratio >= 0.2 for every designed visible source
+max_abs(P_Q_perp(P_Q_perp(X)) - P_Q_perp(X)) <= 1e-8 * max(1, ||X||)
+rank(Q_normal) == 4
+normal_projection_visibility_ratio >= 0.8 for every designed visible source
+normal_background_absorption_ratio <= 0.6 for every designed visible source
 overflexible_projection_visibility_ratio < normal_projection_visibility_ratio
+overflexible_background_absorption_ratio > normal_background_absorption_ratio
 ```
 
 ### Task 7: Identifiability diagnostics
