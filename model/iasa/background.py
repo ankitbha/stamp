@@ -57,9 +57,13 @@ def _validated_rows(row_index: Sequence[dict[str, Any]]) -> tuple[list[dict[str,
     return rows, times, sensor_ids
 
 
-def _timestamp_hours(timestamps: Any, time_indices: list[int]) -> tuple[np.ndarray, np.ndarray]:
+def _timestamp_hours(timestamps: Any, time_indices: list[int]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     if not time_indices:
-        return np.empty(0, dtype=np.float64), np.empty(0, dtype="datetime64[D]")
+        return (
+            np.empty(0, dtype=np.float64),
+            np.empty(0, dtype=np.float64),
+            np.empty(0, dtype="datetime64[D]"),
+        )
     if len(timestamps) <= max(time_indices):
         raise ValueError("timestamps must cover every row_index time_index")
     try:
@@ -68,11 +72,12 @@ def _timestamp_hours(timestamps: Any, time_indices: list[int]) -> tuple[np.ndarr
         raise TypeError("timestamps must contain datetime-like values") from exc
     if np.isnat(selected).any():
         raise ValueError("timestamps must not contain NaT")
-    deltas = (selected - selected[0]) / np.timedelta64(1, "h")
-    hours = np.asarray(deltas, dtype=np.float64)
-    if np.any(np.diff(hours) < 0):
+    elapsed_hours = np.asarray((selected - selected[0]) / np.timedelta64(1, "h"), dtype=np.float64)
+    calendar_days = selected.astype("datetime64[D]")
+    clock_hours = np.asarray((selected - calendar_days) / np.timedelta64(1, "h"), dtype=np.float64)
+    if np.any(np.diff(elapsed_hours) < 0):
         raise ValueError("timestamps referenced by row_index must be monotonic")
-    return hours, selected.astype("datetime64[D]")
+    return elapsed_hours, clock_hours, calendar_days
 
 
 def _standardized(values: np.ndarray) -> tuple[np.ndarray, float, float]:
@@ -85,7 +90,7 @@ def _standardized(values: np.ndarray) -> tuple[np.ndarray, float, float]:
 
 
 def _effective_rank(Q: np.ndarray) -> tuple[int, float, np.ndarray]:
-    if Q.shape[1] == 0:
+    if min(Q.shape) == 0:
         return 0, 0.0, np.empty(0, dtype=np.float64)
     singular_values = np.linalg.svd(Q, full_matrices=False, compute_uv=False)
     tolerance = float(max(Q.shape) * np.finfo(np.float64).eps * singular_values[0])
@@ -109,10 +114,11 @@ def build_background_basis(
         raise ValueError("basis_mode must be 'normal' or 'stress'")
 
     rows, time_indices, sensor_ids = _validated_rows(row_index)
-    time_hours, day_values = _timestamp_hours(timestamps, time_indices)
+    elapsed_hours, clock_hours, day_values = _timestamp_hours(timestamps, time_indices)
     M, T = len(sensor_ids), len(time_indices)
     mT = len(rows)
-    row_hours = np.repeat(time_hours, M) if M else np.empty(0, dtype=np.float64)
+    row_elapsed_hours = np.repeat(elapsed_hours, M) if M else np.empty(0, dtype=np.float64)
+    row_clock_hours = np.repeat(clock_hours, M) if M else np.empty(0, dtype=np.float64)
     columns: list[np.ndarray] = []
     names: list[str] = []
     provenance: list[dict[str, Any]] = []
@@ -126,14 +132,20 @@ def build_background_basis(
     if cfg.include_constant:
         add("constant", np.ones(mT), "constant")
     if cfg.temporal_polynomial_degree:
-        standardized_time, center, scale = _standardized(row_hours)
-        scaling["temporal_hours"] = {"center": center, "scale": scale}
+        standardized_time, center, scale = _standardized(row_elapsed_hours)
+        scaling["temporal_hours"] = {"center": center, "scale": scale, "semantics": "elapsed_from_first_timestamp"}
         for degree in range(1, cfg.temporal_polynomial_degree + 1):
             add(f"time_polynomial_{degree}", standardized_time ** degree, "temporal_polynomial", degree=degree)
     for harmonic in range(1, cfg.daily_harmonics + 1):
-        angle = 2.0 * np.pi * harmonic * row_hours / 24.0
-        add(f"daily_sin_{harmonic}", np.sin(angle), "daily_harmonic", harmonic=harmonic, component="sin")
-        add(f"daily_cos_{harmonic}", np.cos(angle), "daily_harmonic", harmonic=harmonic, component="cos")
+        angle = 2.0 * np.pi * harmonic * row_clock_hours / 24.0
+        add(
+            f"daily_sin_{harmonic}", np.sin(angle), "daily_harmonic",
+            harmonic=harmonic, component="sin", time_semantics="fractional_hours_since_midnight",
+        )
+        add(
+            f"daily_cos_{harmonic}", np.cos(angle), "daily_harmonic",
+            harmonic=harmonic, component="cos", time_semantics="fractional_hours_since_midnight",
+        )
     if cfg.day_intercepts and T:
         unique_days = list(dict.fromkeys(str(day) for day in day_values))
         row_days = np.repeat(np.asarray([str(day) for day in day_values]), M)
@@ -194,6 +206,10 @@ def build_background_basis(
         "sensor_ids": sensor_ids,
         "row_ordering": "time_major_sensor_minor",
         "centering_and_scaling": scaling,
+        "time_semantics": {
+            "temporal_polynomials": "elapsed_hours_from_first_timestamp",
+            "daily_harmonics": "fractional_local_clock_hours_since_calendar_day_boundary",
+        },
         "max_background_rank": cfg.max_background_rank,
     }
     return BackgroundBasisResult(Q=Q, column_names=names, row_index=rows, metadata=metadata)

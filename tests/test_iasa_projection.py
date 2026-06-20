@@ -61,6 +61,15 @@ class ProjectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "nonnegative"):
             fit_background_projector(redundant, ProjectionConfig(rank_tolerance=-1.0))
 
+    def test_prefix_classification_uses_complete_prefix_at_explicit_tolerance(self) -> None:
+        subthreshold = np.zeros((6, 2), dtype=np.float64)
+        subthreshold[0, :] = 0.8
+        duplicate = basis(subthreshold, ["first_subthreshold", "second_crosses_tolerance"])
+        projector = fit_background_projector(duplicate, ProjectionConfig(rank_tolerance=1.0))
+        self.assertEqual(projector.effective_rank, 1)
+        self.assertEqual(projector.metadata["independent_column_names"], ["second_crosses_tolerance"])
+        self.assertEqual(projector.metadata["dependent_column_names"], ["first_subthreshold"])
+
     def test_over_rank_requires_labeled_stress_opt_out(self) -> None:
         q = np.eye(6, 3)
         stress = basis(q, ["a", "b", "c"], mode="stress", cap=2)
@@ -85,6 +94,33 @@ class ProjectionTests(unittest.TestCase):
         bad[0, 0] = np.nan
         with self.assertRaisesRegex(ValueError, "finite"):
             project_response_and_observations(bad, self.y, constant, ROWS, self.columns)
+
+    def test_zero_row_projectors_and_projections(self) -> None:
+        for background in (
+            build_background_basis([], []),
+            build_background_basis([], [], config=BackgroundBasisConfig(include_constant=False)),
+        ):
+            projector = fit_background_projector(background)
+            self.assertEqual(projector.U_r.shape, (0, 0))
+            self.assertEqual(projector.effective_rank, 0)
+            self.assertEqual(projector.singular_values.tolist(), [])
+            self.assertEqual(projector.tolerance, 0.0)
+            result = project_response_and_observations(
+                np.empty((0, 2)), np.empty(0), background, [], [{"column": 0}, {"column": 1}],
+            )
+            self.assertEqual(result.H_tilde.shape, (0, 2))
+            self.assertEqual(result.Y_tilde.shape, (0,))
+            self.assertEqual(result.H_removed.shape, (0, 2))
+            self.assertEqual(result.Y_removed.shape, (0,))
+            json.dumps(result.metadata)
+
+        zero_row_constant = build_background_basis([], [])
+        explicit_tolerance = fit_background_projector(
+            zero_row_constant, ProjectionConfig(rank_tolerance=1.0),
+        )
+        self.assertEqual(explicit_tolerance.Q.shape, (0, 1))
+        self.assertEqual(explicit_tolerance.tolerance, 0.0)
+        self.assertEqual(explicit_tolerance.metadata["rank_tolerance"], 0.0)
 
     def test_public_exports_and_gate(self) -> None:
         for name in (

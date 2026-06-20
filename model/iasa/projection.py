@@ -48,7 +48,7 @@ class ProjectionResult:
 
 
 def _rank(values: np.ndarray, tolerance: float) -> int:
-    if values.shape[1] == 0:
+    if min(values.shape) == 0:
         return 0
     return int(np.count_nonzero(np.linalg.svd(values, full_matrices=False, compute_uv=False) > tolerance))
 
@@ -68,10 +68,10 @@ def fit_background_projector(
     if cfg.rank_tolerance is not None and (not np.isfinite(cfg.rank_tolerance) or cfg.rank_tolerance < 0):
         raise ValueError("rank_tolerance must be finite and nonnegative")
 
-    if Q.shape[1] == 0:
+    if min(Q.shape) == 0:
         singular_values = np.empty(0, dtype=np.float64)
         U_r = np.empty((Q.shape[0], 0), dtype=np.float64)
-        tolerance = 0.0 if cfg.rank_tolerance is None else float(cfg.rank_tolerance)
+        tolerance = 0.0
     else:
         U, singular_values, _ = np.linalg.svd(Q, full_matrices=False)
         default_tolerance = float(max(Q.shape) * np.finfo(np.float64).eps * singular_values[0])
@@ -85,17 +85,16 @@ def fit_background_projector(
 
     independent: list[str] = []
     dependent: list[str] = []
-    selected = np.empty((Q.shape[0], 0), dtype=np.float64)
     current_rank = 0
     for index, name in enumerate(background_basis.column_names):
-        candidate = np.column_stack([selected, Q[:, index]])
-        candidate_rank = _rank(candidate, tolerance)
-        if candidate_rank > current_rank:
+        prefix_rank = _rank(Q[:, :index + 1], tolerance)
+        if prefix_rank > current_rank:
             independent.append(name)
-            selected = candidate
-            current_rank = candidate_rank
         else:
             dependent.append(name)
+        current_rank = prefix_rank
+    if len(independent) != effective_rank:
+        raise RuntimeError("prefix rank classification is inconsistent with effective rank")
     metadata = {
         "method": "thin_svd_implicit_orthogonal_projection",
         "basis_mode": basis_mode,

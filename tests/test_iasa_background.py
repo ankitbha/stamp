@@ -52,6 +52,32 @@ class BackgroundBasisTests(unittest.TestCase):
         np.testing.assert_array_equal(result.Q[:, 2], [-1, 1, -1, 1, -1, 1])
         np.testing.assert_array_equal(result.Q[:, 4], [0, 1, 0, 1, 0, 1])
 
+    def test_daily_harmonics_use_clock_time_not_elapsed_time(self) -> None:
+        one_sensor_rows = rows(times=1, sensors=("a",))
+        six_am = build_background_basis(
+            one_sensor_rows, [np.datetime64("2026-06-01T06:00")],
+            config=BackgroundBasisConfig(include_constant=False, daily_harmonics=1),
+        )
+        np.testing.assert_allclose(six_am.Q[0], [1.0, 0.0], atol=1e-12)
+        self.assertEqual(
+            six_am.metadata["time_semantics"]["daily_harmonics"],
+            "fractional_local_clock_hours_since_calendar_day_boundary",
+        )
+
+        crossing_rows = rows(times=3, sensors=("a",))
+        crossing_timestamps = np.asarray([
+            np.datetime64("2026-06-01T23:00"),
+            np.datetime64("2026-06-02T00:00"),
+            np.datetime64("2026-06-02T01:00"),
+        ])
+        crossing = build_background_basis(
+            crossing_rows, crossing_timestamps,
+            config=BackgroundBasisConfig(include_constant=False, daily_harmonics=1),
+        )
+        angle = np.pi / 12.0
+        np.testing.assert_allclose(crossing.Q[:, 0], [-np.sin(angle), 0.0, np.sin(angle)], atol=1e-12)
+        np.testing.assert_allclose(crossing.Q[:, 1], [np.cos(angle), 1.0, np.cos(angle)], atol=1e-12)
+
     def test_user_basis_empty_basis_and_rank_cap(self) -> None:
         empty = build_background_basis(rows(), self.timestamps, config=BackgroundBasisConfig(include_constant=False))
         self.assertEqual(empty.Q.shape, (6, 0))
@@ -74,6 +100,20 @@ class BackgroundBasisTests(unittest.TestCase):
             user_basis=user, user_basis_names=["u", "v"],
         )
         self.assertEqual(stress.metadata["basis_mode"], "stress")
+
+    def test_zero_row_constant_and_empty_bases(self) -> None:
+        constant = build_background_basis([], [])
+        self.assertEqual(constant.Q.shape, (0, 1))
+        self.assertEqual(constant.column_names, ["constant"])
+        self.assertEqual(constant.metadata["effective_rank"], 0)
+        self.assertEqual(constant.metadata["singular_values"], [])
+        self.assertEqual(constant.metadata["rank_tolerance"], 0.0)
+        json.dumps(constant.metadata)
+
+        empty = build_background_basis([], [], config=BackgroundBasisConfig(include_constant=False))
+        self.assertEqual(empty.Q.shape, (0, 0))
+        self.assertEqual(empty.metadata["effective_rank"], 0)
+        json.dumps(empty.metadata)
 
     def test_validation_failures(self) -> None:
         with self.assertRaisesRegex(ValueError, "complete time-major"):
