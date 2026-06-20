@@ -1,4 +1,4 @@
-\begin{thebibliography}{32}
+\begin{thebibliography}{33}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -160,6 +160,13 @@ Mircea, M., Calori, G., Pirovano, G., BELIS, C., et~al.
   matter with source oriented models and their combined use with receptor
   models.
 \newblock 2020.
+
+\bibitem[Nie et~al.(2024)Nie, Qin, Ma, Mei, and Sun]{nie2024imputeformer}
+Nie, T., Qin, G., Ma, W., Mei, Y., and Sun, J.
+\newblock Imputeformer: Low rankness-induced transformers for generalizable
+  spatiotemporal imputation.
+\newblock In \emph{Proceedings of the 30th ACM SIGKDD Conference on Knowledge
+  Discovery and Data Mining}, pp.\  2260--2271, 2024.
 
 \bibitem[Paatero \& Tapper(1994)Paatero and Tapper]{paatero1994positive}
 Paatero, P. and Tapper, U.

@@ -188,7 +188,7 @@ regional background pollution, and sensor noise.  For policy, the central
 question is often not only \emph{where} pollution is high, but \emph{which}
 source groups contributed to the observed concentrations.  Source
 apportionment therefore seeks to estimate the contributions of categories such
-as traffic, industry, brick kilns, road dust, and population-related activity
+as traffic, industry, brick kilns, and population-related activity
 from a combination of source inventories, transport models, and concentration
 measurements.
 
@@ -235,9 +235,10 @@ function per source.
 
 This perspective changes the role of source apportionment models.  The goal is
 not to return the most detailed vector of source contributions permitted by the
-inventory.  It is to report the finest source resolution that is defensible
+inventory.  It is to report a conservative source resolution that is defensible
 under the available sensors, wind regime, background correction, and noise
-level.  An apportionment method should therefore output source estimates
+level, conditional on the completeness and correctness of the declared source
+model.  An apportionment method should therefore output source estimates
 alongside identifiability diagnostics and ambiguity certificates.
 
 We make the following contributions:
@@ -256,12 +257,14 @@ We make the following contributions:
     \item We propose an identifiability-aware apportionment procedure that fits
     nonnegative source--basis coefficients, reconstructs source activity
     trajectories, reports uncertainty, flags weakly visible coefficients, and
-    merges source groups whose fingerprints are indistinguishable under the
-    current sensing system.
-    \item We design controlled city-scale advection--diffusion experiments to
-    test whether source attribution error, source ambiguity, and the benefit of
-    merging are predicted by the geometry of \(\widetilde H_\Phi\) under varying
-    noise levels, wind regimes, background bases, and sensor layouts.
+    recommends connected report groups when eligible coefficient fingerprints
+    are indistinguishable under the current sensing system.
+    \item We instantiate the framework on a New Delhi platform comprising
+    government PM\(_{2.5}\) and wind records, regulatory sensor locations,
+    fixed-node wind imputation, and seven named normalized proxy inventories.
+    \item We define controlled and observed-data evaluations of conditioning,
+    source ambiguity, background stress, wind diversity, temporal-basis
+    recovery, response error, uncertainty, and residual structure.
 \end{itemize}
 
 The broader message is that sparse-sensor source apportionment is limited by

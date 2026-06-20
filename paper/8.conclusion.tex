@@ -11,7 +11,7 @@ transport, finite lag, background correction, and noise.
 The central object is the projected lagged source--basis response matrix
 \begin{equation}
 \widetilde H_\Phi=P_Q^\perp H_{\Phi}^{\mathrm{lag}}
-\in\mathbb R^{mT\times J},
+\in\mathbb R^{N\times J},
 \qquad J=KB.
 \end{equation}
 Exact identifiability at the selected temporal-basis resolution requires
@@ -24,16 +24,20 @@ sensor trajectories while still producing unstable or non-unique coefficient
 and activity estimates, so prediction accuracy alone is not evidence of
 identifiability at the claimed temporal resolution.
 
-The practical implication is that source apportionment should report the finest
-source grouping that the sensing system supports.  If two source groups have
+The practical implication is that source apportionment should report a
+conservative grouping supported by the sensing system.  If two source groups have
 highly coherent projected fingerprints, the data may support their combined
 contribution but not their separate activities.  Reporting them separately can
 create false precision.  The proposed IASA protocol therefore estimates
 nonnegative source--basis coefficients, reconstructs source activity
 trajectories, audits the projected response matrix, flags weak coefficients and
-ambiguous source pairs, and merges source groups when the fine-grained inventory
-resolution is not identifiable.  Each source-level warning retains the temporal
-basis components that triggered it.
+ambiguous source pairs, and recommends deterministic connected report groups
+when the fine-grained inventory resolution is not identifiable.  Group
+activities and sensor contributions sum member estimates without silently
+replacing the coefficient fit.  Each warning retains the temporal-basis pair
+that triggered it.  Connected components are deterministic but need not be the
+globally finest identifiable partition: an ambiguity chain can conservatively
+group endpoints that are distinguishable from one another.
 
 This perspective also changes how sensing systems and preprocessing choices
 should be designed.  Adding sensors is useful when it improves visibility,
@@ -44,7 +48,16 @@ transport angles, while a single dominant wind regime can leave sources
 confounded.  Background correction can remove broad temporal confounding, but a
 basis that is too flexible can absorb source-driven variation and reduce
 identifiability.  Wind interpolation and transport-model errors act as additional
-observation error whose impact is amplified by ill-conditioning.
+observation error whose impact is amplified by ill-conditioning.  Prospective
+claims about a network require diagnostics over a distribution of historical or
+simulated wind windows rather than one realized wind sequence.
+
+The New Delhi platform makes these choices concrete: government PM\(_{2.5}\)
+rows remain missing rather than being imputed, wind vectors are completed by a
+fixed-node model and aggregated city-wide, and independently normalized proxy
+inventories define relative rather than physical emission units.  Controlled
+experiments and the observed-data study share this platform but require
+different claims: only controlled trials have source-activity ground truth.
 
 The framework has several limitations.  The response operator is an
 approximation to atmospheric transport and can be extended with richer
@@ -57,15 +70,24 @@ resolution is defensible only when the corresponding response columns remain
 identifiable.  Finally, the framework assumes that relevant
 candidate source inventories are available.  Missing source categories may be
 absorbed into available inventories or background terms, which should be treated
-as a model-misspecification risk rather than as identifiable attribution.
+as a model-misspecification risk rather than as identifiable attribution.  A
+calibrated residual bootstrap can reject an inadequate declared model but cannot
+prove inventory completeness, especially when an omitted signature lies in the
+span of the fitted response and background.  Transport ensembles can quantify
+uncertainty under their sampling model, whereas alternative inventories are
+separate robustness scenarios and must not be pooled into confidence intervals.  The
+current city-level wind sequence also omits spatial meteorological variation,
+and proxy-normalized coefficients cannot be interpreted as physical emissions
+without external scaling.
 
 Despite these limitations, the identifiability view provides a concrete basis
 for more reliable policy-facing apportionment.  It separates fitting the observed
 sensor signal from determining which source claims are supported by the sensing
 system.  By using rank, singular values, visibility, background absorption,
-coherence, ray distance, and response perturbation sensitivity, source
+coherence, ray distance, lag and wind-distribution sensitivity, separated
+transport/inventory perturbations, and calibrated residual checks, source
 apportionment can report not only estimated contributions, but also the spatial
-and temporal resolution at which those contributions can be trusted.
+and temporal resolution at which those conditional contributions can be trusted.
 
 \section*{Acknowledgements}
 Ankit Bhardwaj and Lakshminarayanan Subramanian were supported by the NSF Grant (Award Number 2335773) titled ``EAGER: Scalable Climate Modeling using Message-Passing Recurrent Neural Networks''. Lakshminarayanan Subramanian was also funded in part by the NSF Grant (award number OAC-2004572) titled ``A Data-informed Framework for the Representation of Sub-grid Scale Gravity Waves to Improve Climate Prediction''.

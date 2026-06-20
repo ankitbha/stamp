@@ -35,7 +35,13 @@ where:
 - `P_Q_perp` projects away background components.
 - `H_tilde` determines which source groups can be separated after transport, sparse sensing, lag, and background correction.
 
-The goal becomes: estimate source activities and report the finest source grouping that is defensible under the sensor layout, wind regime, lag window, background basis, and noise level. For the real New Delhi case, the roadmap must also produce actual apportionment numbers, uncertainty intervals, and merge recommendations.
+The goal becomes: estimate source activities and report a conservative source
+grouping that is defensible under the sensor layout, wind regime, lag window,
+background basis, and noise level, conditional on the declared inventory. For
+the real New Delhi case, the roadmap must also produce actual proxy
+apportionment numbers, separated observation/transport uncertainty, inventory
+robustness scenarios, calibrated residual adequacy when a noise model is
+available, and merge recommendations.
 
 ### Required new capabilities
 
@@ -161,7 +167,8 @@ Make the expected runtime environment explicit and add minimal smoke checks for 
 /share/apps/apptainer/bin/singularity exec cuda11.8.86-cudnn8.7-devel-ubuntu22.04.2.sif python3 ...
 ```
 
-- Confirm availability of required packages inside the image: `numpy`, `torch`, `pandas`, `pykrige`, and optionally `scipy`.
+- Confirm availability of required packages inside the image: `numpy`, `torch`,
+  `pandas`, and `pykrige`. SciPy is not part of the required solver path.
 - Add a smoke script that imports the pollution simulator, loads source maps, creates a grid, and prints source and sensor shapes without running a long simulation.
 - Keep host Python limitations explicit; in the current environment, host Python does not provide `numpy`.
 
@@ -896,11 +903,72 @@ overflexible_projection_visibility_ratio < normal_projection_visibility_ratio
 overflexible_background_absorption_ratio > normal_background_absorption_ratio
 ```
 
+### Task 6A: PyTorch computational backend consolidation
+
+**Objective**
+
+Make PyTorch the sole computational backend before implementing diagnostics and
+fitting. Pandas and NumPy remain permitted only at CSV/NPZ ingestion and
+serialization boundaries.
+
+**Likely files**
+
+- `model/iasa/response.py`
+- `model/iasa/background.py`
+- `model/iasa/projection.py`
+- `model/iasa/activity.py`
+- `model/iasa/wind.py`
+- Tests and `scripts/run_iasa_sanity.py`
+
+**Implementation details**
+
+- Port puff advection, sensor-kernel evaluation, retained/dropped-mass
+  diagnostics, observation masking, and baseline handling to `torch.Tensor`
+  operations.
+- Port background construction and thin-SVD projection to PyTorch.
+- Keep row/column metadata as Python records, but keep all numerical arrays on
+  the requested device until artifact serialization.
+- Expose and propagate explicit `device` and `dtype` configuration. Use float64
+  by default for inverse diagnostics/fitting and configurable float32 or float64
+  for response construction.
+- Record device, dtype, PyTorch version, and CUDA version in saved artifacts.
+- Attach inventory identifier/hash/version, transport configuration, exact wind
+  realization, dispersion settings, observation mask, and parent-artifact hashes
+  to response and projection artifacts.
+- Add `ensemble_kind` provenance with exactly `transport` or `inventory` for
+  downstream ensemble products. Untagged ensembles must not enter uncertainty
+  aggregation.
+- Convert to NumPy only through explicit `tensor.detach().cpu().numpy()` at an
+  output boundary.
+- Remove SciPy as a runtime or solver requirement. No diagnostic or fit may
+  invoke a hidden CPU implementation.
+- Preserve the existing public row ordering, source-major/basis-minor column
+  ordering, boundary semantics, and provenance metadata.
+
+**Outputs and artifacts**
+
+- PyTorch-native response, background, and projection results.
+- CPU/GPU parity summaries for Gates S1 and S2.
+- Device/dtype and inventory/transport/mask provenance in every generated
+  response and projection artifact.
+
+**Acceptance checks**
+
+- CPU PyTorch outputs match the pre-consolidation implementation within
+  recorded dtype-appropriate tolerances.
+- CPU and CUDA outputs agree within recorded tolerances.
+- Response and projection outputs remain on the requested device until
+  serialization.
+- Gates S1 and S2 pass without SciPy.
+- Task 7 does not begin until this consolidation passes.
+
 ### Task 7: Identifiability diagnostics
 
 **Objective**
 
-Compute diagnostics that explain whether source activities or source-basis coefficients are identifiable.
+Compute coefficient-level diagnostics for the projected source--basis response
+and map those diagnostics to source-level warnings without inventing aggregate
+fingerprint columns.
 
 **Likely files**
 
@@ -909,42 +977,77 @@ Compute diagnostics that explain whether source activities or source-basis coeff
 
 **Implementation details**
 
-For `H_tilde`, compute:
+Accept `fixed_zero_indices` as a pre-fit diagnostic configuration. Validate it
+against `column_index`, remove those columns before constructing the diagnostic
+matrix, and retain `original_to_reduced` and `reduced_to_original` mappings.
+The default is an empty mask. A coefficient that is small after fitting must
+not modify the mask or any diagnostic.
 
-- Matrix rank at configurable tolerance.
-- Singular values.
-- Smallest nonzero singular value.
-- Condition number.
-- Effective rank.
-- Per-source visibility, using projected column norms.
-- Pairwise source-fingerprint coherence:
+For `H_tilde in R^(N x J)`, using PyTorch on the input device, compute:
+
+- Exactly `J` singular values through `H_tilde.T @ H_tilde`, padding with zeros
+  when `J > N` or the matrix is deficient.
+- Numerical tolerance
+  `tau_num = max(N,J) * eps(dtype) * sigma_1` and numerical rank
+  `r_num = count(sigma_i > tau_num)`.
+- Primary identifiability score `sigma_J`, including rank-deficiency zeros.
+- Condition number `sigma_1 / sigma_J` only at full numerical rank and infinity
+  otherwise.
+- Separately configured noise-dependent effective rank threshold `tau_sigma`.
+- Coefficient visibility `v_j = ||h_tilde_j||_2`, weak set
+  `W = {j: v_j <= tau_v}`, and exact source/basis metadata for every `j`.
+- Eligible coefficient-fingerprint coherence:
 
 ```text
 coherence(i, j) = abs(<h_i, h_j>) / (||h_i|| ||h_j||)
 ```
 
-- Background absorption:
+- Background absorption using the removed/raw norm ratio:
 
 ```text
-absorption_k = ||P_Q h_k_lag|| / ||h_k_lag||
+absorption_j = ||H_removed_j|| / ||H_lag_j||
 ```
 
-or the complementary removed fraction, with naming made explicit.
-
-- Ray distance where feasible, using normalized nonnegative source fingerprints.
-- Perturbation sensitivity proxies based on singular values and condition number.
+- Signed linear-ray distance `sqrt(max(0, 1 - coherence(i,j)^2))` for eligible
+  pairs.
+- `null` coherence, ray distance, and absorption entries when their required
+  norms are weak/zero; never serialize NaN as a metric.
+- Eligible ambiguity set `A = {(i,j): i,j not in W and rho_ij > tau_rho}`.
+- Per-source weak-basis flags and cross-source summaries retaining the exact
+  coefficient pair that attains maximum eligible coherence and minimum ray
+  distance.
+- Perturbation sensitivity values `1/sigma_J` and the condition number, with
+  infinity serialized through an explicit status field plus JSON-safe value.
+- For a predeclared collection of historical or simulated wind windows,
+  aggregate per-window diagnostics into 5th, 50th, and 95th percentiles of
+  `sigma_J`; probabilities of full numerical/effective rank; per-coefficient
+  weak probabilities; per-source-pair ambiguity probabilities; and frequencies
+  of conservative report components. This is an empirical wind-distribution
+  summary, not a theorem about every possible wind field.
+- Keep all rank/coherence guarantees uniform over the reduced admissible
+  coefficient set. Do not add a tangent-cone or fitted-active-set
+  identifiability path.
 
 **Outputs and artifacts**
 
-- Diagnostics dictionary.
+- A PyTorch-native diagnostics result retaining device and dtype.
 - Human-readable table.
-- Machine-readable `.npz` or `.json` output.
+- Machine-readable tensor artifact plus JSON summary using `null` for undefined
+  pairwise values.
+- Wind-ensemble summary with sampled-window provenance and deterministic
+  quantile/probability fields.
 
 **Acceptance checks**
 
-- Duplicate source columns yield high coherence and rank deficiency.
+- Duplicate coefficient columns yield high coherence, `sigma_J == 0`, infinite
+  condition status, and rank deficiency.
 - Orthogonal synthetic columns yield low coherence and stable rank.
-- Zero or near-zero source columns are flagged as weakly visible.
+- Zero or near-zero coefficient columns are flagged as weakly visible and have
+  undefined pairwise metrics.
+- A predeclared fixed-zero mask removes the intended columns, preserves the
+  original index mapping, and changes diagnostics only through that declared
+  reduction; post-fit near-zero values do not.
+- Wind-ensemble summaries are exactly repeatable for fixed inputs and seeds.
 
 **Sanity experiment requirements**
 
@@ -956,13 +1059,20 @@ duplicate_case: column 2 exactly equals column 1
 weak_case: one column has near-zero norm
 ```
 
-Also run diagnostics on the response matrices from Gate S1 for eastward and two-direction wind. The gate must verify:
+Build a dedicated matched wind comparison containing the same multiple source,
+basis, and sensor columns under eastward and two-direction wind. The existing
+single-column Gate S1 comparison is only a response-change check and must not be
+used to test coherence. The gate must verify:
 
 - `orthogonal_case` has full rank, low maximum coherence, and finite condition number.
 - `duplicate_case` has rank deficiency and coherence close to 1 for the duplicated pair.
 - `weak_case` flags the near-zero source as weakly visible.
-- For the designed toy geometry, adding the second wind direction does not make identifiability worse by the reported metrics unless the summary explicitly explains the exception.
-- Diagnostics output includes rank, singular values, condition number, effective rank, visibility, pairwise coherence, background absorption if projection was used, and warning flags.
+- For the designed matched geometry, adding the second wind direction does not
+  reduce `sigma_J` or increase maximum eligible coherence. Redesign the geometry
+  if necessary; do not weaken the assertion.
+- Diagnostics output includes padded singular values, `sigma_J`, numerical and
+  effective rank, condition status, visibility, weak set, eligible coherence,
+  ray distance, background absorption, source/basis trigger pairs, and warnings.
 
 Suggested pass/fail tolerances:
 
@@ -970,7 +1080,7 @@ Suggested pass/fail tolerances:
 duplicate_pair_coherence >= 0.999
 weak_column_visibility <= 1e-8 or weak_visibility_flag == true
 orthogonal_max_coherence <= 0.1
-two_direction_sigma_min >= eastward_sigma_min - 1e-8
+two_direction_sigma_J >= eastward_sigma_J - 1e-8
 two_direction_max_coherence <= eastward_max_coherence + 1e-8
 ```
 
@@ -984,6 +1094,7 @@ Estimate nonnegative source-basis coefficients:
 
 ```text
 c_hat = argmin_{c >= 0} ||Y_tilde - H_tilde c||^2
+        + lambda ||c - c0||^2
 ```
 
 **Likely files**
@@ -994,11 +1105,20 @@ c_hat = argmin_{c >= 0} ||Y_tilde - H_tilde c||^2
 
 **Implementation details**
 
-- Prefer `scipy.optimize.nnls` or `scipy.optimize.lsq_linear` if SciPy is available in the runtime environment.
-- Provide a fallback PyTorch optimizer:
-  - optimize unconstrained raw parameters
-  - transform through `softplus` or clamp projected values
-  - stop by tolerance or fixed iteration cap
+- Implement projected FISTA in PyTorch as the sole solver path.
+- Compute a valid Lipschitz step from `sigma_1(H_tilde)` or a recorded
+  power-iteration estimate.
+- Project every update with `torch.clamp(c, min=0)` so inactive coefficients can
+  be exactly zero.
+- Use monotone restart whenever acceleration raises the objective.
+- Stop only when both projected-gradient/KKT residual and relative objective
+  change satisfy configured tolerances, or when the recorded iteration cap is
+  reached.
+- Preserve the input device and use the configured inverse-problem dtype.
+- Do not import SciPy or transfer to CPU for fitting.
+- Accept the same predeclared `fixed_zero_indices` used by Task 7, fit only the
+  reduced columns, restore exact zeros in the full coefficient vector, and
+  return both index mappings. Reject a fit/diagnostic mask mismatch.
 - Return:
 
 ```text
@@ -1011,6 +1131,11 @@ residual_norm
 source_names
 source_basis_metadata
 solver metadata
+device and dtype
+convergence status
+iteration count
+projected-gradient/KKT residual
+objective summary
 ```
 
 - Aggregate fitted coefficients back into interpretable source activity and contribution summaries:
@@ -1019,9 +1144,27 @@ solver metadata
   - intermittent or active-period summaries for brick kilns
   - day-to-day summaries for industry
   - merged-source summaries when merge recommendations apply
-- Estimate uncertainty using one or both of:
-  - local linear covariance approximation on active variables
-  - bootstrap or wind-ensemble refits when ensembles are available
+- Estimate active-set covariance with PyTorch linear algebra on
+  `H_active.T @ H_active + lambda I`.
+- Batch bootstrap or transport-ensemble refits on GPU when shapes agree; record when
+  batching is impossible and why.
+- Implement a refitted parametric-bootstrap model-adequacy check. It accepts an
+  externally calibrated observation-noise covariance, transforms it to the
+  nondegenerate observed-row/background-orthogonal coordinates, computes
+  `T_res = r.T @ Sigma_e^{-1} @ r`, simulates from the complete fitted
+  source/background model plus that noise, refits each replicate, and compares
+  the observed statistic with the empirical null distribution.
+- Default to `alpha=0.05`; paper runs use 1,000 refitted bootstrap replicates.
+  Return `calibration_status`, `T_res`, bootstrap quantile, add-one Monte Carlo
+  `p_value`, `alpha`, replicate count, and noise-model provenance.
+- If the noise covariance is absent, invalid, or was estimated from the same
+  fitted residual without an independent calibration contract, return
+  `calibration_status="uncalibrated"`, null test fields, and no pass/fail
+  boolean. Still return raw/projected norms plus sensor-wise, time-wise, and
+  autocorrelation summaries.
+- Require ensemble provenance. `transport` ensembles may produce uncertainty
+  intervals; `inventory` ensembles produce named robustness scenarios. Reject
+  any aggregation that pools the two kinds.
 - Include warning flags for ill-conditioned matrices or unstable estimates.
 
 **Outputs and artifacts**
@@ -1031,14 +1174,23 @@ solver metadata
 - Aggregated source apportionment numbers.
 - Fitted sensor trajectory.
 - Residual metrics.
-- Optional uncertainty intervals.
+- Active-set and transport/bootstrap uncertainty intervals.
+- Inventory robustness scenarios stored separately from intervals.
+- Residual-adequacy result with explicit calibrated/uncalibrated status.
 
 **Acceptance checks**
 
 - Synthetic orthogonal case recovers known source-basis coefficients within tolerance.
 - Synthetic temporal case recovers known diurnal traffic and intermittent brick-kiln activity within tolerance.
 - Duplicate-column case reports unstable or non-unique activity split.
-- Nonnegativity is enforced in all solver paths.
+- Nonnegativity, KKT convergence metadata, and device preservation are enforced
+  in the sole solver path.
+- Missing noise calibration never yields a model-adequacy pass.
+- Correctly specified calibrated simulations are not systematically rejected,
+  while a residual-visible omitted signal is detected with increasing strength.
+- An omitted signal in `span([H_lag, Q])` demonstrates that non-rejection does
+  not establish inventory completeness.
+- Transport and inventory ensemble products cannot be pooled.
 
 **Sanity experiment requirements**
 
@@ -1053,9 +1205,13 @@ Run the nonnegative fitter. The gate must verify:
 
 - In the well-conditioned noiseless case, recovered coefficients match `c_true` within tight tolerance.
 - With small Gaussian noise, recovered coefficients remain close and residual norm is lower than the zero-coefficient baseline.
-- Nonnegativity is enforced for every solver path.
+- Nonnegativity is enforced by projection and the final KKT residual satisfies
+  its configured tolerance.
 - In a duplicate-column case, individual duplicate coefficients may be unstable, but their sum matches the true merged contribution.
 - In an ill-conditioned case, fit metadata includes a warning rather than presenting the result as fully stable.
+- A mask case confirms the full result restores exact declared zeros and that a
+  fitted near-zero unmasked coefficient does not trigger post-hoc column removal.
+- An uncalibrated residual case emits summaries but no adequacy decision.
 
 Suggested pass/fail tolerances:
 
@@ -1071,7 +1227,9 @@ duplicate_pair_sum_error <= 1e-4 in noiseless duplicate case
 
 **Objective**
 
-Report the finest defensible source grouping by merging or flagging indistinguishable sources.
+Recommend deterministic conservative source reporting groups without silently
+replacing the fitted coefficient model or claiming the globally finest
+identifiable partition.
 
 **Likely files**
 
@@ -1081,30 +1239,41 @@ Report the finest defensible source grouping by merging or flagging indistinguis
 
 **Implementation details**
 
-- Define configurable thresholds:
-  - high coherence threshold
-  - low visibility threshold
-  - minimum singular value or condition threshold
-  - uncertainty width threshold
-- Build a graph where source groups are connected if they are indistinguishable under current diagnostics.
-- Connected components become merge candidates.
+- Consume the exact `tau_rho`, weak set, eligible ambiguity pairs, and
+  source/basis metadata produced by Task 7.
+- Add a source-graph edge `(k,k')` when at least one eligible cross-source
+  coefficient pair exceeds `tau_rho`.
+- Store maximum eligible coherence, minimum ray distance, and the exact
+  source--basis trigger pair for each edge.
+- Order vertices by the original source index and compute deterministically
+  ordered connected components.
+- Mark every component result with `is_conservative=true`. Document that an
+  `A-B-C` edge chain creates one component even when `A` and `C` are pairwise
+  distinguishable; retain both trigger edges so this transitive over-merging is
+  inspectable.
+- Weak coefficients are flagged independently and never create coherence edges.
+- If the matrix is rank deficient but no eligible pair defines an edge, emit a
+  global unresolved warning instead of inventing a merge.
+- Keep the fine-resolution coefficient fit. Group activity trajectories and
+  fitted sensor contributions are sums of component members; do not construct
+  an artificial source fingerprint or silently refit a grouped inventory.
 - Report:
 
 ```text
 source-level activity summaries
-source-basis coefficient groups
-merged-group activity summaries
-merge reason
-diagnostic values that triggered the merge
+source-basis coefficient trigger pairs
+recommended report components
+summed group activity and sensor contributions
+weak flags and global unresolved warnings
+diagnostic values that triggered each edge
 ```
 
-- Keep recommendations deterministic for identical inputs.
-- Make threshold defaults conservative and paper-aligned, but easy to override.
+- Keep recommendations deterministic for identical tensors and metadata.
 
 **Outputs and artifacts**
 
 - Merge recommendations.
-- Merged activity estimates.
+- Summed report-group activities and sensor contributions.
 - Per-source flags.
 
 **Acceptance checks**
@@ -1112,16 +1281,21 @@ diagnostic values that triggered the merge
 - Identical source fingerprints are recommended for merge.
 - Clearly separated synthetic sources are not merged.
 - Weakly visible sources are flagged even if they do not form a high-coherence pair.
+- An `A-B-C` chain produces one deterministic conservative component and retains
+  both trigger edges and their diagnostic values.
 
 **Sanity experiment requirements**
 
 Gate S5, completed as part of Task 9, extends the sanity runner with `--gate merge`. Use fingerprints and fits from the duplicate and separated cases. The gate must verify:
 
 - Duplicate fingerprints produce one merge recommendation containing exactly the duplicate source pair.
-- The merge reason includes the triggering diagnostic, such as high coherence or rank deficiency.
+- The edge includes its triggering coefficient pair and diagnostic values.
 - Clearly separated synthetic sources are not recommended for merge.
 - A weakly visible source is flagged even if it is not connected to a high-coherence pair.
-- Merged contribution summaries are computed and match the true total contribution in the duplicate synthetic case.
+- Grouped activity and sensor-contribution sums match the true total in the
+  duplicate synthetic case without a grouped refit.
+- Component output sets `is_conservative == true` and makes no `finest`
+  guarantee.
 
 Suggested pass/fail tolerances:
 
@@ -1149,7 +1323,11 @@ write summary
 The end-to-end gate must verify:
 
 - The full toy pipeline runs from public APIs with one command.
-- The summary includes source names, `c_true`, `c_hat`, coefficient error, residual norm, rank, singular values, condition number, visibility, coherence, background absorption, merge recommendations, and response boundary metadata.
+- The summary includes source/basis names, `c_true`, `c_hat`, coefficient error,
+  residual norm, padded singular values, `sigma_J`, numerical/effective rank,
+  condition status, weak set, eligible coherence/ray distance, background
+  absorption, trigger pairs, report components, solver convergence, device,
+  dtype, and response boundary metadata.
 - The well-conditioned case recovers source coefficients.
 - The duplicate-source case recommends a merge and reports stable merged contribution.
 - Generated artifacts are small and go to `logs/` or `/tmp`, not tracked source paths.
@@ -1160,7 +1338,8 @@ Task 10 should not begin until Gates S1 through S6 pass, except when a gate is e
 
 **Objective**
 
-Rework experiments around the hypotheses in the new paper.
+Implement the paper's one-factor controlled experiment matrix on the New Delhi
+platform after Gates S1--S6 pass.
 
 **Likely files**
 
@@ -1171,7 +1350,7 @@ Rework experiments around the hypotheses in the new paper.
 
 **Implementation details**
 
-Add reproducible experiment configs for:
+Define one shared base configuration, then reproducible one-factor sweeps for:
 
 - Noise levels.
 - Wind regimes:
@@ -1185,13 +1364,13 @@ Add reproducible experiment configs for:
   - regulatory layout
   - random layouts
   - downwind-focused layouts
-  - layouts optimized for larger `sigma_min(H_tilde)` or lower maximum coherence
+  - layouts optimized for larger `sigma_J(H_tilde)` or lower maximum eligible coherence
 - Background bases:
-  - none
-  - constant
-  - per-sensor intercept
-  - temporal trend
-  - intentionally over-flexible basis
+  - no background
+  - preregistered primary rank-four basis: constant, centered linear trend,
+    first daily sine, and first daily cosine
+  - preregistered redundant/source-independent sensitivity bases
+  - intentionally over-flexible source-like stress basis
 - Source group variants:
   - base named inventories
   - spatial splits such as north/south, near/far, or upwind/downwind
@@ -1202,6 +1381,22 @@ Add reproducible experiment configs for:
   - brick-kiln intermittent profiles
   - industry day-to-day profiles
   - mixed temporal bases with known synthetic coefficients
+- Lag candidates derived before fitting from physical travel/residence bounds.
+  For every adjacent pair, compute
+  `||H(L+delta)-H(L)||_F / max(||H(L+delta)||_F, eps)`, select the smallest
+  `L` at or below `tau_L=1e-3`, and retain rank, condition, and component
+  stability across the sweep. The observation row count must remain fixed.
+- Inventory robustness variants with tagged changes to source locations, map
+  scales, category assignments, and inventory versions.
+- Omitted-source adequacy variants containing both a residual-visible signature
+  outside `span([H_lag, Q])` and an aligned signature inside that span.
+- Historical and simulated wind-window ensembles for distributional network
+  diagnostics, with fixed source/basis/sensor/mask/background definitions.
+
+Every wind-diversity comparison must use identical source, temporal-basis,
+sensor, observation-mask, and background columns. Real imputed New Delhi wind
+is included as a controlled transport input with synthetic coefficients, not as
+an observed-source ground-truth experiment.
 
 Map the experiment suite to the new paper hypotheses:
 
@@ -1209,27 +1404,51 @@ Map the experiment suite to the new paper hypotheses:
 - H2: High-coherence groups should be merged.
 - H3: Background correction can help or hurt.
 - H4: Wind diversity and sensor geometry change resolution. Include a dedicated wind-diversity sweep where all else is fixed and wind changes from single-direction transport to increasingly diverse directions.
-- H5: Response-matrix error amplifies attribution error.
+- H5a: Wind, dispersion, and transport-operator error amplify attribution error.
+- H5b: Inventory perturbation and misspecification alter source-specific
+  attribution and must be reported as robustness scenarios.
 
-For the wind-diversity sweep, report how `rank(H_tilde)`, `sigma_min`, effective rank, condition number, maximum coherence, merge recommendations, and source-activity error change as directional diversity increases. The expected claim is that one-direction transport can leave source fingerprints coherent or invisible, while multi-direction wind exposes sources from different angles and improves identifiability.
+For the wind-diversity sweep, report numerical/effective rank, `sigma_J`,
+condition status, weak coefficients, maximum eligible coherence, minimum ray
+distance, report components, and source-activity error. Do not encode the
+expected direction as an empirical conclusion before results exist.
+
+Add a separate temporal-recovery family for traffic diurnal, brick-kiln
+intermittent, industry day/night, and mixed bases. H5a includes controlled
+wind/dispersion perturbations and the explicitly labeled edge-hold-PDE versus
+open-boundary-puff mismatch. H5b never contributes draws to H5a uncertainty
+intervals.
+
+For residual adequacy, use an independently declared Gaussian noise covariance,
+run 1,000 refitted bootstrap replicates for paper results, and report calibration
+and power across omitted-source strength. The aligned omitted-source case is a
+required negative control: it may pass and must be explained as evidence that
+adequacy non-rejection cannot certify inventory completeness.
 
 **Outputs and artifacts**
 
 - Configured experiment runs.
-- Saved `H_lag`, `H_tilde`, diagnostics, fits, and evaluation outputs.
+- Saved `H_lag`, `H_tilde`, masks, diagnostics, fits, uncertainty, report
+  components, lag sweeps, adequacy results, inventory scenarios,
+  wind-distribution summaries, device/dtype, and evaluation outputs.
 - Summary CSV or JSON tables for analysis.
 
 **Acceptance checks**
 
-- Each hypothesis has at least one runnable experiment config.
+- Each H1--H5b hypothesis and temporal-recovery family has at least one runnable
+  one-factor configuration.
 - Results include both attribution accuracy and identifiability diagnostics.
 - Runs are reproducible from saved config and seed.
+- The primary `Q`, lag rule, fixed-zero mask, and inventory version are
+  recoverable from provenance and are not selected from final fit quality.
+- Transport and inventory ensembles remain type-separated through aggregation.
 
 ### Task 11: Evaluation and reporting
 
 **Objective**
 
-Evaluate the new method using source-apportionment metrics instead of free-field source recovery metrics, and produce real New Delhi apportionment tables.
+Produce separate controlled-ground-truth and observed-New-Delhi reports matching
+the paper's result placeholders.
 
 **Likely files**
 
@@ -1251,19 +1470,43 @@ Compute:
 ||Y_tilde - H_tilde c_hat||_2
 ```
 
-- Rank, singular values, condition number, effective rank.
-- Visibility, coherence, absorption, merge recommendations.
+- Padded singular values, `sigma_J`, numerical/effective rank, and condition
+  status.
+- Visibility, weak set, eligible coherence/ray distance, absorption, trigger
+  pairs, global warnings, deterministic conservative report components, and
+  `is_conservative=true`.
+- Every lag candidate, convergence ratio, selected lag, `tau_L`, physical-grid
+  rationale, and diagnostic/group stability across the lag sweep.
+- Primary/sensitivity background-basis identifiers and confirmation that they
+  were fixed independently of `Y` and recovery results.
+- Fixed-zero coefficient mask plus original/reduced index mappings.
 - Uncertainty interval coverage when synthetic ground truth is known.
+- Residual `calibration_status`, `T_res`, bootstrap quantile, `p_value`,
+  `alpha`, replicate count, noise-model provenance, and sensor/time/ACF
+  summaries. Never serialize an adequacy pass for an uncalibrated run.
 - Correlation between diagnostics and attribution error across experiment sweeps.
-- Real New Delhi apportionment summaries from observed `pm25`, imputed `WD/WS`, named inventories, and temporal activity bases.
-- Source-level and merged-source contribution tables with uncertainty intervals.
+- Real New Delhi summaries from observed-only PM2.5 rows, imputed `WD/WS`, named
+  inventories, and temporal activity bases, without source-ground-truth error.
+- Normalized proxy coefficient/activity tables and sensor-space source/group
+  contribution tables with active-set and transport/bootstrap intervals.
+- Inventory-version scenario tables kept separate and labeled as robustness,
+  not confidence intervals.
+- Wind-distribution tables containing 5th/50th/95th percentiles of `sigma_J`,
+  full numerical/effective-rank probabilities, coefficient weakness
+  probabilities, source-pair ambiguity probabilities, and component frequencies.
+- Raw and projected residuals, fitted trajectories, observation count, response
+  provenance, solver convergence, device, and dtype.
+- If percentages are shown, label them as fractions of the fitted
+  inventory-attributed sensor signal, never physical-emission shares.
 
 Produce:
 
 - Human-readable run summaries.
 - Machine-readable result files.
-- Tables suitable for paper figures or appendices.
+- Tables matching every placeholder subsection in the paper evaluation.
 - New Delhi tables that clearly separate identifiable source-level contributions from merged or ambiguous groups.
+- H5a transport uncertainty and H5b inventory robustness tables that cannot be
+  mistaken for one combined interval.
 
 **Outputs and artifacts**
 
@@ -1274,8 +1517,13 @@ Produce:
 
 - Evaluation works on a single saved IASA run.
 - Evaluation aggregates multiple runs into one summary table.
-- Merged-group metrics are reported whenever merge recommendations exist.
+- Grouped metrics are reported whenever a non-singleton report component exists.
 - New Delhi smoke run emits an apportionment report without requiring ground-truth source activities.
+- Undefined weak-pair metrics remain `null` through single-run and aggregate
+  reporting.
+- An `A-B-C` chain retains both trigger edges in the aggregate report.
+- Omitted-source results state that rejection diagnoses model inadequacy without
+  identifying its cause and that non-rejection cannot certify completeness.
 
 ### Task 12: Documentation and cleanup
 
@@ -1299,14 +1547,38 @@ are outside the active repository contract.
 1. Build or load named inventories.
 2. Load and impute New Delhi `WD/WS`, or choose a synthetic wind provider.
 3. Build temporal activity bases.
-4. Generate or load observations.
-5. Build H_lag.
-6. Build Q and project to H_tilde.
-7. Run diagnostics.
-8. Fit nonnegative source-basis coefficients.
-9. Report source contributions, uncertainty, and merge recommendations.
-10. Evaluate controlled experiments and real New Delhi apportionment.
+4. Declare the primary Q, lag-candidate grid, inventory version, and any
+   fixed-zero coefficient mask.
+5. Generate or load observations.
+6. Build H_lag, select lag by response convergence, and preserve the sweep.
+7. Build Q and project to H_tilde.
+8. Run realized-wind and, when requested, wind-distribution diagnostics.
+9. Fit nonnegative source-basis coefficients and check residual adequacy when a
+   calibrated noise model is available.
+10. Report source contributions, observation/transport uncertainty, inventory
+    robustness, and conservative merge recommendations.
+11. Evaluate controlled experiments and real New Delhi apportionment.
 ```
+
+- State that pandas/NumPy are ingestion and serialization tools while response,
+  projection, diagnostics, fitting, covariance, and ensemble computation use
+  PyTorch on an explicit device/dtype.
+- Add commands for wind-product generation, Gates S1--S6, controlled sweeps,
+  observed-New-Delhi evaluation, aggregation, and paper compilation.
+- Document container image, PyTorch/CUDA versions, device model, deterministic
+  settings, seeds, generated-product policy, checkpoint provenance, response
+  provenance, inventory hashes/versions, lag protocol, coefficient masks,
+  background preregistration, ensemble-kind semantics, noise-model provenance,
+  and diagnostic/adequacy/grouping result schemas.
+- Document that identifiability certificates are conditional on the declared
+  inventory, transport, temporal basis, lag, background basis, observation
+  mask, and noise assumptions. State that a calibrated residual rejection shows
+  model inadequacy but not its cause, while non-rejection does not establish
+  inventory completeness.
+- Document that connected components are conservative deterministic report
+  groups rather than a guaranteed finest partition, and that inventory
+  scenarios are never confidence-interval draws.
+- Do not list SciPy as a required solver dependency.
 
 - Document that legacy files live only in ignored `archive/` if kept locally,
   and active code must not depend on them.
@@ -1323,8 +1595,12 @@ are outside the active repository contract.
 
 - A new contributor can follow documentation to run the minimal IASA pipeline.
 - Documentation names the expected runtime environment.
+- Documentation names supported CPU/CUDA devices and dtype defaults.
 - Documentation does not present archived legacy code as maintained, required,
   or available in clean checkouts.
+- Documentation exposes all new artifact fields and reproduces the paper
+  defaults `tau_L=1e-3`, `alpha=0.05`, 1,000 adequacy bootstrap refits, and
+  wind quantiles 0.05/0.50/0.95.
 
 ## 4. Test Plan
 
@@ -1337,6 +1613,7 @@ Required sanity-gate ordering:
 ```text
 Task 5 complete -> Gate S1 response sanity passes
 Task 6 complete -> Gate S2 projection sanity passes
+Task 6A complete -> PyTorch CPU/CUDA parity and device-preservation checks pass
 Task 7 complete -> Gate S3 diagnostic sanity passes
 Task 8 complete -> Gate S4 fitting sanity passes
 Task 9 complete -> Gate S5 merge sanity passes
@@ -1372,30 +1649,65 @@ These sanity gates are not replacements for the unit tests below. Unit tests che
 
 ```text
 H_lag.shape == (num_sensors * num_times, num_source_basis_columns)
-H_tilde.shape == H_lag.shape
+H_selected.shape == (num_observed_pm25_rows, num_source_basis_columns)
+H_tilde.shape == H_selected.shape
 c_hat.shape == (num_source_basis_columns,)
 theta_hat_t.shape == (num_sources, num_times)
-Y_tilde.shape == (num_sensors * num_times,)
+Y_tilde.shape == (num_observed_pm25_rows,)
 ```
 
 - One-hot source-basis activity should match the corresponding open-boundary response column after projection and baseline subtraction.
 - Empty background basis should be a no-op.
+- PM2.5 masking should remove identical ordered rows from observations,
+  responses, backgrounds, and metadata; a mismatch must fail.
 - `WD/WS -> Vx/Vy` conversion should pass cardinal-direction cases with the documented meteorological convention.
+- CPU and CUDA paths should preserve requested device/dtype and agree within
+  recorded tolerances.
 
 ### Numerical diagnostics tests
 
-- Duplicate columns should produce rank deficiency and high coherence.
+- Duplicate columns should produce rank deficiency, `sigma_J == 0`, and high
+  coherence.
 - Orthogonal synthetic columns should produce low coherence.
-- Near-zero columns should produce low visibility flags.
+- Near-zero columns should produce weak flags and `null` pairwise metrics.
 - Increasing background basis flexibility should not increase projected source visibility.
 - Synthetic one-direction wind should produce lower or equal identifiability scores than a matched multi-direction wind case in a controlled layout where wind diversity is designed to reveal source separation.
+- A predeclared fixed-zero mask removes exactly its columns, preserves both
+  index mappings, and recomputes diagnostics on the reduced matrix. A fitted
+  near-zero coefficient does not alter diagnostics.
+- Fixed historical/simulated wind inputs and seeds produce deterministic
+  quantiles, rank/weakness/ambiguity probabilities, and component frequencies.
 
 ### Fitting tests
 
 - Recover known nonnegative activities in a well-conditioned synthetic case.
 - Recover known diurnal traffic activity and intermittent brick-kiln activity in a synthetic temporal-basis case.
-- Preserve nonnegative estimates in both SciPy and PyTorch fallback solvers.
+- Preserve nonnegative estimates, KKT convergence metadata, and device placement
+  in the PyTorch projected-FISTA solver.
 - Flag instability in a high-coherence or rank-deficient case.
+- Reject any attempt to pool `transport` and `inventory` ensemble members.
+
+### Lag and model-adequacy tests
+
+- Lag selection returns the smallest candidate satisfying `tau_L=1e-3`, keeps
+  the observation row count fixed, and returns every convergence and stability
+  diagnostic.
+- A calibrated correctly specified simulation is not systematically rejected
+  at `alpha=0.05` over repeated trials.
+- Detection probability increases with the strength of an omitted signal
+  outside `span([H_lag, Q])`.
+- An omitted signal in `span([H_lag, Q])` exercises the documented
+  residual-invisibility limitation.
+- A missing or invalid external noise covariance produces `uncalibrated`, null
+  test fields, residual summaries, and no pass/fail decision.
+
+### Reporting-group tests
+
+- An `A-B-C` ambiguity chain yields one deterministic component with
+  `is_conservative=true` and both trigger edges retained, even when `A-C` is not
+  an edge.
+- Clearly separated sources remain separate and weak sources remain independent
+  flags rather than invented edges.
 
 ### Clean-slate regression tests
 
@@ -1416,7 +1728,12 @@ load inventories -> impute/load wind -> build temporal bases -> build H_lag -> p
 ```
 
 - Save diagnostics and fit outputs.
-- Verify summary report contains source activities, residuals, singular values, visibility, coherence, merge recommendations, and response boundary metadata.
+- Verify the summary contains source activities, residuals, padded singular
+  values, `sigma_J`, visibility, eligible coherence/ray distance, trigger pairs,
+  conservative report components, solver convergence, lag selection,
+  coefficient mask/index mapping, primary Q, residual calibration status,
+  separated ensemble outputs, wind-distribution summary, device/dtype, and
+  response/inventory/noise provenance.
 - Run a New Delhi smoke test that uses observed `pm25`, imputed `WD/WS`, named inventories, and temporal bases to emit an apportionment report without requiring ground-truth source activities.
 
 ## 5. Suggested Package Layout
@@ -1481,6 +1798,8 @@ Use this path only if the FieldFormer/ImputeFormer implementation is not already
 - Active code, tests, docs, and scripts must not import from or rely on
   `archive/`.
 - Treat `sim/govdata_1H_current.csv` as the authoritative local New Delhi source for observed `pm25`, `WD`, and `WS`.
+- Do not impute `pm25`; apply its observed-row selection identically to `Y`,
+  `H_lag`, `Q`, and row metadata.
 - Use imputed real `WD/WS` as the default wind input for the New Delhi apportionment workflow.
 - Use synthetic wind providers for controlled identifiability experiments.
 - The first IASA version should use temporal-basis coefficients, not unconstrained `theta_k(t)` at every timestamp.
@@ -1489,7 +1808,25 @@ Use this path only if the FieldFormer/ImputeFormer implementation is not already
 - Paper-facing `H_lag` construction should prefer the dedicated open-boundary puff/plume response implementation over minimal reuse of the current edge-hold PDE simulator.
 - Spatially varying wind can be added after v1; a city-level imputed wind sequence is acceptable for the first open-boundary response path if the metadata documents that choice.
 - Background projection should be implemented before diagnostics and fitting, because the new paper treats `H_tilde` as the central object.
+- After ingestion, use PyTorch for response, projection, diagnostics, fitting,
+  covariance, and ensemble computation. SciPy is not a required dependency.
+- Preserve explicit device and dtype metadata; avoid implicit CPU transfers.
 - Merge recommendations should be reported as recommendations, not silently applied to source-level estimates.
+- Connected components are deterministic conservative report groups and are not
+  claimed to be the globally finest identifiable partition.
+- Identifiability diagnostics are uniform over the full predeclared admissible
+  coefficient set. Do not infer tangent-cone identifiability from fitted zeros;
+  only a scientifically declared pre-fit fixed-zero mask may reduce columns.
+- Select lag before coefficient fitting with the physical candidate grid and
+  default response-convergence threshold `tau_L=1e-3`.
+- The paper-facing residual adequacy test uses `alpha=0.05` and 1,000 refitted
+  parametric-bootstrap replicates. Without an externally calibrated noise model,
+  status is `uncalibrated` and no adequacy decision is allowed.
+- Wind-distribution summaries use quantiles 0.05, 0.50, and 0.95.
+- Transport ensembles may support uncertainty intervals; inventory alternatives
+  are named robustness scenarios and must never be pooled into those intervals.
+- Independently normalized inventory coefficients are normalized proxy units,
+  not physical emission totals or physical source shares.
 - Any generated large matrices or experiment outputs should go under `logs/` or a clearly named generated-data path, not be committed by default.
 - If the FieldFormer/ImputeFormer code is not present in this repo, adding or adapting it is required before the real New Delhi apportionment experiment can be considered complete.
 
@@ -1497,7 +1834,8 @@ Use this path only if the FieldFormer/ImputeFormer implementation is not already
 
 ### Milestone A: Minimal IASA core
 
-Complete Tasks 1 through 8, including Task 3A, and sanity Gates S1 through S4.
+Complete Tasks 1 through 8, including Tasks 3A and 6A, and sanity Gates S1
+through S4.
 
 Deliverable:
 
@@ -1520,7 +1858,9 @@ Complete Task 9, sanity Gates S5 and S6, and the single-run parts of Task 11.
 
 Deliverable:
 
-- Fit output includes diagnostics, uncertainty where available, source flags, and merge recommendations.
+- Fit output includes diagnostics, separated uncertainty/robustness where
+  available, residual calibration status, source flags, and conservative merge
+  recommendations.
 - One command can run a minimal source-apportionment report.
 - New Delhi smoke run produces an apportionment report using imputed wind.
 - Toy merge and end-to-end IASA sanity gates pass before broad controlled experiments begin.
@@ -1531,7 +1871,8 @@ Complete Tasks 10 and 11.
 
 Deliverable:
 
-- Controlled sweeps validate H1-H5, including the wind-diversity claim.
+- Controlled sweeps evaluate H1--H5b, lag selection, missing-source adequacy,
+  and realized/distributional wind diagnostics.
 - Results tables connect attribution error to response-matrix geometry.
 - New Delhi tables report source-level and merged-source apportionment numbers.
 

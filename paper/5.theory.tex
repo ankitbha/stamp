@@ -561,7 +561,7 @@ is determined by the projected observations.  Throughout this section,
 \begin{aligned}
 \widetilde Y&=\widetilde H_\Phi\mathbf c+\widetilde E,\\
 \widetilde H_\Phi&=P_Q^\perp H_{\Phi}^{\mathrm{lag}}
-\in\mathbb R^{mT\times J},\\
+\in\mathbb R^{N\times J},\\
 J&=KB.
 \end{aligned}
 \label{eq:theory_projected_model}
@@ -589,8 +589,8 @@ the selected temporal-basis resolution.
 \begin{proposition}[Identifiability of inventory-based apportionment]
 \label{prop:rank_identifiability}
 In the noiseless projected model \(\widetilde Y=\widetilde H_\Phi\mathbf c\),
-\(\mathbf c\in\mathbb R^J\) is identifiable for all coefficient vectors if and
-only if
+\(\mathbf c\) is identifiable uniformly for all
+\(\mathbf c\in\mathbb R_+^J\) if and only if
 \begin{equation}
 \operatorname{rank}(\widetilde H_\Phi)=J.
 \label{eq:rank_condition}
@@ -601,20 +601,23 @@ only if
 If \(\operatorname{rank}(\widetilde H_\Phi)=J\), then
 \(\ker(\widetilde H_\Phi)=\{0\}\), so
 \(\widetilde H_\Phi(\mathbf c_1-\mathbf c_2)=0\) implies
-\(\mathbf c_1=\mathbf c_2\).  Conversely, if
+\(\mathbf c_1=\mathbf c_2\), including on the nonnegative orthant.  Conversely, if
 \(\operatorname{rank}(\widetilde H_\Phi)<J\), there exists a nonzero
-\(\Delta\mathbf c\in\ker(\widetilde H_\Phi)\).  Then
-\(\widetilde H_\Phi\mathbf c=\widetilde H_\Phi(\mathbf c+
-\Delta\mathbf c)\), so the coefficient vector is not uniquely determined.
+\(\Delta\mathbf c\in\ker(\widetilde H_\Phi)\).  Choose an interior
+\(\mathbf c\) with entries large enough that both \(\mathbf c\) and
+\(\mathbf c+\alpha\Delta\mathbf c\) are nonnegative for some nonzero,
+sufficiently small \(\alpha\).  They have the same response, so uniform
+identifiability on \(\mathbb R_+^J\) fails.
 \end{proof}
 
 Nonnegativity can remove some null directions at the boundary of the feasible
-cone.  However, if \(\operatorname{rank}(\widetilde H_\Phi)<J\), any coefficient
-vector in the interior of \(\mathbb R_+^J\) can be perturbed slightly along a null
-direction while remaining feasible.  Full column rank is therefore the clean
-condition for interpretation at the selected basis resolution.  Rank deficiency
-may arise from spatial source ambiguity, dependence among temporal modes, or
-their interaction.
+cone, so a particular boundary point may be locally more identifiable than this
+uniform condition indicates.  We do not make a tangent-cone or fitted-active-set
+identifiability claim, and a near-zero estimate does not justify deleting its
+column after fitting.  Coefficients fixed to zero by scientific knowledge are
+instead masked before fitting; the theorem and all diagnostics then apply to
+the reduced, predeclared column set.  Rank deficiency may arise from spatial
+source ambiguity, dependence among temporal modes, or their interaction.
 
 \subsection{Noise-Robust Identifiability}
 \label{subsec:noise_robust_identifiability}
@@ -622,7 +625,7 @@ their interaction.
 Let \(\sigma_1(\widetilde H_\Phi)\ge\cdots\ge
 \sigma_J(\widetilde H_\Phi)\ge0\) be the square roots of the eigenvalues of
 \(\widetilde H_\Phi^\top\widetilde H_\Phi\), including zeros when
-\(J>mT\) or the matrix is rank deficient.  Even with full rank, small singular
+\(J>N\) or the matrix is rank deficient.  Even with full rank, small singular
 values amplify noise.
 
 \begin{proposition}[Noise-robust apportionment]
@@ -672,7 +675,7 @@ For floating-point computation, the default numerical rank tolerance is
 \begin{equation}
 \begin{aligned}
 \tau_{\mathrm{num}}
-&=\max(mT,J)\,\epsilon_{\mathrm{mach}}\,\sigma_1,\\
+&=\max(N,J)\,\epsilon_{\mathrm{mach}}\,\sigma_1,\\
 r_{\mathrm{num}}
 &=\#\{i:\sigma_i>\tau_{\mathrm{num}}\}.
 \end{aligned}
@@ -773,6 +776,9 @@ a_j=
 {\|\mathbf h_j^{\mathrm{lag}}\|_2}.
 \label{eq:background_absorption}
 \end{equation}
+If \(\|\mathbf h_j^{\mathrm{lag}}\|_2\) is zero at numerical tolerance,
+\(a_j\) is undefined and reported as N/A; the coefficient remains explicitly
+weak.  Machine-readable reports use JSON \texttt{null}, not NaN.
 If \(a_j\approx 1\), most of the raw source--basis fingerprint lies in the
 background space, and the projected visibility \(v_j\) will be small even if
 the raw fingerprint is large.  This is why identifiability must be assessed
@@ -781,8 +787,17 @@ after projection.
 \subsection{Response-Matrix Perturbations}
 \label{subsec:operator_error}
 
-The constructed response matrix can be wrong because of wind interpolation,
-transport approximation, dispersion parameters, or inventory error.  Let
+The constructed response matrix can be wrong for two scientifically different
+reasons.  Transport error includes wind interpolation, transport approximation,
+and dispersion parameters; inventory error includes missing, misplaced,
+misclassified, or incorrectly scaled proxy sources.  Write the projected
+response discrepancy as
+\begin{equation}
+\Delta_H=\Delta_{\mathrm{tr}}+\Delta_{\mathrm{inv}}+
+\Delta_{\mathrm{int}},
+\label{eq:response_error_decomposition}
+\end{equation}
+where the final term allows transport--inventory interaction.  Let
 \(\widetilde H_\Phi^\star\) be the true projected response and
 \(\widehat{\widetilde H}_\Phi\) the constructed one, with
 \begin{equation}
@@ -814,42 +829,52 @@ The unconstrained least-squares estimate using
 \end{equation}
 \end{proposition}
 
-The effect of wind and transport uncertainty is therefore most damaging when
-the projected response matrix is already ill-conditioned.
+The same norm bound applies to all three discrepancy terms, but their
+interpretations are not interchangeable.  Wind and dispersion ensembles
+quantify transport uncertainty and may support uncertainty intervals under the
+ensemble model.  Alternative inventory maps, locations, labels, or scales are
+inventory robustness scenarios, not confidence intervals.  They are reported
+separately, and source-specific attribution remains conditional on the supplied
+inventory.  Either error type is most damaging when the projected response is
+already ill-conditioned.
 
 \subsection{Identifiable Source Resolution}
 \label{subsec:source_merging}
 
 When coefficient fingerprints are weak or highly coherent, separate source
-estimates can be misleading.  Let \(\mathcal G=\{G_1,\ldots,G_M\}\) be a
-partition of the original \(K\) source groups into merged groups, with merged
-inventory
+estimates can be misleading.  We define the source ambiguity graph by
 \begin{equation}
-S^{\mathcal G}
-=
-\left[
-\sum_{k\in G_1}\mathbf s_k\;
-\sum_{k\in G_2}\mathbf s_k\;
-\cdots\;
-\sum_{k\in G_M}\mathbf s_k
-\right].
-\label{eq:merged_inventory}
+\mathcal E_{\mathrm{src}}
+=\left\{(k,k'):\exists b,b'\quad
+((k,b),(k',b'))\in\mathcal A\right\}.
+\label{eq:source_ambiguity_graph}
 \end{equation}
-Let \(\widetilde H_\Phi^{\mathcal G}\) be the corresponding projected
-source--basis response with \(MB\) columns.  We say that \(\mathcal G\) is
-identifiable at thresholds \(\tau_\sigma\) and \(\tau_\rho\) if
+Each edge retains the maximum eligible coefficient coherence, minimum ray
+distance, and the source--basis pair attaining the trigger.  Deterministically
+ordered connected components \(\mathcal G=\{G_1,\ldots,G_M\}\) are recommended
+report groups.  Weak coefficients remain separate flags and do not create
+edges.  Rank deficiency with no eligible edge produces a global unresolved
+warning rather than an invented merge.
+
+These components are deterministic, conservative reporting units, not a claim
+of the globally finest identifiable partition.  In particular, if edges join
+\(A\) to \(B\) and \(B\) to \(C\), the component contains
+\(\{A,B,C\}\) even when \(A\) and \(C\) are distinguishable as a pair.  The
+edge table therefore retains both triggering pairs and their diagnostic values
+so that this transitive over-merging is visible.
+
+The coefficient fit is not silently replaced by a grouped refit.  For reporting,
+group activity and fitted sensor contribution are the sums
 \begin{equation}
-r_{\mathrm{eff}}(\widetilde H_\Phi^{\mathcal G};\tau_\sigma)=MB,
+\widehat\theta_{G_a}(t)=\sum_{k\in G_a}\widehat\theta_k(t),
 \qquad
-\max_{\substack{a\ne a'\\b,b'}}
-\rho^{\mathcal G}_{(a,b),(a',b')}\le \tau_\rho.
-\label{eq:merged_identifiability}
+\widehat Y_{G_a}=\sum_{k\in G_a}\sum_b
+\mathbf h_{kb}^{\mathrm{lag}}\widehat c_{kb}.
+\label{eq:grouped_reports}
 \end{equation}
-The reporting rule is to use the finest partition satisfying these conditions,
-while flagging low-visibility coefficients and retaining the basis pair that
-triggers each source-level ambiguity.  Matrix diagnostics remain coefficient
-level; source-level activity summaries are reconstructed from the fitted basis
-coefficients rather than from an artificial sum of fingerprint columns.
+Matrix diagnostics remain coefficient level; these group summaries express the
+coarser claims supported by the fit without inventing a scalar source
+fingerprint.
 
 \begin{table}[t]
 \centering

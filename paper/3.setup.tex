@@ -542,6 +542,24 @@ where each \(\mathbf h_{kb}^{\mathrm{lag}}\in\mathbb R^{mT}\) is the
 finite-horizon source--basis, or coefficient, fingerprint.  When \(B=1\),
 these columns reduce to the source fingerprints of the constant-activity model.
 
+The lag window changes these fingerprints and the release times contributing to
+each observation; it does not add sensor--time observations or change the row
+count.  We choose it before fitting source coefficients.  Physical travel-time
+and residence-time bounds define an increasing candidate grid
+\(\mathcal L_{\mathrm{cand}}\).  For adjacent candidates \(L\) and
+\(L+\Delta\), with the same observed rows and columns, define
+\begin{equation}
+\eta_L=
+\frac{\|H_{\Phi}^{\mathrm{lag}}(L+\Delta)
+-H_{\Phi}^{\mathrm{lag}}(L)\|_F}
+{\max\{\|H_{\Phi}^{\mathrm{lag}}(L+\Delta)\|_F,\epsilon\}}.
+\label{eq:lag_convergence}
+\end{equation}
+The primary lag is the smallest candidate with \(\eta_L\le\tau_L\), using
+\(\tau_L=10^{-3}\) by default.  Rank, conditioning, and ambiguity components
+are also reported across the candidate grid.  The fitted value of
+\(\mathbf c\) is never used to select \(L\).
+
 \paragraph{Background and temporal correction.}
 Observed concentrations include components not explained by the local source
 inventory, including regional background, smooth temporal trends, and
@@ -556,6 +574,26 @@ and write
 Y = H_{\Phi}^{\mathrm{lag}}\mathbf c + Q\boldsymbol\gamma + E.
 \label{eq:model_with_background}
 \end{equation}
+
+Real concentration records need not be complete.  Let \(\mathcal O\) be the
+ordered set of observed sensor--time PM\(_{2.5}\) rows and let
+\(M_{\mathcal O}\in\{0,1\}^{N\times mT}\), \(N=|\mathcal O|\), select them.
+The observation mask is applied identically to every row-aligned object:
+\begin{equation}
+Y_{\mathcal O}=M_{\mathcal O}Y,\quad
+H_{\Phi,\mathcal O}^{\mathrm{lag}}
+=M_{\mathcal O}H_{\Phi}^{\mathrm{lag}},\quad
+Q_{\mathcal O}=M_{\mathcal O}Q.
+\label{eq:observation_selection}
+\end{equation}
+Row metadata are filtered by the same ordered index set; an alignment mismatch
+is an error rather than an invitation to reorder silently.  Wind may be
+imputed, but missing PM\(_{2.5}\) values are not.  For complete controlled
+observations, \(M_{\mathcal O}=I\) and \(N=mT\).  Below we drop the
+\(\mathcal O\) subscript and use \(Y\in\mathbb R^N\),
+\(H_{\Phi}^{\mathrm{lag}}\in\mathbb R^{N\times J}\), and
+\(Q\in\mathbb R^{N\times r}\) for these aligned arrays.
+
 Let
 \begin{equation}
 P_Q^\perp = I - QQ^\dagger

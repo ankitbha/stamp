@@ -554,62 +554,45 @@ Section~\ref{sec:problem_setup} defines the projected inverse problem.  This
 section describes how the response matrix is constructed in practice and how
 source activities are estimated once the response has been formed.
 
-\subsection{Coordinate-Aware Wind Field Estimation}
+\subsection{Masked Wind Preparation}
 \label{subsec:wind_field_estimation}
 
-Wind is usually observed at a small number of locations and must be estimated
-on the concentration grid.  Let
-\(X_{\mathrm{wind}}=\{\mathbf z_1,\ldots,\mathbf z_p\}\) be the wind-monitoring
-locations, and let \(\mathbf w_t^{\mathrm{obs}}(\mathbf z_i)\in\mathbb R^2\)
-denote the observed horizontal wind vector at time \(t\).  We estimate a
-gridded wind field by
-\begin{equation}
-\widehat{\mathbf w}_{1:T}
-= f_\phi(\mathbf w_{1:T}^{\mathrm{obs}},X_{\mathrm{wind}},X_{\mathrm{grid}}).
-\label{eq:wind_interpolator}
-\end{equation}
-The interpolator may be kriging, inverse-distance weighting, graph
-interpolation, or a local attention model over nearby wind observations.  Since
-hourly wind observations already provide temporal structure, the interpolator
-uses a short temporal patch and explicit coordinates rather than an unconstrained
-long-horizon sequence model.
-
-We use a residual parameterization around a physically reasonable baseline,
-\begin{equation}
-\widehat{\mathbf w}_t(\mathbf x)
-= \mathbf w_t^0(\mathbf x)+\Delta_\phi(\mathbf x,t),
-\label{eq:wind_residual}
-\end{equation}
-where \(\mathbf w_t^0\) is a baseline interpolation or reanalysis-guided wind
-field, and \(\Delta_\phi\) is a bounded correction.  The wind model is trained on
-wind measurements before fitting pollution sensors:
+Government wind direction is meteorological: it records where wind comes from,
+whereas transport requires the direction in which pollution moves.  We first
+convert direction \(WD\) in degrees and speed \(WS\) to transport vectors,
 \begin{equation}
 \begin{aligned}
-\mathcal L_{\mathrm{wind}}
-={}&
-\sum_t\sum_{\mathbf z_i\in X_{\mathrm{wind}}}
-\left\|
-\widehat{\mathbf w}_t(\mathbf z_i)
--
-\mathbf w_t^{\mathrm{obs}}(\mathbf z_i)
-\right\|_2^2 \\
-&+
-\lambda_{\mathrm{sm}}R_{\mathrm{sm}}(\widehat{\mathbf w})
-+
-\lambda_\Delta\|\Delta_\phi\|_2^2 .
+U_x&=-WS\sin(WD\pi/180),\\
+V_y&=-WS\cos(WD\pi/180).
 \end{aligned}
-\label{eq:wind_loss}
+\label{eq:wind_direction_conversion}
 \end{equation}
-A grid smoothness penalty,
+The observed vectors and their masks are supplied to a fixed-node masked
+ImputeFormer model \citep{nie2024imputeformer}.  Training masks additional
+observed entries, while inference preserves every observed vector and fills
+only missing entries.  The completed station vectors are averaged at each hour
+to produce the city-level sequence used by the first New Delhi response path,
 \begin{equation}
-R_{\mathrm{sm}}(\widehat{\mathbf w})
-=\sum_t\sum_{(g,g')\in E_{\mathrm{grid}}}
-\|\widehat{\mathbf w}_t(\mathbf x_g)-\widehat{\mathbf w}_t(\mathbf x_{g'})\|_2^2,
-\label{eq:wind_smoothness}
+\widehat{\mathbf w}_t
+=\frac{1}{p}\sum_{i=1}^{p}\widehat{\mathbf w}_t(\mathbf z_i).
+\label{eq:city_wind_average}
 \end{equation}
-discourages cell-to-cell oscillations while allowing spatial variation driven by
-measurements and coordinates.  The residual penalty prevents wind from becoming
-a flexible latent variable chosen only to fit pollution sensors.
+This fixed-node, city-level model is the implementation used for the study; a
+coordinate-aware spatial wind field is a future extension.
+
+Meteorological speed must be converted to grid displacement before puff
+advection.  For response timestep \(\Delta t_{\mathrm{s}}\) seconds and cell
+dimensions \(\Delta x_{\mathrm{m}},\Delta y_{\mathrm{m}}\), we use
+\begin{equation}
+v_x^{\mathrm{grid}}(t)=\frac{U_x(t)\Delta t_{\mathrm{s}}}{\Delta x_{\mathrm{m}}},
+\qquad
+v_y^{\mathrm{grid}}(t)=\frac{V_y(t)\Delta t_{\mathrm{s}}}{\Delta y_{\mathrm{m}}}.
+\label{eq:wind_unit_conversion}
+\end{equation}
+Every response artifact records these scales, the coordinate convention, the
+wind units, and the exact converted sequence.  Controlled experiments use the
+same interface for constant, single-direction, diurnal, AR(1), and
+multi-directional synthetic winds.
 
 \subsection{Open-Boundary Lagged Plume Response}
 \label{subsec:plume_response}
@@ -626,7 +609,7 @@ G_{t,\tau}^{\partial}\mathbf z\ge 0,
 Thus the operator preserves nonnegativity and is mass non-increasing inside the
 modeled domain.
 
-We instantiate this response with a differentiable puff approximation.  For a
+We instantiate this response with a Gaussian puff approximation.  For a
 unit release from source cell \(i\) at location \(\mathbf r_i\) and release time
 \(\tau\), the puff center is initialized as \(\mathbf z_i(\tau)=\mathbf r_i\) and
 advected by the interpolated wind field,
@@ -635,12 +618,17 @@ advected by the interpolated wind field,
 \qquad a\in[\tau,t].
 \label{eq:puff_ode}
 \end{equation}
-With substep size \(\delta a\), this is discretized as
+Source cells have integer centers and domain extents
+\([-0.5,N_x-0.5]\times[-0.5,N_y-0.5]\).  With substep size \(\delta a\), the
+trajectory is discretized as
 \begin{equation}
 \mathbf z_i^{r+1}=\mathbf z_i^r+\delta a\,\widehat{\mathbf w}_{a_r}(\mathbf z_i^r).
 \label{eq:puff_discrete}
 \end{equation}
-If the puff exits \(\Omega\), its in-domain mass is removed.  Otherwise its
+The final substep is shortened so that the trajectory lands exactly at the
+requested observation time.  If the center exits \(\Omega\), the whole
+remaining puff is removed and never reflected, wrapped, clamped, or reinserted.
+Otherwise its
 contribution is spread with an anisotropic Gaussian kernel
 \begin{equation}
 K_\psi(\mathbf x;\mathbf z_i,\Sigma_i)
@@ -659,16 +647,65 @@ where \(\psi\) denotes dispersion parameters.  A simple covariance model is
 R_i(t,\tau)^\top,
 \label{eq:dispersion_covariance}
 \end{equation}
-with \(R_i\) aligned to the mean wind direction along the trajectory.  The grid
-response to a unit release is
+with \(R_i\) aligned to the mean wind direction along the trajectory and a
+fixed fallback orientation when mean wind is numerically zero.  The age in this
+covariance is lower-bounded by a positive minimum dispersion time, so
+same-time releases remain finite.
+
+Response-matrix entries are computed by evaluating the kernel directly at
+sensor coordinates:
 \begin{equation}
-\left[G_{t,\tau}^{\partial}(\widehat{\mathbf w}_{\tau:t};\psi)\mathbf e_i\right]_g
-=\chi_i(t,\tau)K_\psi(\mathbf x_g;\mathbf z_i(t),\Sigma_i(t,\tau))\Delta V_g,
-\label{eq:grid_response}
+\left[O G_{t,\tau}^{\partial}
+(\widehat{\mathbf w}_{\tau:t};\psi)\mathbf e_i\right]_s
+=\chi_i(t,\tau)K_\psi(\mathbf x_s;\mathbf z_i(t),\Sigma_i(t,\tau)).
+\label{eq:sensor_response}
 \end{equation}
-where \(\chi_i(t,\tau)\) indicates whether the puff remains active in the open
-domain and \(\Delta V_g\) is the grid-cell area or volume.  Kernel mass outside
-\(\Omega\) is not renormalized.
+Grid quadrature is used separately for kernel retained/dropped-mass diagnostics.
+Kernel boundary or truncation loss and whole-release exit loss are recorded
+separately and are never renormalized.  Summing repeated sensor observations is
+not a mass estimate.
+
+Paper-facing response matrices use a zero-source, zero-initial-state baseline.
+Kriged initial conditions belong only to auxiliary PDE mismatch experiments;
+their matched zero-source trajectory is subtracted before attribution.  The
+operator-matched experiments use the open-boundary puff response, while the
+edge-hold PDE and perturbed puff operators are reserved for explicitly labeled
+response-error tests.
+
+The computational roadmap implements this response in PyTorch.  Tensor
+operations retained in the graph can be differentiated, but discrete exit
+events and reporting logic are not assigned gradients.
+
+\subsection{Background Construction and Projection}
+\label{subsec:background_construction}
+
+The normal background basis may contain a global constant, centered and scaled
+elapsed-time polynomials, local-clock daily sine/cosine harmonics,
+reference-coded day effects, standardized regional sensor-coordinate trends,
+reference-coded sensor offsets, and a row-aligned user basis.  It depends only
+on timestamps, day labels, sensor identity, and sensor coordinates.  Its
+paper-facing effective rank is capped at eight.  Source-derived columns are
+allowed only in labeled stress tests.
+
+The primary background specification is declared before source fitting and is
+not selected by inspecting \(Y\) or by optimizing source recovery.  For the New
+Delhi study it is the rank-four basis consisting of a global constant, centered
+linear trend, and first daily sine and cosine.  Alternative source-independent
+bases are predeclared sensitivity analyses; a source-like basis is only a
+labeled stress test.  None is data-selected as a replacement authoritative
+model.  Each comparison reports the resulting visibility, absorption, rank,
+conditioning, and ambiguity components.
+
+Let \(Q=U\Sigma V^\top\) be a thin singular value decomposition and retain
+columns \(U_r\) above the recorded rank tolerance.  Projection is applied
+implicitly,
+\begin{equation}
+P_Q^\perp X=X-U_r(U_r^\top X),
+\label{eq:implicit_background_projection}
+\end{equation}
+without constructing an \(N\times N\) matrix.  Metadata record requested and
+effective rank, discarded/dependent columns, tolerance, and exact row order.
+The response, observation, and background row records must match exactly.
 
 \subsection{Response Matrix and Source Activity Fit}
 \label{subsec:response_and_fit}
@@ -684,7 +721,8 @@ O G_{t,t-\ell}^{\partial}(\widehat{\mathbf w}_{t-\ell:t};\psi)
 \label{eq:constructed_response}
 \end{equation}
 and stacking over time and source-major, basis-minor columns yields
-\(H_\Phi^{\mathrm{lag}}\in\mathbb R^{mT\times J}\), \(J=KB\).
+\(H_\Phi^{\mathrm{lag}}\in\mathbb R^{N\times J}\), \(J=KB\), after applying
+the observation selection from Equation~\ref{eq:observation_selection}.
 Background correction gives
 \begin{equation}
 \widetilde Y=P_Q^\perp Y,
@@ -692,6 +730,15 @@ Background correction gives
 \widetilde H_\Phi=P_Q^\perp H_{\Phi}^{\mathrm{lag}}.
 \label{eq:constructed_projected_response}
 \end{equation}
+
+Scientific knowledge may declare a set \(\mathcal F_0\) of coefficients to be
+identically zero before the response is diagnosed or fitted.  With
+\(\mathcal I=\{1,\ldots,J\}\setminus\mathcal F_0\), IASA removes the
+corresponding columns, computes every diagnostic from
+\(\widetilde H_{\Phi,\mathcal I}\), fits only \(\mathbf c_{\mathcal I}\), and
+then restores zeros in the full source--basis index.  The default is
+\(\mathcal F_0=\varnothing\).  A small fitted coefficient is not a reason to
+change this predeclared mask or recompute a more favorable diagnostic.
 Source--basis coefficients are then estimated by nonnegative regularized least
 squares,
 \begin{equation}
@@ -728,14 +775,14 @@ Equivalently, one may fit background and source coefficients jointly:
 The projected formulation is used for identifiability because it exposes the
 part of each source--basis fingerprint that remains after background correction.
 
-\subsection{Constrained End-to-End Refinement}
+\subsection{Constrained End-to-End Refinement as an Extension}
 \label{subsec:constrained_refinement}
 
-The most interpretable estimator fixes wind fields and transport parameters
-before fitting source activity.  When wind interpolation or dispersion is
-uncertain, we optionally refine wind residuals and dispersion parameters under
-explicit constraints.  Let \(\phi_0\) and \(\psi_0\) denote the pretrained wind
-and initial dispersion parameters.  The refinement objective is
+The reported estimator fixes wind fields and transport parameters before
+fitting source activity.  A future PyTorch implementation may refine wind and
+dispersion under explicit constraints.  Let \(\phi_0\) and \(\psi_0\) denote
+the pretrained wind and initial dispersion parameters.  The prospective
+refinement objective is
 \begin{align}
 \mathcal L_{\mathrm{refine}}
 =&\|Y-H_{\Phi}^{\mathrm{lag}}(\phi,\psi)\mathbf c-Q\boldsymbol\gamma\|_2^2

@@ -16,9 +16,9 @@ Symbol & Shape or range & Meaning \\
 \(\Phi\) & \(T\times B\) & nonnegative source-activity basis \\
 \(C\) & \(K\times B\) & nonnegative source--basis coefficients \\
 \(\mathbf c\) & \(J=KB\) & source-major vectorization of \(C\) \\
-\(H_\Phi^{\mathrm{lag}}\) & \(mT\times J\) & unprojected coefficient fingerprints \\
-\(\widetilde H_\Phi\) & \(mT\times J\) & background-projected fingerprints \\
-\(\widetilde{\mathbf h}_{kb}\) & \(mT\) & fingerprint for coefficient \(c_{kb}\) \\
+\(H_\Phi^{\mathrm{lag}}\) & \(N\times J\) & observed-row coefficient fingerprints \\
+\(\widetilde H_\Phi\) & \(N\times J\) & background-projected fingerprints \\
+\(\widetilde{\mathbf h}_{kb}\) & \(N\) & fingerprint for coefficient \(c_{kb}\) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -39,3 +39,139 @@ source--basis pair that attains it.  Coherence and ray distance are undefined
 for pairs involving a coefficient with \(v_j\le\tau_v\); tables display these
 entries as N/A, exclude them from pairwise extrema, and report the weak
 coefficient separately.
+
+\section{Implementation Invariants}
+\label{app:implementation_invariants}
+
+The response is constructed first on the complete time-major, sensor-minor row
+index.  The PM\(_{2.5}\) observation mask then selects the same ordered rows
+from \(Y\), \(H_\Phi^{\mathrm{lag}}\), \(Q\), and metadata.  Source--basis
+columns are always source-major and basis-minor.  Any row or column metadata
+mismatch is a hard error.
+
+Paper-facing responses use integer source-cell centers, half-cell domain
+extents, fractional final advection substeps, a positive minimum dispersion
+age, direct sensor evaluation, finite lag, and complete removal after center
+exit.  Kernel boundary/truncation loss and whole-release exit loss are recorded
+separately.  Retained and dropped kernel mass sum to emitted kernel mass within
+the recorded quadrature tolerance; sensor observations are never summed as a
+mass proxy.  The default puff baseline has zero source and zero initial state.
+
+Normal backgrounds have effective rank at most eight and do not use inventory
+or response columns.  Thin-SVD projection stores the numerical tolerance,
+singular values, retained \(U_r\), dependent input columns, removed components,
+and orthogonality/idempotence residuals.  A source-like column is permitted only
+when the run is labeled as a stress test.
+
+The primary \(Q\), lag-candidate grid, and fixed-zero coefficient set are
+declared before fitting.  A fixed-zero mask removes columns before diagnostics
+and fitting and stores both reduced-to-original and original-to-reduced index
+maps.  Fitted near-zero coefficients never modify the mask.  Adjacent lag
+responses use identical rows and columns; the default convergence threshold is
+\(\tau_L=10^{-3}\).
+
+\section{Sanity Gates}
+\label{app:sanity_gates}
+
+Before paper experiments, the implementation must pass six small deterministic
+gates built from public APIs:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{S1---response.}  On a \(16\times16\) grid with four compact
+    sources, four sensors, impulse/constant bases, and seed 123, verify response
+    shape, downwind arrival, open-boundary exit, no wraparound, dispersion
+    anisotropy, mass accounting, metadata, and exact repeatability.
+    \item \textbf{S2---projection.}  Use the S1 response with a rank-four normal
+    background to verify exact ordering, background removal, orthogonality,
+    idempotence, redundant-column invariance, and the labeled source-like stress
+    behavior.
+    \item \textbf{S3---diagnostics.}  Verify orthogonal, duplicate, and weak
+    matrices, including padded zeros, \(\sigma_J\), infinite deficient
+    condition status, weak-pair N/A values, and a matched multi-source eastward
+    versus two-direction wind comparison.
+    \item \textbf{S4---fit.}  Recover known nonnegative coefficients in
+    noiseless/noisy well-conditioned cases, verify projected-FISTA KKT
+    convergence, preserve exact nonnegativity, and recover the duplicate-pair
+    sum when the individual split is nonunique.
+    \item \textbf{S5---report groups.}  Verify the duplicate-source connected
+    component, an \(A\)--\(B\)--\(C\) chain with both trigger edges retained,
+    separated-source non-edge, independent weak flag, conservative-group flag,
+    and summed group contribution.
+    \item \textbf{S6---end to end.}  Build sources, wind, response, background,
+    masked observations, diagnostics, fit, uncertainty, and report groups with
+    one command and write a compact provenance-complete summary.
+\end{enumerate}
+Task 10 experiments begin only after S1--S6 and the PyTorch CPU/CUDA parity
+checks pass.
+
+\section{PyTorch Solver and Uncertainty Protocol}
+\label{app:pytorch_solver}
+
+After CSV/NPZ ingestion, numerical computation uses PyTorch tensors on an
+explicit device and dtype.  The nonnegative coefficient objective is
+\begin{equation}
+f(\mathbf c)=
+\|\widetilde Y-\widetilde H_\Phi\mathbf c\|_2^2
++\lambda\|\mathbf c-\mathbf c_0\|_2^2,
+\qquad \mathbf c\ge0.
+\label{eq:appendix_fista_objective}
+\end{equation}
+Projected FISTA uses a Lipschitz step derived from \(\sigma_1\) or a recorded
+power-iteration estimate, clamps every iterate to the nonnegative orthant, and
+restarts acceleration whenever the objective increases.  Termination requires
+the configured projected-gradient/KKT residual and relative objective-change
+tolerances, or reports that the iteration cap was reached.  The fit artifact
+stores convergence status, iteration count, final KKT residual, objective
+summary, device, and dtype.
+
+Active-set covariance uses PyTorch linear algebra on
+\(\widetilde H_{\Phi,\mathcal A}^{\top}
+\widetilde H_{\Phi,\mathcal A}+\lambda I\).  Wind-ensemble and bootstrap refits
+are batched on the same device when shapes permit.  Undefined weak-pair metrics
+are serialized as JSON \texttt{null}, never NaN or a false numerical distance.
+
+Uncertainty artifacts distinguish \texttt{ensemble\_kind=transport} from
+\texttt{ensemble\_kind=inventory}.  Only the former may be summarized as an
+ensemble uncertainty interval; inventory members remain named robustness
+scenarios, and an aggregation request that mixes the two kinds is an error.
+
+\section{Adequacy and Ensemble Result Contracts}
+\label{app:adequacy_contracts}
+
+A residual-adequacy result stores \texttt{calibration\_status},
+\(T_{\mathrm{res}}\), bootstrap quantile, Monte Carlo \(p\)-value,
+\(\alpha\), replicate count, and noise-model provenance.  Paper runs use
+\(\alpha=0.05\) and 1000 refitted replicates.  If the externally calibrated
+noise covariance is absent or invalid, numerical test fields are null and the
+status is \texttt{uncalibrated}; no boolean pass is emitted.  Sensor, time, and
+autocorrelation residual summaries are retained in either case.
+
+A lag-selection result stores every candidate \(L\), adjacent convergence
+ratio, selected \(L\), \(\tau_L\), physical grid rationale, row count, and
+diagnostic/group summaries.  A wind-distribution result stores the sampled-window
+provenance; 5th, 50th, and 95th percentiles of \(\sigma_J\); full numerical and
+effective-rank probabilities; coefficient weakness probabilities; pairwise
+ambiguity probabilities; and conservative-component frequencies.
+
+\section{Reproducibility and Artifact Provenance}
+\label{app:reproducibility}
+
+Every paper run records the container image, repository revision, PyTorch and
+CUDA versions, device model, dtype, deterministic-algorithm settings, random
+seeds, source files and crop, per-source scales, wind product/checkpoint,
+inventory identifier/hash/version, observation mask, response and transport
+configuration, wind realization, dispersion settings, background columns and
+rank tolerance, lag protocol, fixed-zero mask and index mapping, diagnostic
+thresholds, ensemble kind, solver settings, noise-model provenance, and parent
+artifact hashes.
+Generated wind products, response matrices, checkpoints, and experiment outputs
+are written to generated-data or log paths and are not treated as immutable
+source files.
+
+Controlled-run artifacts contain true and estimated coefficients, reconstructed
+activities, response/projection results, diagnostics, uncertainty, report
+groups, and recovery metrics.  Observed New Delhi artifacts omit unavailable
+ground truth and instead contain observed-row counts, fitted trajectories, raw
+and projected residuals, normalized proxy activities/contributions,
+uncertainty, weak/ambiguous flags, trigger pairs, and group summaries.  A
+percentage is emitted only with an explicit denominator identifying it as a
+fraction of fitted inventory-attributed sensor signal.
