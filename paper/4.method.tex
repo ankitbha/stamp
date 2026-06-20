@@ -673,52 +673,60 @@ domain and \(\Delta V_g\) is the grid-cell area or volume.  Kernel mass outside
 \subsection{Response Matrix and Source Activity Fit}
 \label{subsec:response_and_fit}
 
-Given the estimated wind field and source inventory, the lagged source response
-is constructed as in Section~\ref{sec:problem_setup}:
+Given the estimated wind field, source inventory, and temporal activity basis,
+the lagged source--basis response is constructed as in
+Section~\ref{sec:problem_setup}.  Its \((k,b)\)-th column is
 \begin{equation}
-\begin{aligned}
-&H_t^{\mathrm{lag}}
-=\sum_{\ell\in\mathcal L_t}
-O G_{t,t-\ell}^{\partial}(\widehat{\mathbf w}_{t-\ell:t};\psi)S, \\
-&H_{1:T}^{\mathrm{lag}}=[H_1^{\mathrm{lag}};\ldots;H_T^{\mathrm{lag}}].
-\end{aligned}
+\mathbf h_{t,kb}^{\mathrm{lag}}
+=\sum_{\ell\in\mathcal L_t}\phi_b(t-\ell)
+O G_{t,t-\ell}^{\partial}(\widehat{\mathbf w}_{t-\ell:t};\psi)
+\mathbf s_k,
 \label{eq:constructed_response}
 \end{equation}
+and stacking over time and source-major, basis-minor columns yields
+\(H_\Phi^{\mathrm{lag}}\in\mathbb R^{mT\times J}\), \(J=KB\).
 Background correction gives
 \begin{equation}
 \widetilde Y=P_Q^\perp Y,
 \qquad
-\widetilde H=P_Q^\perp H_{1:T}^{\mathrm{lag}}.
+\widetilde H_\Phi=P_Q^\perp H_{\Phi}^{\mathrm{lag}}.
 \label{eq:constructed_projected_response}
 \end{equation}
-Source activities are then estimated by nonnegative regularized least squares,
+Source--basis coefficients are then estimated by nonnegative regularized least
+squares,
 \begin{equation}
-\widehat{\boldsymbol\theta}
-=\arg\min_{\boldsymbol\theta\ge 0}
-\|\widetilde Y-\widetilde H\boldsymbol\theta\|_2^2
-+\lambda R(\boldsymbol\theta).
+\widehat{\mathbf c}
+=\arg\min_{\mathbf c\ge 0}
+\|\widetilde Y-\widetilde H_\Phi\mathbf c\|_2^2
++\lambda R(\mathbf c).
 \label{eq:nnls_estimator}
+\end{equation}
+Reshaping \(\widehat{\mathbf c}\) into \(\widehat C\) reconstructs the
+source activity trajectory
+\begin{equation}
+\widehat\theta_k(t)=\sum_{b=1}^{B}\widehat c_{kb}\phi_b(t).
+\label{eq:reconstructed_activity}
 \end{equation}
 The regularizer can be ridge stabilization,
 \begin{equation}
-R(\boldsymbol\theta)=\|\boldsymbol\theta\|_2^2,
+R(\mathbf c)=\|\mathbf c\|_2^2,
 \label{eq:ridge_regularizer}
 \end{equation}
 or a weak prior around inventory-derived activity levels,
 \begin{equation}
-R(\boldsymbol\theta)=\|\boldsymbol\theta-\boldsymbol\theta_0\|_2^2.
+R(\mathbf c)=\|\mathbf c-\mathbf c_0\|_2^2.
 \label{eq:prior_regularizer}
 \end{equation}
 Equivalently, one may fit background and source coefficients jointly:
 \begin{equation}
-(\widehat{\boldsymbol\theta},\widehat{\boldsymbol\gamma})
-=\arg\min_{\boldsymbol\theta\ge 0,\boldsymbol\gamma}
-\|Y-H_{1:T}^{\mathrm{lag}}\boldsymbol\theta-Q\boldsymbol\gamma\|_2^2
-+\lambda R(\boldsymbol\theta).
+(\widehat{\mathbf c},\widehat{\boldsymbol\gamma})
+=\arg\min_{\mathbf c\ge 0,\boldsymbol\gamma}
+\|Y-H_{\Phi}^{\mathrm{lag}}\mathbf c-Q\boldsymbol\gamma\|_2^2
++\lambda R(\mathbf c).
 \label{eq:joint_fit}
 \end{equation}
 The projected formulation is used for identifiability because it exposes the
-part of each source fingerprint that remains after background correction.
+part of each source--basis fingerprint that remains after background correction.
 
 \subsection{Constrained End-to-End Refinement}
 \label{subsec:constrained_refinement}
@@ -730,8 +738,8 @@ explicit constraints.  Let \(\phi_0\) and \(\psi_0\) denote the pretrained wind
 and initial dispersion parameters.  The refinement objective is
 \begin{align}
 \mathcal L_{\mathrm{refine}}
-=&\|Y-H_{1:T}^{\mathrm{lag}}(\phi,\psi)\boldsymbol\theta-Q\boldsymbol\gamma\|_2^2
-+\lambda_\theta R(\boldsymbol\theta) \nonumber\\
+=&\|Y-H_{\Phi}^{\mathrm{lag}}(\phi,\psi)\mathbf c-Q\boldsymbol\gamma\|_2^2
++\lambda_\theta R(\mathbf c) \nonumber\\
 &+\lambda_w\|\widehat{\mathbf w}_{1:T}^{\phi}-\widehat{\mathbf w}_{1:T}^{\phi_0}\|_2^2
 +\lambda_\psi\|\psi-\psi_0\|_2^2 \nonumber\\
 &+\lambda_{\mathrm{sm}}R_{\mathrm{sm}}(\widehat{\mathbf w}^{\phi}),
@@ -739,7 +747,7 @@ and initial dispersion parameters.  The refinement objective is
 \end{align}
 subject to
 \begin{equation}
-\boldsymbol\theta\ge 0,
+\mathbf c\ge 0,
 \quad
 \psi\in\Psi_{\mathrm{phys}},
 \quad
@@ -749,4 +757,4 @@ subject to
 This refinement is accepted only as a constrained local correction.  Without
 these restrictions, wind and plume parameters could fit sparse pollution sensors
 while weakening the physical and source-level interpretation of
-\(\widehat{\boldsymbol\theta}\).
+\(\widehat{\mathbf c}\) and the reconstructed activities.

@@ -1,0 +1,41 @@
+\section{Temporal-Basis Notation and Diagnostic Conventions}
+\label{app:temporal_basis_notation}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Indices and objects in the temporal-basis apportionment model.}
+\label{tab:temporal_basis_notation}
+\begin{tabular}{lll}
+\toprule
+Symbol & Shape or range & Meaning \\
+\midrule
+\(k\) & \(1,\ldots,K\) & source-group index \\
+\(b\) & \(1,\ldots,B\) & temporal-basis index \\
+\(j=(k,b)\) & \(1,\ldots,J\) & source-major, basis-minor coefficient index \\
+\(\Phi\) & \(T\times B\) & nonnegative source-activity basis \\
+\(C\) & \(K\times B\) & nonnegative source--basis coefficients \\
+\(\mathbf c\) & \(J=KB\) & source-major vectorization of \(C\) \\
+\(H_\Phi^{\mathrm{lag}}\) & \(mT\times J\) & unprojected coefficient fingerprints \\
+\(\widetilde H_\Phi\) & \(mT\times J\) & background-projected fingerprints \\
+\(\widetilde{\mathbf h}_{kb}\) & \(mT\) & fingerprint for coefficient \(c_{kb}\) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The constant-activity model uses \(B=1\), \(\phi_1(t)=1\), and
+\(c_{k1}=\theta_k\).  In the general model, diagnostics are computed for the
+\(J\) coefficient fingerprints.  Source-level activity trajectories are
+reconstructed as
+\[
+\widehat\theta_k(t)=\sum_{b=1}^{B}\widehat c_{kb}\phi_b(t);
+\]
+fingerprint columns are not summed to create an artificial source-level
+diagnostic vector.
+
+For a source-level ambiguity summary, IASA reports the largest eligible
+coherence between coefficients belonging to different sources and retains the
+source--basis pair that attains it.  Coherence and ray distance are undefined
+for pairs involving a coefficient with \(v_j\le\tau_v\); tables display these
+entries as N/A, exclude them from pairwise extrema, and report the weak
+coefficient separately.

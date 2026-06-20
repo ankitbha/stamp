@@ -8,30 +8,38 @@ separable from sparse observations.  The separability question is governed by
 how inventory groups appear at the sensor network after wind-conditioned
 transport, finite lag, background correction, and noise.
 
-The central object is the projected lagged source-response matrix
+The central object is the projected lagged source--basis response matrix
 \begin{equation}
-\widetilde H=P_Q^\perp H_{1:T}^{\mathrm{lag}}.
+\widetilde H_\Phi=P_Q^\perp H_{\Phi}^{\mathrm{lag}}
+\in\mathbb R^{mT\times J},
+\qquad J=KB.
 \end{equation}
-Exact source-level identifiability requires \(\operatorname{rank}(\widetilde H)=K\),
-while robust attribution depends on the singular values, effective rank,
-visibility, background absorption, pairwise coherence, and perturbation
-sensitivity of \(\widetilde H\).  A model can fit sensor trajectories while
-still producing unstable or non-unique source estimates, so prediction accuracy
-alone is not evidence of source-level identifiability.
+Exact identifiability at the selected temporal-basis resolution requires
+\(\operatorname{rank}(\widetilde H_\Phi)=J\), while robust attribution depends
+on the singular values (including rank-deficiency zeros), effective rank,
+coefficient visibility, background absorption, pairwise coherence, ray
+distance, and perturbation sensitivity of \(\widetilde H_\Phi\).  The
+constant-activity source model is the special case \(B=1\).  A model can fit
+sensor trajectories while still producing unstable or non-unique coefficient
+and activity estimates, so prediction accuracy alone is not evidence of
+identifiability at the claimed temporal resolution.
 
 The practical implication is that source apportionment should report the finest
 source grouping that the sensing system supports.  If two source groups have
 highly coherent projected fingerprints, the data may support their combined
 contribution but not their separate activities.  Reporting them separately can
-create false precision.  The proposed IASA protocol therefore estimates source
-activity, audits the projected response matrix, flags weak or ambiguous groups,
-and merges source groups when the fine-grained inventory resolution is not
-identifiable.
+create false precision.  The proposed IASA protocol therefore estimates
+nonnegative source--basis coefficients, reconstructs source activity
+trajectories, audits the projected response matrix, flags weak coefficients and
+ambiguous source pairs, and merges source groups when the fine-grained inventory
+resolution is not identifiable.  Each source-level warning retains the temporal
+basis components that triggered it.
 
 This perspective also changes how sensing systems and preprocessing choices
 should be designed.  Adding sensors is useful when it improves visibility,
-conditioning, or coherence of source fingerprints, not merely when it increases
-spatial coverage.  Wind diversity can expose source groups from multiple
+conditioning, coherence, or ray separation of coefficient fingerprints, not
+merely when it increases spatial coverage.  Wind diversity can expose source
+groups from multiple
 transport angles, while a single dominant wind regime can leave sources
 confounded.  Background correction can remove broad temporal confounding, but a
 basis that is too flexible can absorb source-driven variation and reduce
@@ -41,9 +49,12 @@ observation error whose impact is amplified by ill-conditioning.
 The framework has several limitations.  The response operator is an
 approximation to atmospheric transport and can be extended with richer
 meteorology, vertical mixing, deposition, chemistry, and boundary inflow.  The
-theory is linear in source activities conditional on fixed wind, transport,
-inventory, and background components; fully joint estimation introduces
-additional nonlinearities.  Finally, the framework assumes that relevant
+theory is linear in source--basis coefficients conditional on fixed wind,
+transport, temporal basis, inventory, and background components; fully joint
+estimation introduces additional nonlinearities.  The selected temporal basis
+also limits the activity patterns that can be recovered: finer temporal
+resolution is defensible only when the corresponding response columns remain
+identifiable.  Finally, the framework assumes that relevant
 candidate source inventories are available.  Missing source categories may be
 absorbed into available inventories or background terms, which should be treated
 as a model-misspecification risk rather than as identifiable attribution.
@@ -52,9 +63,9 @@ Despite these limitations, the identifiability view provides a concrete basis
 for more reliable policy-facing apportionment.  It separates fitting the observed
 sensor signal from determining which source claims are supported by the sensing
 system.  By using rank, singular values, visibility, background absorption,
-coherence, and response perturbation sensitivity, source apportionment can report
-not only estimated contributions, but also the resolution at which those
-contributions can be trusted.
+coherence, ray distance, and response perturbation sensitivity, source
+apportionment can report not only estimated contributions, but also the spatial
+and temporal resolution at which those contributions can be trusted.
 
 \section*{Acknowledgements}
 Ankit Bhardwaj and Lakshminarayanan Subramanian were supported by the NSF Grant (Award Number 2335773) titled ``EAGER: Scalable Climate Modeling using Message-Passing Recurrent Neural Networks''. Lakshminarayanan Subramanian was also funded in part by the NSF Grant (award number OAC-2004572) titled ``A Data-informed Framework for the Representation of Sub-grid Scale Gravity Waves to Improve Climate Prediction''.

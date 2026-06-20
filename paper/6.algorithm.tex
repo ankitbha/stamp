@@ -416,13 +416,16 @@ projected response matrix.
 IASA takes sparse pollution observations \(Y\), sensor locations
 \(X_{\mathrm{sens}}\), wind observations \(\mathbf w_{1:T}^{\mathrm{obs}}\), source
 inventories \(S\in\mathbb R^{q\times K}\), a background basis \(Q\), a maximum
-lag \(L\), and an open-boundary transport response \(G^\partial\).  It also uses
-thresholds \(\tau_\sigma\), \(\tau_\rho\), and \(\tau_v\) for effective rank,
-pairwise ambiguity, and visibility.
+lag \(L\), a nonnegative temporal basis \(\Phi\in\mathbb R_+^{T\times B}\),
+and an open-boundary transport response \(G^\partial\).  It also uses a
+numerical SVD tolerance \(\tau_{\mathrm{num}}\) and distinct thresholds
+\(\tau_\sigma\), \(\tau_\rho\), and \(\tau_v\) for effective rank, pairwise
+ambiguity, and visibility.
 
-The outputs are source contribution estimates at the identifiable grouping,
-fitted trajectories and residuals, uncertainty intervals, singular-value and
-coherence diagnostics, low-visibility flags, and merge recommendations.
+The outputs are source--basis coefficient estimates, reconstructed source
+activities and contribution estimates at the identifiable grouping, fitted
+trajectories and residuals, uncertainty intervals, singular-value, coherence,
+and ray-distance diagnostics, low-visibility flags, and merge recommendations.
 
 \subsection{Procedure}
 \label{subsec:iasa_procedure}
@@ -432,50 +435,57 @@ The procedure is:
     \item \textbf{Estimate wind.}  Construct
     \(\widehat{\mathbf w}_{1:T}=f_\phi(\mathbf w_{1:T}^{\mathrm{obs}},
     X_{\mathrm{wind}},X_{\mathrm{grid}})\).
-    \item \textbf{Build lagged responses.}  For each time \(t\), compute
+    \item \textbf{Build lagged responses.}  For every source--basis pair, compute
     \[
-    H_t^{\mathrm{lag}}=
-    \sum_{\ell\in\mathcal L_t}
-    O G_{t,t-\ell}^{\partial}(\widehat{\mathbf w}_{t-\ell:t})S.
+    \mathbf h_{t,kb}^{\mathrm{lag}}=
+    \sum_{\ell\in\mathcal L_t}\phi_b(t-\ell)
+    O G_{t,t-\ell}^{\partial}(\widehat{\mathbf w}_{t-\ell:t})\mathbf s_k.
     \]
-    \item \textbf{Stack and project.}  Form \(H_{1:T}^{\mathrm{lag}}\), then
+    \item \textbf{Stack and project.}  Form \(H_{\Phi}^{\mathrm{lag}}\), with
+    source-major, basis-minor columns, then
     compute
     \[
     \widetilde Y=P_Q^\perp Y,
     \qquad
-    \widetilde H=P_Q^\perp H_{1:T}^{\mathrm{lag}}.
+    \widetilde H_\Phi=P_Q^\perp H_{\Phi}^{\mathrm{lag}}.
     \]
-    \item \textbf{Fit source activities.}  Solve
+    \item \textbf{Fit source activities.}  Solve for coefficients and reconstruct
+    activities:
     \[
-    \widehat{\boldsymbol\theta}
-    =\arg\min_{\boldsymbol\theta\ge0}
-    \|\widetilde Y-\widetilde H\boldsymbol\theta\|_2^2
-    +\lambda R(\boldsymbol\theta).
+    \begin{aligned}
+    \widehat{\mathbf c}
+    &=\arg\min_{\mathbf c\ge0}
+    \|\widetilde Y-\widetilde H_\Phi\mathbf c\|_2^2
+    +\lambda R(\mathbf c),\\
+    \widehat\theta_k(t)&=\sum_b\widehat c_{kb}\phi_b(t).
+    \end{aligned}
     \]
-    \item \textbf{Audit identifiability.}  Compute singular values,
-    \(r_{\mathrm{eff}}(\tau_\sigma)\), visibility \(v_k\), background absorption
-    \(a_k\), and coherence \(\rho_{ij}\).
-    \item \textbf{Flag unsupported groups.}  Mark weakly visible sources
-    \(\mathcal W=\{k:v_k<\tau_v\}\) and ambiguous pairs
-    \(\mathcal A=\{(i,j):\rho_{ij}>\tau_\rho\}\).
+    \item \textbf{Audit identifiability.}  Compute \(r_{\mathrm{num}}\), the
+    singular values, \(r_{\mathrm{eff}}(\tau_\sigma)\), coefficient visibility
+    \(v_j\), background absorption \(a_j\), coherence \(\rho_{ij}\), and ray
+    distance \(d^{\mathrm{ray}}_{ij}\).
+    \item \textbf{Flag unsupported groups.}  Mark weak coefficient fingerprints
+    \(\mathcal W=\{j:v_j\le\tau_v\}\).  For eligible pairs only, set
+    \(\mathcal A=\{(i,j):i,j\notin\mathcal W,\rho_{ij}>\tau_\rho\}\).
     \item \textbf{Merge when necessary.}  If \(\mathcal A\ne\emptyset\), merge
     source groups connected by high-coherence edges, reconstruct the merged
-    inventory \(S^{\mathcal G}\), recompute \(\widetilde H^{\mathcal G}\), and
+    inventory \(S^{\mathcal G}\), recompute
+    \(\widetilde H_{\Phi}^{\mathcal G}\), and
     refit contributions at the merged resolution.
     \item \textbf{Report.}  Return source estimates, uncertainty intervals,
     residuals, diagnostics, and the final source grouping.
 \end{enumerate}
 
-This procedure separates two questions: which source vector best fits the
-projected sensor data, and which components of that vector are supported by the
-geometry of \(\widetilde H\).
+This procedure separates two questions: which source activity trajectories best
+fit the projected sensor data, and which source--basis coefficients are
+supported by the geometry of \(\widetilde H_\Phi\).
 
 \subsection{Uncertainty Reporting}
 \label{subsec:uncertainty_reporting}
 
 Let
 \begin{equation}
-\widetilde r=\widetilde Y-\widetilde H\widehat{\boldsymbol\theta}
+\widetilde r=\widetilde Y-\widetilde H_\Phi\widehat{\mathbf c}
 \label{eq:projected_residual}
 \end{equation}
 be the projected residual.  A residual variance estimate is
@@ -486,19 +496,19 @@ be the projected residual.  A residual variance estimate is
 \label{eq:residual_variance}
 \end{equation}
 For an unconstrained or active-set approximation, let
-\(\mathcal A_\theta=\{k:\widehat\theta_k>\tau_\theta\}\) and let
-\(\widetilde H_{\mathcal A_\theta}\) contain the active columns.  The covariance
+\(\mathcal A_c=\{j:\widehat c_j>\tau_c\}\) and let
+\(\widetilde H_{\Phi,\mathcal A_c}\) contain the active columns.  The covariance
 of the active estimates is approximated by
 \begin{equation}
-\operatorname{Cov}(\widehat{\boldsymbol\theta}_{\mathcal A_\theta})
+\operatorname{Cov}(\widehat{\mathbf c}_{\mathcal A_c})
 =
 \widehat\sigma^2
-(\widetilde H_{\mathcal A_\theta}^\top
-\widetilde H_{\mathcal A_\theta}+\lambda I)^\dagger.
+(\widetilde H_{\Phi,\mathcal A_c}^\top
+\widetilde H_{\Phi,\mathcal A_c}+\lambda I)^\dagger.
 \label{eq:active_covariance}
 \end{equation}
 When wind ensembles are available, IASA also constructs response matrices
-\(\widetilde H^{(b)}\), refits \(\widehat{\boldsymbol\theta}^{(b)}\), and reports
+\(\widetilde H_\Phi^{(b)}\), refits \(\widehat{\mathbf c}^{(b)}\), and reports
 empirical quantiles across ensemble members.  These intervals capture
 uncertainty induced by wind interpolation and transport-response construction.
 
@@ -507,39 +517,44 @@ uncertainty induced by wind interpolation and transport-response construction.
 
 The constrained refinement in Section~\ref{subsec:constrained_refinement} is
 accepted only if it improves fit without degrading separability.  Let
-\(\widetilde H_0\) be the projected response before refinement and
-\(\widetilde H_{\mathrm{ref}}\) after refinement.  We require
+\(\widetilde H_{\Phi,0}\) be the projected response before refinement and
+\(\widetilde H_{\Phi,\mathrm{ref}}\) after refinement.  We require
 \begin{equation}
-\sigma_{\min}(\widetilde H_{\mathrm{ref}})
+\sigma_J(\widetilde H_{\Phi,\mathrm{ref}})
 \ge
-(1-\eta_{\mathrm{id}})\sigma_{\min}(\widetilde H_0)
+(1-\eta_{\mathrm{id}})\sigma_J(\widetilde H_{\Phi,0})
 \label{eq:refinement_smin_check}
 \end{equation}
 and
 \begin{equation}
-\max_{i\ne j}\rho_{ij}^{\mathrm{ref}}
+\max_{\substack{i\ne j\\i,j\notin\mathcal W}}\rho_{ij}^{\mathrm{ref}}
 \le \tau_\rho^{\mathrm{ref}}.
 \label{eq:refinement_coherence_check}
 \end{equation}
 These checks prevent end-to-end tuning from improving sensor fit by making
-source fingerprints less distinguishable.
+source--basis fingerprints less distinguishable.  If either response is
+numerically rank deficient, its \(\sigma_J\) is zero under the padded-spectrum
+convention of Section~\ref{subsec:identifiability_diagnostics}.
 
 \subsection{Reporting Protocol}
 \label{subsec:reporting_protocol}
 
 For each reported source group \(G_a\), IASA reports
-\begin{equation}
-\widehat\theta_{G_a},
-\qquad
-\mathrm{CI}(\widehat\theta_{G_a}),
-\qquad
-v_{G_a},
-\qquad
-\max_{b\ne a}\rho^{\mathcal G}_{ab}.
+\begin{align}
+&\widehat{\boldsymbol\theta}_{G_a,1:T},
+\quad \mathrm{CI}(\widehat\theta_{G_a}),
+\quad \{v_{kb}:k\in G_a\},\nonumber\\
+&\max_{\substack{k\in G_a,\,k'\notin G_a\\
+                  (k,b),(k',b')\notin\mathcal W}}
+\rho_{(k,b),(k',b')}.
 \label{eq:reported_quantities}
-\end{equation}
-A source contribution is marked reliable only when its visibility is above
-threshold, its uncertainty interval is sufficiently narrow, and its coherence
-with other reported groups is below the ambiguity threshold.  Otherwise IASA
-labels the source as weakly visible, ambiguous with another source group, or
-merged into a coarser identifiable group.
+\end{align}
+A source contribution is marked reliable only when its constituent reported
+coefficients are above the visibility threshold, its uncertainty interval is
+sufficiently narrow, and its eligible coherence with other reported groups is
+below the ambiguity threshold.  Reports retain the basis names of every weak
+coefficient and the coefficient pair attaining each cross-source coherence
+maximum.  Coherence and ray distance involving weak fingerprints are displayed
+as ``N/A'' and excluded from extrema; the weak flags remain visible.  Otherwise
+IASA labels the source as weakly visible, ambiguous with another source group,
+or merged into a coarser identifiable group.

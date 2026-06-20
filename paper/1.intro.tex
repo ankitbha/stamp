@@ -205,28 +205,33 @@ uncertain; it is not identifiable from the available sensing system.
 We study this issue in the inventory-based setting.  Instead of attempting to
 recover an arbitrary unknown source field, we assume access to a finite set of
 known or proxy source maps.  These inventories restrict attribution to a
-lower-dimensional source activity vector and make the problem interpretable:
-the output is an estimate of the activity or contribution of each candidate
-source group.  However, the inventory restriction alone does not make the
-problem identifiable.  Source groups can still be weakly visible, absorbed by
-background components, or mutually coherent after transport to the sensor
-network.
+lower-dimensional source model and make the problem interpretable.  To allow
+realistic time variation without estimating one free value at every hour, we
+represent each source activity as a nonnegative combination of a small number
+of temporal basis functions.  The unknowns are therefore source--basis
+coefficients, from which source activity trajectories and contributions are
+reconstructed.  However, the inventory and temporal-basis restrictions alone
+do not make the problem identifiable.  Coefficient fingerprints can still be
+weakly visible, absorbed by background components, or mutually coherent after
+transport to the sensor network.
 
 The key object in our analysis is a projected lagged source-response matrix.
 For a fixed wind sequence, transport operator, source inventory, sensor layout,
-and lag window, each source group induces a finite-horizon sensor-space
-fingerprint.  Stacking these fingerprints gives a lagged response matrix
-\(H_{1:T}^{\mathrm{lag}}\).  Real observations also contain background and
+and lag window, each source--basis pair induces a finite-horizon sensor-space
+fingerprint.  Stacking these fingerprints gives a lagged source--basis response
+matrix \(H_{\Phi}^{\mathrm{lag}}\).  Real observations also contain background and
 temporal components, represented by a low-dimensional basis \(Q\).  After
 projecting out this background space, the inverse problem is governed by
 \[
-\widetilde H = P_Q^\perp H_{1:T}^{\mathrm{lag}},
+\widetilde H_\Phi = P_Q^\perp H_{\Phi}^{\mathrm{lag}},
 \]
 where \(P_Q^\perp\) is the projection onto the orthogonal complement of the
-background basis.  The rank, singular values, source visibility, background
-absorption, and pairwise coherence of \(\widetilde H\) determine which source
-contributions can be separated and which should be reported only after merging
-or qualification.
+background basis.  The rank, singular values, coefficient visibility,
+background absorption, pairwise coherence, and ray distance of
+\(\widetilde H_\Phi\) determine which temporal source contributions can be
+separated and which should be reported only after merging or qualification.
+The familiar constant-activity model is recovered by using one constant basis
+function per source.
 
 This perspective changes the role of source apportionment models.  The goal is
 not to return the most detailed vector of source contributions permitted by the
@@ -238,26 +243,29 @@ alongside identifiability diagnostics and ambiguity certificates.
 We make the following contributions:
 \begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
     \item We formulate sparse-sensor, inventory-based source apportionment as a
-    lagged wind-conditioned inverse problem over known or proxy source groups.
+    lagged wind-conditioned inverse problem over nonnegative source--temporal-
+    basis coefficients.
     \item We identify the projected lagged response matrix
-    \(\widetilde H=P_Q^\perp H_{1:T}^{\mathrm{lag}}\) as the central object
-    governing source separability after transport, sparse observation, lag, and
-    background correction.
+    \(\widetilde H_\Phi=P_Q^\perp H_{\Phi}^{\mathrm{lag}}\) as the central
+    object governing coefficient separability after transport, sparse
+    observation, lag, and background correction.
     \item We derive diagnostics for exact and noise-robust identifiability,
     including rank, smallest singular value, condition number, effective rank,
-    source visibility, background absorption, and pairwise source-fingerprint
-    coherence.
+    coefficient visibility, background absorption, pairwise fingerprint
+    coherence, and ray distance.
     \item We propose an identifiability-aware apportionment procedure that fits
-    nonnegative source contributions, reports uncertainty, flags weakly visible
-    sources, and merges source groups whose fingerprints are indistinguishable
-    under the current sensing system.
+    nonnegative source--basis coefficients, reconstructs source activity
+    trajectories, reports uncertainty, flags weakly visible coefficients, and
+    merges source groups whose fingerprints are indistinguishable under the
+    current sensing system.
     \item We design controlled city-scale advection--diffusion experiments to
     test whether source attribution error, source ambiguity, and the benefit of
-    merging are predicted by the geometry of \(\widetilde H\) under varying
+    merging are predicted by the geometry of \(\widetilde H_\Phi\) under varying
     noise levels, wind regimes, background bases, and sensor layouts.
 \end{itemize}
 
 The broader message is that sparse-sensor source apportionment is limited by
 the information content of the sensing system.  Reliable attribution requires
 not only a transport model and an optimizer, but an explicit account of which
-source fingerprints are visible and separable in the observed sensor space.
+source--basis fingerprints are visible and separable in the observed sensor
+space.

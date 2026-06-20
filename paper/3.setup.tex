@@ -476,16 +476,27 @@ S = [\mathbf s_1\;\mathbf s_2\;\cdots\;\mathbf s_K]\in \mathbb R^{q\times K},
 \end{equation}
 where \(\mathbf s_k\in\mathbb R^q\) is the spatial pattern of source group
 \(k\).  The source grid dimension \(q\) may differ from the concentration-grid
-dimension \(n\).  Over a fixed observation window, source activity is represented
-by a nonnegative vector
+dimension \(n\).  We represent time-varying source activity with a shared
+low-dimensional temporal basis
 \begin{equation}
-\boldsymbol\theta\in \mathbb R_+^K,
+\Phi=[\boldsymbol\phi_1\;\cdots\;\boldsymbol\phi_B]
+\in\mathbb R_+^{T\times B},
+\qquad
+C=[c_{kb}]\in\mathbb R_+^{K\times B}.
+\label{eq:temporal_activity_basis}
+\end{equation}
+The activity of source \(k\) at time \(t\) is
+\begin{equation}
+\theta_k(t)=\sum_{b=1}^{B}c_{kb}\phi_b(t),
+\qquad \theta_k(t)\ge0.
 \label{eq:source_activity}
 \end{equation}
-so that emissions are proportional to \(S\boldsymbol\theta\).  Time-varying
-activity can be handled by replacing \(\boldsymbol\theta\) with a sequence or a
-low-dimensional temporal basis; the constant-window model is the basic object
-analyzed here.
+The activity bases used for source emissions are nonnegative; signed temporal
+harmonics, when used, belong to the separate background basis \(Q\).  We
+vectorize \(C\) in source-major, basis-minor order as
+\(\mathbf c=\operatorname{vec}_{\mathrm{src}}(C)\in\mathbb R_+^J\), where
+\(J=KB\).  The constant-window model is the special case \(B=1\),
+\(\phi_1(t)=1\), and \(c_{k1}=\theta_k\).
 
 \paragraph{Lagged wind-conditioned response.}
 Emissions released at time \(t-\ell\) may affect sensors at time \(t\) only
@@ -503,29 +514,33 @@ define
 \mathcal L_t = \{0,1,\ldots,\min(L,t-1)\}.
 \label{eq:lag_set}
 \end{equation}
-The source-to-sensor response at time \(t\) is
+For source \(k\) and basis component \(b\), the corresponding sensor response
+at time \(t\) is
 \begin{equation}
-H_t^{\mathrm{lag}}
+\mathbf h_{t,kb}^{\mathrm{lag}}
 = \sum_{\ell\in\mathcal L_t}
-O G_{t,t-\ell}^{\partial}(w_{t-\ell:t}) S
-\in \mathbb R^{m\times K}.
+\phi_b(t-\ell)
+O G_{t,t-\ell}^{\partial}(w_{t-\ell:t})\mathbf s_k
+\in \mathbb R^m.
 \label{eq:time_response}
 \end{equation}
-Stacking over the finite horizon gives
+Stacking over time and arranging columns in source-major, basis-minor order
+gives
 \begin{equation}
-H_{1:T}^{\mathrm{lag}}
-=
-\begin{bmatrix}
-H_1^{\mathrm{lag}}\\
-H_2^{\mathrm{lag}}\\
-\vdots\\
-H_T^{\mathrm{lag}}
-\end{bmatrix}
-\in \mathbb R^{mT\times K}.
+\begin{aligned}
+H_{\Phi}^{\mathrm{lag}}
+&=
+[\mathbf h_{11}^{\mathrm{lag}}\;\cdots\;
+ \mathbf h_{1B}^{\mathrm{lag}}\;\cdots\;
+ \mathbf h_{KB}^{\mathrm{lag}}]
+\in \mathbb R^{mT\times J},\\
+J&=KB,
+\end{aligned}
 \label{eq:stacked_response}
 \end{equation}
-The \(k\)-th column of \(H_{1:T}^{\mathrm{lag}}\) is the finite-horizon
-sensor-space fingerprint of source group \(k\).
+where each \(\mathbf h_{kb}^{\mathrm{lag}}\in\mathbb R^{mT}\) is the
+finite-horizon source--basis, or coefficient, fingerprint.  When \(B=1\),
+these columns reduce to the source fingerprints of the constant-activity model.
 
 \paragraph{Background and temporal correction.}
 Observed concentrations include components not explained by the local source
@@ -538,7 +553,7 @@ Q\in \mathbb R^{mT\times r}, \qquad \boldsymbol\gamma\in \mathbb R^r,
 \end{equation}
 and write
 \begin{equation}
-Y = H_{1:T}^{\mathrm{lag}}\boldsymbol\theta + Q\boldsymbol\gamma + E.
+Y = H_{\Phi}^{\mathrm{lag}}\mathbf c + Q\boldsymbol\gamma + E.
 \label{eq:model_with_background}
 \end{equation}
 Let
@@ -550,28 +565,31 @@ be the projection onto the orthogonal complement of the background space, with
 \(Q^\dagger\) denoting the Moore--Penrose pseudoinverse.  The corrected inverse
 problem is
 \begin{equation}
-\widetilde Y = \widetilde H\boldsymbol\theta + \widetilde E,
+\widetilde Y = \widetilde H_\Phi\mathbf c + \widetilde E,
 \qquad
 \widetilde Y=P_Q^\perp Y,
 \qquad
-\widetilde H=P_Q^\perp H_{1:T}^{\mathrm{lag}}.
+\widetilde H_\Phi=P_Q^\perp H_{\Phi}^{\mathrm{lag}}.
 \label{eq:projected_model}
 \end{equation}
 All identifiability diagnostics in this paper are computed from
-\(\widetilde H\), not from the raw inventory matrix or the unprojected response.
+\(\widetilde H_\Phi\), not from the raw inventory matrix or the unprojected
+response.
 
-\paragraph{Projected source fingerprints.}
+\paragraph{Projected source--basis fingerprints.}
 Writing
 \begin{equation}
-H_{1:T}^{\mathrm{lag}}
-=[\mathbf h_1^{\mathrm{lag}}\;\cdots\;\mathbf h_K^{\mathrm{lag}}],
+H_{\Phi}^{\mathrm{lag}}
+=[\mathbf h_{11}^{\mathrm{lag}}\;\cdots\;\mathbf h_{KB}^{\mathrm{lag}}],
 \qquad
-\widetilde H=[\widetilde{\mathbf h}_1\;\cdots\;\widetilde{\mathbf h}_K],
+\widetilde H_\Phi
+=[\widetilde{\mathbf h}_{11}\;\cdots\;\widetilde{\mathbf h}_{KB}],
 \label{eq:source_fingerprints}
 \end{equation}
 we have
-\(\widetilde{\mathbf h}_k=P_Q^\perp\mathbf h_k^{\mathrm{lag}}\).  These
-projected fingerprints encode the observable effect of each source group after
-wind transport, lag, sparse sensing, and background correction.  Source
-apportionment is well posed only to the extent that these fingerprints are
-visible and separable.
+\(\widetilde{\mathbf h}_{kb}=P_Q^\perp\mathbf h_{kb}^{\mathrm{lag}}\).
+These projected fingerprints encode the observable effect of each temporal
+component of each source after wind transport, lag, sparse sensing, and
+background correction.  Source apportionment at the chosen temporal-basis
+resolution is well posed only to the extent that these coefficient fingerprints
+are visible and separable.
