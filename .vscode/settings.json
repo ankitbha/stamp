@@ -1,0 +1,43 @@
+{
+  "latex-workshop.latex.rootFile.useSubFile": false,
+  "latex-workshop.latex.tools": [
+    {
+      "name": "pdflatex-stamp-overlay",
+      "command": "/share/apps/apptainer/bin/apptainer",
+      "args": [
+        "exec",
+        "--overlay",
+        "/scratch/ab9738/stamp/overlay-25GB-500K.ext3",
+        "/scratch/ab9738/stamp/cuda11.8.86-cudnn8.7-devel-ubuntu22.04.2.sif",
+        "bash",
+        "-lc",
+        "cd '%DIR%' && export TEXINPUTS=.:./icml2026//: && pdflatex -synctex=1 -interaction=nonstopmode -file-line-error '%DOCFILE%.tex'"
+      ]
+    },
+    {
+      "name": "bibtex-stamp-overlay",
+      "command": "/share/apps/apptainer/bin/apptainer",
+      "args": [
+        "exec",
+        "--overlay",
+        "/scratch/ab9738/stamp/overlay-25GB-500K.ext3",
+        "/scratch/ab9738/stamp/cuda11.8.86-cudnn8.7-devel-ubuntu22.04.2.sif",
+        "bash",
+        "-lc",
+        "cd '%DIR%' && export TEXINPUTS=.:./icml2026//: && bibtex '%DOCFILE%'"
+      ]
+    }
+  ],
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "apptainer: pdflatex -> bibtex -> pdflatex -> pdflatex",
+      "tools": [
+        "pdflatex-stamp-overlay",
+        "bibtex-stamp-overlay",
+        "pdflatex-stamp-overlay",
+        "pdflatex-stamp-overlay"
+      ]
+    }
+  ],
+  "latex-workshop.latex.recipe.default": "apptainer: pdflatex -> bibtex -> pdflatex -> pdflatex"
+}
