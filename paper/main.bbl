@@ -25,12 +25,21 @@ Belis, C., Favez, O., Mircea, M., Diapouli, E., Manousakas, M., Vratolis, S.,
   models—revised version 2019.
 \newblock \emph{Publications Office, LU}, 2019.
 
-\bibitem[Bhardwaj et~al.(2025)Bhardwaj, Balashankar, and
+\bibitem[Bhardwaj et~al.(2025{\natexlab{a}})Bhardwaj, Balashankar, Iyer, Soans,
+  Sudarshan, Pande, and Subramanian]{bhardwaj2025comprehensive}
+Bhardwaj, A., Balashankar, A., Iyer, S., Soans, N., Sudarshan, A., Pande, R.,
+  and Subramanian, L.
+\newblock Comprehensive monitoring of air pollution hotspots using sparse
+  sensor networks.
+\newblock \emph{ACM Journal on Computing and Sustainable Societies}, 3\penalty0
+  (4):\penalty0 1--36, 2025{\natexlab{a}}.
+
+\bibitem[Bhardwaj et~al.(2025{\natexlab{b}})Bhardwaj, Balashankar, and
   Subramanian]{bhardwaj2025fieldformer}
 Bhardwaj, A., Balashankar, A., and Subramanian, L.
 \newblock Fieldformer: Physics-informed transformers for spatio-temporal field
   reconstruction from sparse sensors.
-\newblock \emph{arXiv preprint arXiv:2510.03589}, 2025.
+\newblock \emph{arXiv preprint arXiv:2510.03589}, 2025{\natexlab{b}}.
 
 \bibitem[Carrassi et~al.(2018)Carrassi, Bocquet, Bertino, and
   Evensen]{carrassi2018data}
@@ -160,13 +169,6 @@ Mircea, M., Calori, G., Pirovano, G., BELIS, C., et~al.
   matter with source oriented models and their combined use with receptor
   models.
 \newblock 2020.
-
-\bibitem[Nie et~al.(2024)Nie, Qin, Ma, Mei, and Sun]{nie2024imputeformer}
-Nie, T., Qin, G., Ma, W., Mei, Y., and Sun, J.
-\newblock Imputeformer: Low rankness-induced transformers for generalizable
-  spatiotemporal imputation.
-\newblock In \emph{Proceedings of the 30th ACM SIGKDD Conference on Knowledge
-  Discovery and Data Mining}, pp.\  2260--2271, 2024.
 
 \bibitem[Paatero \& Tapper(1994)Paatero and Tapper]{paatero1994positive}
 Paatero, P. and Tapper, U.

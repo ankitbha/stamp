@@ -36,21 +36,11 @@ their metadata.
 
 \subsection{Wind Preparation}
 \label{subsec:new_delhi_wind}
-
 The observed \(WD/WS\) values are converted using
-Equation~\ref{eq:wind_direction_conversion} before entering the fixed-node
-masked ImputeFormer pipeline.  Raw values, masks, completed station vectors,
-and model configuration are preserved in the wind product.  Observed vectors
-are copied through unchanged; missing vectors are filled by the model.  The
-completed station vectors are averaged into a city-level hourly sequence and
-scaled by Equation~\ref{eq:wind_unit_conversion} for response construction.
-The response metadata record the product path, station count, physical and grid
-units, cell dimensions, timestep, and exact \(v_x/v_y\) arrays.
-
-The imputed product is required for paper-facing New Delhi runs.  An explicitly
-labeled observed-only station-mean fallback exists solely for smoke tests and
-cannot be used to claim case-study results.  Coordinate-aware spatial wind
-fields remain an extension beyond this first city-level implementation.
+Equation~\ref{eq:wind_direction_conversion} before entering the FieldFormer wind
+imputation pipeline.  The saved wind product retains raw station values, masks,
+station coordinates, held-out validation splits, model configuration, checkpoint
+metadata, and the gridded query field used by the response operator.  The New Delhi runs use the FieldFormer-imputed grid wind field.
 
 \subsection{Inventories and Proxy Temporal Activities}
 \label{subsec:new_delhi_inventories}
@@ -137,7 +127,7 @@ variants, and optional operator mismatch.  Because its coefficients are known,
 it supports recovery and interval-coverage metrics.
 
 The observed-data mode combines real PM\(_{2.5}\), its observation mask, the
-imputed New Delhi wind sequence, the named normalized inventories, and the
+imputed New Delhi wind field, the named normalized inventories, and the
 declared proxy temporal bases.  It has no ground-truth source activities.
 Accordingly, it reports residuals, response geometry, uncertainty, weak and
 ambiguous coefficients, normalized proxy contributions, and recommended report

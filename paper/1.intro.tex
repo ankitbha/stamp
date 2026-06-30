@@ -216,7 +216,7 @@ weakly visible, absorbed by background components, or mutually coherent after
 transport to the sensor network.
 
 The key object in our analysis is a projected lagged source-response matrix.
-For a fixed wind sequence, transport operator, source inventory, sensor layout,
+For a fixed wind-field realization, transport operator, source inventory, sensor layout,
 and lag window, each source--basis pair induces a finite-horizon sensor-space
 fingerprint.  Stacking these fingerprints gives a lagged source--basis response
 matrix \(H_{\Phi}^{\mathrm{lag}}\).  Real observations also contain background and
@@ -230,7 +230,7 @@ background basis.  The rank, singular values, coefficient visibility,
 background absorption, pairwise coherence, and ray distance of
 \(\widetilde H_\Phi\) determine which temporal source contributions can be
 separated and which should be reported only after merging or qualification.
-The familiar constant-activity model is recovered by using one constant basis
+A constant-activity model which measures the average activity over the observation period is recovered by using one constant basis
 function per source.
 
 This perspective changes the role of source apportionment models.  The goal is
@@ -261,7 +261,7 @@ We make the following contributions:
     are indistinguishable under the current sensing system.
     \item We instantiate the framework on a New Delhi platform comprising
     government PM\(_{2.5}\) and wind records, regulatory sensor locations,
-    fixed-node wind imputation, and seven named normalized proxy inventories.
+    FieldFormer-based gridded wind imputation, and seven named normalized proxy inventories.
     \item We define controlled and observed-data evaluations of conditioning,
     source ambiguity, background stress, wind diversity, temporal-basis
     recovery, response error, uncertainty, and residual structure.

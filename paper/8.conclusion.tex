@@ -50,11 +50,11 @@ basis that is too flexible can absorb source-driven variation and reduce
 identifiability.  Wind interpolation and transport-model errors act as additional
 observation error whose impact is amplified by ill-conditioning.  Prospective
 claims about a network require diagnostics over a distribution of historical or
-simulated wind windows rather than one realized wind sequence.
+simulated wind windows rather than one realized wind-field reconstruction.
 
 The New Delhi platform makes these choices concrete: government PM\(_{2.5}\)
-rows remain missing rather than being imputed, wind vectors are completed by a
-fixed-node model and aggregated city-wide, and independently normalized proxy
+rows remain missing rather than being imputed, wind vectors are completed with a FieldFormer-based gridded imputer queried on
+the response grid, and independently normalized proxy
 inventories define relative rather than physical emission units.  Controlled
 experiments and the observed-data study share this platform but require
 different claims: only controlled trials have source-activity ground truth.
@@ -75,10 +75,8 @@ calibrated residual bootstrap can reject an inadequate declared model but cannot
 prove inventory completeness, especially when an omitted signature lies in the
 span of the fitted response and background.  Transport ensembles can quantify
 uncertainty under their sampling model, whereas alternative inventories are
-separate robustness scenarios and must not be pooled into confidence intervals.  The
-current city-level wind sequence also omits spatial meteorological variation,
-and proxy-normalized coefficients cannot be interpreted as physical emissions
-without external scaling.
+separate robustness scenarios and must not be pooled into confidence intervals.  The learned gridded wind field is still only as reliable as the sparse station
+network and its held-out validation; dense real wind truth is unavailable.
 
 Despite these limitations, the identifiability view provides a concrete basis
 for more reliable policy-facing apportionment.  It separates fitting the observed

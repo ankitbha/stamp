@@ -436,9 +436,11 @@ The procedure is:
     physical lag-candidate grid, temporal bases, inventory version, and any
     scientifically justified fixed-zero coefficient mask before inspecting
     fitted source activities.
-    \item \textbf{Prepare wind.}  Convert meteorological \(WD/WS\) to transport
-    vectors, preserve observed entries, impute missing vectors, aggregate the
-    completed stations, and convert physical velocity to grid displacement.
+    \item \textbf{Prepare wind.} Convert meteorological \(WD/WS\) to transport
+    vectors, preserve masks and observed values for audit, train or load the
+    FieldFormer wind imputer, query the response grid to obtain
+    \(\widehat{\mathbf w}_t(\mathbf x_g)\), and convert physical velocity to grid
+    displacement.
     \item \textbf{Build and select lagged responses.}  For every unmasked
     source--basis pair and candidate lag, compute
     \[
@@ -505,7 +507,6 @@ relative objective change.  Device, dtype, convergence status, iteration count,
 
 \subsection{Uncertainty Reporting}
 \label{subsec:uncertainty_reporting}
-
 Let
 \begin{equation}
 \widetilde r=\widetilde Y-\widetilde H_\Phi\widehat{\mathbf c}
@@ -530,7 +531,8 @@ of the active estimates is approximated by
 \widetilde H_{\Phi,\mathcal A_c}+\lambda I)^\dagger.
 \label{eq:active_covariance}
 \end{equation}
-When wind ensembles are available, IASA also constructs response matrices
+For each wind-field ensemble member from Section~\ref{subsec:wind_field_estimation},
+IASA constructs
 \(\widetilde H_\Phi^{(b)}\), refits \(\widehat{\mathbf c}^{(b)}\), and reports
 empirical quantiles across ensemble members.  These intervals capture
 uncertainty induced by wind interpolation and transport-response construction.
