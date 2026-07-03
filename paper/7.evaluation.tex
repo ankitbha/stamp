@@ -102,6 +102,16 @@ starts from a zero-source, zero-initial-state baseline.  This is the
 operator-matched generator for controlled H1--H4 experiments and the inference
 operator for observed PM\(_{2.5}\).
 
+For observed New Delhi runs, the initial pollution field is estimated from the
+first available regulatory observations using spatial kriging on the response
+grid.  Its zero-source transported trajectory is subtracted from the sensor
+observations before fitting source activities.  Source coefficients are
+therefore fitted to the residual sensor-time signal after removing the
+contribution of the initialized background field and the low-rank temporal
+background basis.  Controlled operator-matched experiments may instead use a
+zero initial field when the synthetic data are generated from the same
+zero-initial-state response.
+
 An auxiliary advection--diffusion simulator uses first-order upwind advection,
 a five-point Laplacian, a two-stage Heun update, diffusivity
 \(3\times10^{-4}\), and edge-hold boundaries.  It is not silently substituted

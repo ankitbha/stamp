@@ -150,17 +150,13 @@ the response matrix evaluates concentration at sensor points rather than
 integrating over area-weighted grid cells, summing entries across sensors or
 repeated sensor-time observations does not estimate retained pollutant mass.
 
-
 Response matrices are constructed for source-induced increments relative to a
-declared initial-condition baseline.  For observed New Delhi runs, the initial
-pollution field is estimated from the first available regulatory observations
-using spatial kriging on the response grid, and its zero-source transported
-trajectory is subtracted from the sensor observations before fitting source
-activities.  Source coefficients are therefore fitted to the residual
-sensor-time signal after removing the contribution of the initialized
-background field and the low-rank temporal background basis.  Controlled
-operator-matched experiments may instead use a zero initial field when the
-synthetic data are generated from the same zero-initial-state response.
+declared initial-condition baseline.  The baseline policy is fixed before
+source fitting, recorded with the response artifact, and applied consistently to
+the observations and response rows.  Application-specific choices, such as
+whether to subtract a zero-source transported initial field or to use a
+zero-initial-state response, are part of the experimental instantiation rather
+than the generic response definition.
 
 The open-boundary lagged plume response is implemented in PyTorch.  Tensor
 operations retained in the graph can be differentiated, but discrete exit
@@ -174,17 +170,22 @@ elapsed-time polynomials, local-clock daily sine/cosine harmonics,
 reference-coded day effects, standardized regional sensor-coordinate trends,
 reference-coded sensor offsets, and a row-aligned user basis.  It depends only
 on timestamps, day labels, sensor identity, and sensor coordinates.  Its
-paper-facing effective rank is capped at eight.  Source-derived columns are
-allowed only in labeled stress tests.
+effective rank is capped at eight.  Columns constructed from inventories,
+response fingerprints, or fitted source signals are excluded from the normal
+background basis; they are permitted only in explicitly labeled stress tests
+that measure how source-like background variation can absorb attribution
+signal.
 
-The primary background specification is declared before source fitting and is
-not selected by inspecting \(Y\) or by optimizing source recovery.  For the New
-Delhi study it is the rank-four basis consisting of a global constant, centered
-linear trend, and first daily sine and cosine.  Alternative source-independent
-bases are predeclared sensitivity analyses; a source-like basis is only a
-labeled stress test.  None is data-selected as a replacement authoritative
-model.  Each comparison reports the resulting visibility, absorption, rank,
-conditioning, and ambiguity components.
+The primary background basis \(Q\) is specified before source fitting: its
+columns and rank cap are chosen from the allowed source-independent metadata
+above, not by searching over \(Y\) or by optimizing source recovery.  Once
+\(Q\) is fixed, its coefficients are estimated implicitly by projection, or
+explicitly in the joint fit.  For the New Delhi study, the primary basis is the
+rank-four member of this allowed class: a global constant, centered linear
+trend, and first daily sine and cosine.  Alternative source-independent bases
+are predeclared sensitivity analyses, not data-selected replacements for the
+authoritative model.  Each comparison reports the resulting visibility,
+absorption, rank, conditioning, and ambiguity components.
 
 Let \(Q=U\Sigma V^\top\) be a thin singular value decomposition and retain
 columns \(U_r\) above the recorded rank tolerance.  Projection is applied
@@ -193,15 +194,15 @@ implicitly,
 P_Q^\perp X=X-U_r(U_r^\top X),
 \label{eq:implicit_background_projection}
 \end{equation}
-without constructing an \(N\times N\) matrix.  Metadata record requested and
-effective rank, discarded/dependent columns, tolerance, and exact row order.
-The response, observation, and background row records must match exactly.
+without constructing an \(N\times N\) matrix.  The row metadata for \(Y\), \(H_\Phi^{\mathrm{lag}}\), and \(Q\) must be
+identical: each row must refer to the same timestamp, sensor identity, and
+sensor index in the same order before projection is applied.
 
 \subsection{Response Matrix and Source Activity Fit}
 \label{subsec:response_and_fit}
 
 Given the estimated wind field, source inventory, and temporal activity basis,
-the lagged source--basis response is constructed as in
+the lagged unit coefficient source--basis response is constructed as in
 Section~\ref{sec:problem_setup}.  Its \((k,b)\)-th column is
 \begin{equation}
 \mathbf h_{t,kb}^{\mathrm{lag}}
@@ -227,8 +228,9 @@ identically zero before the response is diagnosed or fitted.  With
 corresponding columns, computes every diagnostic from
 \(\widetilde H_{\Phi,\mathcal I}\), fits only \(\mathbf c_{\mathcal I}\), and
 then restores zeros in the full source--basis index.  The default is
-\(\mathcal F_0=\varnothing\).  A small fitted coefficient is not a reason to
-change this predeclared mask or recompute a more favorable diagnostic.
+\(\mathcal F_0=\varnothing\). Coefficients are not removed after fitting merely because their estimates are
+small; doing so would change the diagnosed inverse problem after seeing the
+data and could make the reported identifiability artificially favorable.
 Source--basis coefficients are then estimated by nonnegative regularized least
 squares,
 \begin{equation}
@@ -269,9 +271,14 @@ part of each source--basis fingerprint that remains after background correction.
 \label{subsec:constrained_refinement}
 
 The reported estimator fixes wind fields and transport parameters before
-fitting source activity.  A future PyTorch implementation may refine wind and
-dispersion under explicit constraints.  Let \(\phi_0\) and \(\psi_0\) denote
-the pretrained wind and initial dispersion parameters.  The prospective
+fitting source activity.  In the next step, our PyTorch implementation refines wind and
+dispersion under explicit constraints.  Let \(\phi\) denote the wind-imputer parameters and let \(\psi\) denote the
+dispersion parameters of the puff response, such as
+\(\sigma_\parallel\), \(\sigma_\perp\), and the minimum dispersion age.  Let
+\(\phi_0\) and \(\psi_0\) be their pretrained or default values.  We use
+\(R_{\mathrm{sm}}\) for a predeclared wind-field smoothness penalty, such as
+temporal or spatial squared differences, and \(\Psi_{\mathrm{phys}}\) for the
+physically admissible dispersion-parameter set. The prospective
 refinement objective is
 \begin{align}
 \mathcal L_{\mathrm{refine}}
