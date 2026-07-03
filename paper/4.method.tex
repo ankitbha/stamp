@@ -267,19 +267,25 @@ Equivalently, one may fit background and source coefficients jointly:
 The projected formulation is used for identifiability because it exposes the
 part of each source--basis fingerprint that remains after background correction.
 
-\subsection{Constrained End-to-End Refinement as an Extension}
+\subsection{Constrained End-to-End Refinement}
 \label{subsec:constrained_refinement}
 
-The reported estimator fixes wind fields and transport parameters before
-fitting source activity.  In the next step, our PyTorch implementation refines wind and
-dispersion under explicit constraints.  Let \(\phi\) denote the wind-imputer parameters and let \(\psi\) denote the
+IASA first constructs a fixed response matrix from the pretrained wind field and
+default dispersion parameters, fits source activities, and computes
+identifiability diagnostics for that declared response.  It then performs a
+constrained local refinement of the wind field, dispersion parameters, source
+coefficients, and background coefficients.  The refinement is initialized at the
+fixed-response solution and is allowed only to make small physically constrained
+corrections, so that improved sensor fit does not come from arbitrary changes
+to transport. 
+
+Let \(\phi\) denote the wind-imputer parameters and let \(\psi\) denote the
 dispersion parameters of the puff response, such as
 \(\sigma_\parallel\), \(\sigma_\perp\), and the minimum dispersion age.  Let
 \(\phi_0\) and \(\psi_0\) be their pretrained or default values.  We use
 \(R_{\mathrm{sm}}\) for a predeclared wind-field smoothness penalty, such as
 temporal or spatial squared differences, and \(\Psi_{\mathrm{phys}}\) for the
-physically admissible dispersion-parameter set. The prospective
-refinement objective is
+physically admissible dispersion-parameter set.  The refinement objective is
 \begin{align}
 \mathcal L_{\mathrm{refine}}
 =&\|Y-H_{\Phi}^{\mathrm{lag}}(\phi,\psi)\mathbf c-Q\boldsymbol\gamma\|_2^2
@@ -298,7 +304,8 @@ subject to
 \|\widehat{\mathbf w}_{1:T}^{\phi}-\widehat{\mathbf w}_{1:T}^{\phi_0}\|_\infty\le \epsilon_w.
 \label{eq:refinement_constraints}
 \end{equation}
-This refinement is accepted only as a constrained local correction.  Without
-these restrictions, wind and plume parameters could fit sparse pollution sensors
-while weakening the physical and source-level interpretation of
-\(\widehat{\mathbf c}\) and the reconstructed activities.
+The refined response is accepted only as a constrained local correction and is
+reported with its own response diagnostics.  Without these restrictions, wind
+and plume parameters could fit sparse pollution sensors while weakening the
+physical and source-level interpretation of \(\widehat{\mathbf c}\) and the
+reconstructed activities.
