@@ -11,27 +11,31 @@ background flexibility, noise, and forward-model error.
 \subsection{Experiment Matrix}
 \label{subsec:experiment_matrix}
 
-\paragraph{H1: conditioning predicts recovery.}
+\paragraph{Experiment 1: conditioning predicts recovery.}
 We vary source geometry and Gaussian observation noise at 0\%, 1\%, 5\%, 10\%,
 and 20\% of the maximum clean sensor signal.  For each trial we compare
 coefficient and reconstructed-activity errors with \(\sigma_J\), numerical and
 effective rank, condition number, and visibility.
 
-\paragraph{H2: coherent sources require grouped reporting.}
-We form increasingly coherent source pairs through nearby spatial splits and
-matched transport paths.  Individual-source errors are compared with errors in
-the summed activity and fitted sensor contribution of each recommended
-connected component.  Edge reports retain the triggering source--basis pair.
+\paragraph{Experiment 2: coherent sources require grouped reporting.}
+We form increasingly coherent source pairs by shifting a copy of one inventory
+map by a controlled spatial offset, so that decreasing the shift drives coherence
+toward one.  Individual-source errors are compared with errors in the summed
+activity and fitted sensor contribution of each recommended connected component.
+Edge reports retain the triggering source--basis pair.
 
-\paragraph{H3: background correction can help or hurt.}
+\paragraph{Experiment 3: background correction can help or hurt.}
 We compare no background, the normal rank-four basis from
 Section~\ref{subsec:new_delhi_forward_models}, a redundant-column basis with the
-same span, and a labeled source-like stress basis.  The response geometry is
-audited through visibility and the removed/raw absorption ratio.  The rank-four
-primary and every sensitivity variant are declared before fitting; no basis is
-selected from \(Y\) or from its source-recovery score.
+same span, and a labeled source-like stress basis.  This tests background
+flexibility directly: too little background leaves broad confounding in the
+residual, while a too-flexible or source-like basis can absorb source-driven
+signal and reduce identifiability.  The response geometry is audited through
+visibility and the removed/raw absorption ratio.  The rank-four primary and every
+sensitivity variant are declared before fitting; no basis is selected from \(Y\)
+or from its source-recovery score.
 
-\paragraph{H4: wind diversity and sensor geometry change resolution.}
+\paragraph{Experiment 4: wind diversity and sensor geometry change resolution.}
 Matched source, basis, and sensor sets are evaluated under constant,
 single-direction, diurnal, AR(1), multi-directional, and real imputed New Delhi
 wind.  Sensor variants are the regulatory layout, seeded random layouts,
@@ -42,37 +46,51 @@ ensembles estimate the 5th, 50th, and 95th percentiles of \(\sigma_J\), rank
 probabilities, coefficient weakness probabilities, pairwise ambiguity
 probabilities, and conservative component frequencies.
 
-\paragraph{H5a: transport error is amplified by ill-conditioning.}
-We perturb wind speed, wind direction, and dispersion, and separately generate
-observations with the auxiliary edge-hold PDE while fitting with the
-open-boundary puff response.  The operator error norm, coefficient/activity
-error, residual, and singular spectrum are reported together.  These tagged
-transport ensembles may support transport-uncertainty intervals.
+\paragraph{Experiment 5: transport error is amplified by ill-conditioning.}
+We use two kinds of transport error.  \emph{Parametric} perturbations vary wind
+speed, wind direction, and dispersion within the puff family; a \emph{structural}
+mismatch instead generates observations with the auxiliary edge-hold
+advection--diffusion PDE while fitting with the open-boundary puff response.  The
+operator error norm, coefficient/activity error, residual, and singular spectrum
+are reported together, and the parametric transport ensembles may support
+transport-uncertainty intervals.  The structural case additionally exercises the
+residual-adequacy test of Section~\ref{subsec:model_adequacy}: we report its
+rejection rate to show it has power against forward-model misspecification, not
+only against missing sources.
 
-\paragraph{H5b: inventory error changes the attribution target.}
+\paragraph{Experiment 6: inventory error changes the attribution target.}
 We perturb inventory locations, spatial scales, category assignments, and map
 versions while holding transport fixed.  Each alternative inventory is a
-separate robustness scenario.  Its variation is not pooled with H5a and is not
-reported as a confidence interval.
+separate robustness scenario.  Its variation is not pooled with the transport
+error of Experiment~5 and is not reported as a confidence interval.
 
-\paragraph{Lag-window sensitivity.}
+\paragraph{Experiment 7: lag-window sensitivity.}
 Physical travel and residence times define the candidate grid.  We evaluate
 Equation~\ref{eq:lag_convergence}, choose the smallest lag satisfying
 \(\tau_L=10^{-3}\), and report rank, conditioning, and report-component
 stability across the grid without using fitted source coefficients for selection.
 
-\paragraph{Missing-source model adequacy.}
+\paragraph{Experiment 8: missing-source model adequacy.}
 Controlled trials omit either a residual-visible source outside
 \(\operatorname{span}[H_\Phi^{\mathrm{lag}},Q]\) or an aligned source whose
 signature lies in that span.  The refitted parametric-bootstrap test from
 Section~\ref{subsec:model_adequacy} is evaluated for calibration and power.  The
 aligned case demonstrates why non-rejection cannot certify inventory completeness.
 
-\paragraph{Temporal-basis recovery.}
+\paragraph{Experiment 9: temporal-basis recovery.}
 Known traffic diurnal, brick-kiln intermittent, industry day/night, and mixed
 source-basis coefficients are reconstructed at increasing noise.  This study
 separates coefficient error from error in the reconstructed source activity
 trajectory.
+
+\paragraph{Experiment 10: per-sensor footprints and spatial attribution.}
+On controlled trials with known source origins, we check that the per-sensor
+footprints of Section~\ref{subsec:per_sensor_footprints} localize the responsible
+upwind cells and that per-sensor contributions sum to the fitted sensor signal.
+On observed New Delhi data we report, per monitor, the fitted source-group
+contributions and their spatial cells of origin, aggregated to the identifiable
+report groups so no per-sensor separation exceeds the network's global
+resolution.
 
 Real imputed wind is used as a controlled transport input when coefficients are
 synthetically known.  The observed-PM\(_{2.5}\) mode is a separate evaluation
@@ -101,7 +119,11 @@ robustness, weak/ambiguous flags, conservative grouped contributions, and the
 residual calibration status.  A reported percentage, if used, is explicitly a fraction of the
 fitted inventory-attributed sensor signal and not a physical-emission share.
 
-\subsection{H1 Results: Conditioning and Recovery}
+\paragraph{Controlled results.}
+The following subsections report the controlled trials, which have known
+source--basis coefficients and therefore recovery and coverage metrics.
+
+\subsection{Experiment 1 Results: Conditioning and Recovery}
 \label{subsec:results_h1}
 
 \textbf{Results pending.}  The final table will contain noise level, source
@@ -109,7 +131,7 @@ geometry, \(\sigma_J\), numerical/effective rank, condition number, coefficient
 error, activity error, residual, and interval coverage; the accompanying figure
 will plot recovery error against \(\sigma_J\) and condition number.
 
-\subsection{H2 Results: Coherence and Grouped Reporting}
+\subsection{Experiment 2 Results: Coherence and Grouped Reporting}
 \label{subsec:results_h2}
 
 \textbf{Results pending.}  The table will report each source pair, triggering
@@ -118,7 +140,7 @@ component, and grouped activity and sensor-contribution errors.  Chain cases
 will retain every edge and show when connected components conservatively merge
 two sources that are pairwise distinguishable.
 
-\subsection{H3 Results: Background Stress}
+\subsection{Experiment 3 Results: Background Stress}
 \label{subsec:results_h3}
 
 \textbf{Results pending.}  The table will compare requested/effective background
@@ -126,7 +148,7 @@ rank, dependent columns, coefficient visibility, absorption, singular values,
 recovery error, and residual for the no-background, normal, redundant, and
 source-like stress cases, together with each predeclared basis identifier.
 
-\subsection{H4 Results: Wind Diversity and Sensor Geometry}
+\subsection{Experiment 4 Results: Wind Diversity and Sensor Geometry}
 \label{subsec:results_h4}
 
 \textbf{Results pending.}  The table will cross wind provider and sensor layout
@@ -136,7 +158,7 @@ error.  Wind comparisons will use identical source--basis columns.  A second
 table will report the ensemble quantiles and rank, weakness, ambiguity, and
 component probabilities.
 
-\subsection{H5a Results: Transport Error}
+\subsection{Experiment 5 Results: Transport Error}
 \label{subsec:results_h5a}
 
 \textbf{Results pending.}  The table will identify the true and fitted forward
@@ -144,7 +166,7 @@ operators, perturbation magnitude, response error norm, \(\sigma_J\), condition
 number, coefficient/activity error, projected residual, and transport-interval
 coverage.
 
-\subsection{H5b Results: Inventory Robustness}
+\subsection{Experiment 6 Results: Inventory Robustness}
 \label{subsec:results_h5b}
 
 \textbf{Results pending.}  The table will identify the primary and alternative
@@ -152,14 +174,14 @@ inventory versions, location/scale/category perturbation, diagnostics, fitted
 activities, and grouped contributions.  Rows are robustness scenarios, not
 confidence-interval draws.
 
-\subsection{Lag-Window Selection Results}
+\subsection{Experiment 7 Results: Lag-Window Selection}
 \label{subsec:results_lag_selection}
 
 \textbf{Results pending.}  The table will report candidate lag, response
 convergence ratio, \(\sigma_J\), numerical/effective rank, condition status,
 ambiguity components, selected lag, and the physical candidate-grid rationale.
 
-\subsection{Missing-Source Adequacy Results}
+\subsection{Experiment 8 Results: Missing-Source Adequacy}
 \label{subsec:results_missing_source}
 
 \textbf{Results pending.}  The table will report omitted-source alignment,
@@ -167,12 +189,25 @@ signal strength, calibrated noise model, \(T_{\mathrm{res}}\), bootstrap
 quantile, \(p\)-value, rejection rate, and residual summaries.  It will include
 both the residual-visible and span-aligned omissions.
 
-\subsection{Temporal-Basis Recovery Results}
+\subsection{Experiment 9 Results: Temporal-Basis Recovery}
 \label{subsec:results_temporal_basis}
 
 \textbf{Results pending.}  The table will report source, basis name, true and
 estimated coefficients, coefficient error, activity-trajectory error, weak
 flags, and uncertainty coverage for traffic, brick kilns, and industries.
+
+\subsection{Experiment 10 Results: Per-Sensor Footprints}
+\label{subsec:results_footprints}
+
+\textbf{Results pending.}  On controlled trials the table and plots will report
+footprint localization error against known source origins and the per-sensor
+contribution reconstruction; the observed New Delhi per-sensor footprints appear
+with the apportionment results below.
+
+\paragraph{Observed New Delhi results.}
+The remaining subsections report the observed-data study, which has no
+source-activity ground truth and therefore reports geometry, residuals,
+uncertainty, and conservative groups rather than recovery error.
 
 \subsection{New Delhi Wind-Imputation Validation}
 \label{subsec:results_wind_imputation}

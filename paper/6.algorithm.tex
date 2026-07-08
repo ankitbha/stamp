@@ -427,10 +427,40 @@ activities and contribution estimates at the identifiable grouping, fitted
 trajectories and residuals, uncertainty intervals, singular-value, coherence,
 and ray-distance diagnostics, low-visibility flags, and merge recommendations.
 
+The thresholds are summarized in Table~\ref{tab:thresholds}; each is predeclared
+or calibrated from noise or physics and none is tuned on source-recovery results.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{3pt}
+\caption{IASA thresholds, their meaning, and how they are set.  None is
+optimized on source-recovery error.}
+\label{tab:thresholds}
+\begin{tabular}{lll}
+\toprule
+Threshold & Meaning & How set \\
+\midrule
+\(\tau_{\mathrm{num}}\) & numerical rank tol.\ & \(\max(N,J)\epsilon_{\mathrm{mach}}\sigma_1\) \\
+\(\tau_\sigma\) & effective-rank floor & noise scale, e.g.\ \(\sigma_e\sqrt N\) \\
+\(\tau_v\) & visibility floor & \(\mathrm{SNR}_{\min}\,\sigma_e\) \\
+\(\tau_\rho\) & ambiguity coherence & predeclared, near \(1\) \\
+\(\tau_\rho^{\mathrm{ref}}\) & refinement coherence & default \(\tau_\rho^{\mathrm{ref}}=\tau_\rho\) \\
+\(\epsilon_w\) & wind-drift cap & physical wind tolerance \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Procedure}
 \label{subsec:iasa_procedure}
 
-The procedure is:
+The step order is deliberate and enforces the paper's central discipline of
+separating fit from diagnosis: model choices, thresholds, and the fixed-zero mask
+are predeclared; the response is then built, background-projected, and fitted;
+only afterwards are the identifiability diagnostics computed and conservative
+groups reported.  Because no threshold or column set is chosen after inspecting
+the fitted coefficients, the reported identifiability cannot be made artificially
+favorable by post-fit tuning.  The procedure is:
 \begin{enumerate}[leftmargin=*]
     \item \textbf{Predeclare the model.}  Fix the primary background basis,
     physical lag-candidate grid, temporal bases, inventory version, and any
@@ -497,11 +527,14 @@ This procedure separates two questions: which source activity trajectories best
 fit the projected sensor data, and which source--basis coefficients are
 supported by the geometry of \(\widetilde H_\Phi\).
 
-The nonnegative quadratic problem is solved with projected FISTA in PyTorch.
-Each gradient step is projected by \(\mathbf c\leftarrow\max(\mathbf c,0)\),
-with a Lipschitz step derived from the largest singular value, monotone restart,
-and convergence checks based on the projected-gradient/KKT residual and
-relative objective change.  Device, dtype, convergence status, iteration count,
+The objective in Equation~\ref{eq:nnls_estimator} is a smooth convex quadratic
+under a simple nonnegativity constraint, so we solve it with projected FISTA
+\citep{beck2009fast}: an accelerated proximal-gradient method whose proximal step
+for the indicator of \(\{\mathbf c\ge0\}\) is the clamp
+\(\mathbf c\leftarrow\max(\mathbf c,0)\).  Each gradient step uses a Lipschitz
+step size derived from the largest singular value, with monotone restart, and
+convergence is checked on the projected-gradient/KKT residual and the relative
+objective change.  Device, dtype, convergence status, iteration count,
     and the final KKT residual are part of the fit record.  Transport-ensemble
     and bootstrap refits are batched on the same device when their shapes agree.
 
@@ -531,12 +564,20 @@ of the active estimates is approximated by
 \widetilde H_{\Phi,\mathcal A_c}+\lambda I)^\dagger.
 \label{eq:active_covariance}
 \end{equation}
-For each wind-field ensemble member from Section~\ref{subsec:wind_field_estimation},
-IASA constructs
+Here \(\widehat\sigma^2\) is a residual variance estimate that discounts the
+effective degrees of freedom consumed by the fit; the use of
+\(N-r_{\mathrm{eff}}(\tau_\sigma)\) is a heuristic degrees-of-freedom count that
+does not exactly account for the background rank \(r\) or the NNLS active-set
+constraints.  Equation~\ref{eq:active_covariance} is the standard active-set /
+ridge least-squares covariance approximation \citep{seber2003linear}: its
+diagonal entries give per-coefficient uncertainty and its off-diagonal entries
+expose coupled (jointly uncertain) estimates.
+
+For each transport ensemble member from
+Section~\ref{subsec:wind_field_estimation}, IASA rebuilds
 \(\widetilde H_\Phi^{(b)}\), refits \(\widehat{\mathbf c}^{(b)}\), and reports
-empirical quantiles across ensemble members.  These intervals capture
-uncertainty induced by wind interpolation and transport-response construction.
-Every ensemble is tagged by provenance.  Wind and dispersion members have
+empirical quantiles across members as transport uncertainty.  Every ensemble is
+tagged by provenance.  Wind and dispersion members have
 \texttt{ensemble\_kind=transport} and may form transport-uncertainty intervals.
 Alternative inventory maps, source locations, labels, or scales have
 \texttt{ensemble\_kind=inventory} and produce scenario-wise robustness tables.
@@ -557,18 +598,25 @@ covariance
 \bar\Sigma_e=Z^\top\Sigma_e Z.
 \label{eq:adequacy_coordinates}
 \end{equation}
-When \(\bar\Sigma_e\) is calibrated independently of this fitted residual and
-is positive definite, the adequacy statistic is
+where \(\Sigma_e\) is an externally declared observation-noise covariance and
+\(Z\) removes the background directions so that \(\bar r\) carries no degrees of
+freedom absorbed by \(Q\).  For independent homoscedastic noise
+\(\Sigma_e=\sigma_e^2 I\), orthonormality of \(Z\) gives
+\(\bar\Sigma_e=\sigma_e^2 I\) and \(T_{\mathrm{res}}=\|\bar r\|_2^2/\sigma_e^2\).
+When \(\bar\Sigma_e\) is calibrated independently of this fitted residual and is
+positive definite, the adequacy statistic is
 \begin{equation}
 T_{\mathrm{res}}=\bar r^\top\bar\Sigma_e^{-1}\bar r.
 \label{eq:residual_adequacy_statistic}
 \end{equation}
-IASA draws \(B_{\mathrm{res}}=1000\) parametric-bootstrap observations from the
-fitted source/background model plus the declared noise model, repeats the full
-coefficient fit for every draw, and recomputes \(T_{\mathrm{res}}\).  At
-\(\alpha=0.05\), it flags model inadequacy when the observed statistic exceeds
-the empirical \((1-\alpha)\)-quantile; the Monte Carlo \(p\)-value uses the
-standard add-one correction.
+Its null distribution is not a plain \(\chi^2\), because \(\widehat{\mathbf c}\)
+is fitted from the same data; IASA therefore calibrates it by parametric
+bootstrap.  It simulates \(B_{\mathrm{res}}=1000\) synthetic observation sets from
+the fitted source/background model plus the declared noise model, refits the
+coefficients on each draw, and recomputes \(T_{\mathrm{res}}\) to form the null
+distribution.  At \(\alpha=0.05\) it flags inadequacy when the observed statistic
+exceeds the empirical \((1-\alpha)\)-quantile; the Monte Carlo \(p\)-value uses
+the standard add-one correction.
 
 If no externally calibrated noise model is supplied, IASA reports raw and
 projected residual norms and sensor-wise, time-wise, and autocorrelation
@@ -613,24 +661,20 @@ and
 \label{eq:refinement_coherence_check}
 \end{equation}
 These checks prevent end-to-end tuning from improving sensor fit by making
-source--basis fingerprints less distinguishable.  If either response is
-numerically rank deficient, its \(\sigma_J\) is zero under the padded-spectrum
-convention of Section~\ref{subsec:identifiability_diagnostics}.
+source--basis fingerprints less distinguishable.  If either response has fewer
+than \(J\) numerically nonzero singular values, its \(\sigma_J\) is taken to be
+zero (Section~\ref{subsec:identifiability_diagnostics}), so refinement cannot be
+accepted by exploiting a rank-deficient response.
 
 \subsection{Reporting Protocol}
 \label{subsec:reporting_protocol}
 
-For sources \(k\ne k'\), an edge is added when at least one eligible
-coefficient pair \(((k,b),(k',b'))\) belongs to \(\mathcal A\).  Each edge
-retains its maximum eligible coherence, minimum ray distance, and the basis pair
-attaining the trigger.  Connected components are ordered by the original source
-indices and become conservative recommended report groups.  An
-\(A\)--\(B\)--\(C\) edge chain therefore produces one component even if
-\(A\) and \(C\) are pairwise distinguishable; the edge report preserves the
-trigger for each link.  Components are not asserted to be the globally finest
-identifiable partition.  Rank deficiency without an
-eligible pair produces a global unresolved warning rather than an invented
-edge.
+The source ambiguity graph, its deterministic connected components, and the
+transitive over-merging of an \(A\)--\(B\)--\(C\) chain are defined in
+Section~\ref{subsec:source_merging}.  Operationally, those components are the
+conservative recommended report groups, each edge retains its triggering
+coefficient pair, and rank deficiency without an eligible pair yields a global
+unresolved warning rather than an invented edge.
 
 For each reported source group \(G_a\), IASA reports
 \begin{align}
@@ -651,3 +695,11 @@ maximum.  Coherence and ray distance involving weak fingerprints are displayed
 as ``N/A'' and excluded from extrema; the weak flags remain visible.  Otherwise
 IASA labels the source as weakly visible, ambiguous with another source group,
 or merged into a coarser identifiable group.
+
+IASA additionally reports the per-sensor contribution decomposition and source
+footprints of Section~\ref{subsec:per_sensor_footprints}, which show, for each
+monitor, the fitted source-group contributions and their spatial cells of
+origin.  These are spatial overlays of the same global fit: per-sensor source
+shares are aggregated to the identifiable report groups \(\mathcal G\) wherever
+the pooled diagnostics require grouping, so the spatial view never asserts a
+separation the network does not support.

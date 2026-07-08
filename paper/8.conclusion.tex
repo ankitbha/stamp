@@ -59,24 +59,33 @@ inventories define relative rather than physical emission units.  Controlled
 experiments and the observed-data study share this platform but require
 different claims: only controlled trials have source-activity ground truth.
 
-The framework has several limitations.  The response operator is an
-approximation to atmospheric transport and can be extended with richer
-meteorology, vertical mixing, deposition, chemistry, and boundary inflow.  The
-theory is linear in source--basis coefficients conditional on fixed wind,
-transport, temporal basis, inventory, and background components; fully joint
-estimation introduces additional nonlinearities.  The selected temporal basis
-also limits the activity patterns that can be recovered: finer temporal
-resolution is defensible only when the corresponding response columns remain
-identifiable.  Finally, the framework assumes that relevant
-candidate source inventories are available.  Missing source categories may be
-absorbed into available inventories or background terms, which should be treated
-as a model-misspecification risk rather than as identifiable attribution.  A
-calibrated residual bootstrap can reject an inadequate declared model but cannot
-prove inventory completeness, especially when an omitted signature lies in the
-span of the fitted response and background.  Transport ensembles can quantify
-uncertainty under their sampling model, whereas alternative inventories are
-separate robustness scenarios and must not be pooled into confidence intervals.  The learned gridded wind field is still only as reliable as the sparse station
-network and its held-out validation; dense real wind truth is unavailable.
+The framework has several limitations that bound its present claims.  The theory
+is linear in source--basis coefficients conditional on fixed wind, transport,
+temporal basis, inventory, and background components; fully joint estimation
+introduces additional nonlinearities.  The selected temporal basis limits the
+activity patterns that can be recovered: finer temporal resolution is defensible
+only when the corresponding response columns remain identifiable, and modeling
+traffic as one spatial map with diurnal components assumes a time-invariant
+congestion pattern.  The framework also assumes that relevant candidate source
+inventories are available; missing source categories may be absorbed into
+available inventories or background terms, which is a model-misspecification risk
+rather than identifiable attribution.  A calibrated residual bootstrap can reject
+an inadequate declared model but cannot prove inventory completeness, especially
+when an omitted signature lies in the span of the fitted response and background.
+Transport ensembles can quantify uncertainty under their sampling model, whereas
+alternative inventories are separate robustness scenarios and must not be pooled
+into confidence intervals.  Finally, the learned gridded wind field is only as
+reliable as the sparse station network and its held-out validation; dense real
+wind truth is unavailable.
+
+Several further directions are future work rather than limits of the present
+claims.  The open-boundary puff response can be extended with richer meteorology,
+vertical mixing, deposition, chemistry, and boundary inflow.  The per-sensor
+footprints of Section~\ref{subsec:per_sensor_footprints} already trace attributed
+pollution back to upwind cells; extending them with explicit spatial diagnostics,
+such as source centroids or barycenters of the responsible region, is a natural
+next step.  Jointly estimating the temporal basis, transport, and inventory under
+identifiability control is likewise left to future work.
 
 Despite these limitations, the identifiability view provides a concrete basis
 for more reliable policy-facing apportionment.  It separates fitting the observed

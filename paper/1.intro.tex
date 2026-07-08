@@ -77,9 +77,14 @@ We make the following contributions:
     trajectories, reports uncertainty, flags weakly visible coefficients, and
     recommends connected report groups when eligible coefficient fingerprints
     are indistinguishable under the current sensing system.
+    \item We add a per-sensor spatial attribution that back-traces the transport
+    response to show which upwind regions and source groups drive each monitor,
+    reported as an overlay that inherits the global identifiable resolution
+    rather than asserting finer per-sensor separations.
     \item We instantiate the framework on a New Delhi platform comprising
     government PM\(_{2.5}\) and wind records, regulatory sensor locations,
-    FieldFormer-based gridded wind imputation, and seven named normalized proxy inventories.
+    FieldFormer-based gridded wind imputation, and four normalized proxy source
+    groups with declared temporal activity bases.
     \item We define controlled and observed-data evaluations of conditioning,
     source ambiguity, background stress, wind diversity, temporal-basis
     recovery, response error, uncertainty, and residual structure.

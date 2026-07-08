@@ -1,4 +1,4 @@
-\begin{thebibliography}{33}
+\begin{thebibliography}{35}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -9,6 +9,13 @@
 Banks, H.~T. and Kunisch, K.
 \newblock \emph{Estimation techniques for distributed parameter systems}.
 \newblock Springer Science \& Business Media, 2012.
+
+\bibitem[Beck \& Teboulle(2009)Beck and Teboulle]{beck2009fast}
+Beck, A. and Teboulle, M.
+\newblock A fast iterative shrinkage-thresholding algorithm for linear inverse
+  problems.
+\newblock \emph{SIAM Journal on Imaging Sciences}, 2\penalty0 (1):\penalty0
+  183--202, 2009.
 
 \bibitem[Belis et~al.(2013)Belis, Karagulian, Larsen, and
   Hopke]{belis2013critical}
@@ -190,6 +197,11 @@ Raissi, M., Perdikaris, P., and Karniadakis, G.~E.
   equations.
 \newblock \emph{Journal of Computational physics}, 378:\penalty0 686--707,
   2019.
+
+\bibitem[Seber \& Lee(2003)Seber and Lee]{seber2003linear}
+Seber, G. A.~F. and Lee, A.~J.
+\newblock \emph{Linear Regression Analysis}.
+\newblock Wiley, Hoboken, NJ, 2nd edition, 2003.
 
 \bibitem[Tarantola(2005)]{tarantola2005inverse}
 Tarantola, A.

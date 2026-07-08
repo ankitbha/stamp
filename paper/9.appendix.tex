@@ -40,6 +40,163 @@ for pairs involving a coefficient with \(v_j\le\tau_v\); tables display these
 entries as N/A, exclude them from pairwise extrema, and report the weak
 coefficient separately.
 
+\section{Detailed Identifiability Proofs}
+\label{app:identifiability_proofs}
+
+\paragraph{Proof of Proposition~\ref{prop:rank_identifiability}.}
+Let \(A=\widetilde H_\Phi\in\mathbb R^{N\times J}\).  If
+\(\operatorname{rank}(A)=J\), then the rank-nullity theorem gives
+\(\dim\ker(A)=J-\operatorname{rank}(A)=0\).  Hence
+\(\ker(A)=\{\mathbf 0\}\).  If two feasible coefficient vectors
+\(\mathbf c_1,\mathbf c_2\in\mathbb R_+^J\) produce the same projected
+observation,
+\[
+A\mathbf c_1=A\mathbf c_2,
+\]
+then \(A(\mathbf c_1-\mathbf c_2)=0\).  Since the only vector in the kernel is
+\(\mathbf 0\), we have \(\mathbf c_1-\mathbf c_2=\mathbf 0\), and therefore
+\(\mathbf c_1=\mathbf c_2\).  Thus the coefficient vector is identifiable over
+the nonnegative feasible set.
+
+Conversely, suppose \(\operatorname{rank}(A)<J\).  By rank-nullity,
+\(\dim\ker(A)>0\), so there exists a nonzero vector
+\(\Delta\mathbf c\in\ker(A)\).  Choose any \(\beta>\|\Delta\mathbf c\|_\infty\)
+and set \(\mathbf c=\beta\mathbf 1\).  Then \(\mathbf c\in\mathbb R_+^J\), and
+\(\mathbf c+\Delta\mathbf c\in\mathbb R_+^J\) because every component satisfies
+\[
+\beta+\Delta c_j\ge \beta-\|\Delta\mathbf c\|_\infty>0.
+\]
+The two vectors are distinct because \(\Delta\mathbf c\ne0\), but they produce
+the same projected observation:
+\[
+A(\mathbf c+\Delta\mathbf c)
+=A\mathbf c+A\Delta\mathbf c
+=A\mathbf c.
+\]
+Therefore uniform identifiability over \(\mathbb R_+^J\) fails whenever
+\(\operatorname{rank}(A)<J\).  This proves the equivalence.
+
+\paragraph{Proof of Proposition~\ref{prop:noise_robust}.}
+Again let \(A=\widetilde H_\Phi\), and assume \(A\) has full column rank
+\(J\).  The projected observation model is
+\[
+\widetilde Y=A\mathbf c+\widetilde E.
+\]
+For unconstrained least squares,
+\[
+\widehat{\mathbf c}_{\mathrm{LS}}
+=\arg\min_{\mathbf z}\|\widetilde Y-A\mathbf z\|_2^2
+=A^\dagger\widetilde Y,
+\]
+where \(A^\dagger\) is the Moore--Penrose pseudoinverse.  Substituting the data
+model gives
+\[
+\widehat{\mathbf c}_{\mathrm{LS}}
+=A^\dagger(A\mathbf c+\widetilde E)
+=\mathbf c+A^\dagger\widetilde E,
+\]
+because \(A^\dagger A=I_J\) for a full-column-rank matrix.  Hence
+\[
+\|\widehat{\mathbf c}_{\mathrm{LS}}-\mathbf c\|_2
+=\|A^\dagger\widetilde E\|_2
+\le \|A^\dagger\|_2\|\widetilde E\|_2.
+\]
+The singular values of \(A^\dagger\) are the reciprocals of the nonzero
+singular values of \(A\), so \(\|A^\dagger\|_2=1/\sigma_J(A)\).  Therefore
+\[
+\|\widehat{\mathbf c}_{\mathrm{LS}}-\mathbf c\|_2
+\le
+\frac{\|\widetilde E\|_2}{\sigma_J(A)}.
+\]
+
+For nonnegative least squares, let \(\widehat{\mathbf c}\) minimize
+\(\|\widetilde Y-A\mathbf z\|_2^2\) over \(\mathbf z\ge0\).  Since the true
+\(\mathbf c\ge0\), it is feasible.  Optimality of \(\widehat{\mathbf c}\)
+therefore implies
+\[
+\|\widetilde Y-A\widehat{\mathbf c}\|_2
+\le
+\|\widetilde Y-A\mathbf c\|_2
+=\|\widetilde E\|_2.
+\]
+Let \(\Delta=\widehat{\mathbf c}-\mathbf c\).  Using
+\(\widetilde Y=A\mathbf c+\widetilde E\),
+\[
+\widetilde Y-A\widehat{\mathbf c}
+=\widetilde E-A\Delta.
+\]
+Thus
+\[
+\|A\Delta\|_2
+=\|\widetilde E-(\widetilde E-A\Delta)\|_2
+\le
+\|\widetilde E\|_2+\|\widetilde E-A\Delta\|_2
+\le
+2\|\widetilde E\|_2.
+\]
+Full column rank gives the lower singular-value inequality
+\[
+\|A\Delta\|_2\ge \sigma_J(A)\|\Delta\|_2.
+\]
+Combining the two inequalities yields
+\[
+\|\widehat{\mathbf c}-\mathbf c\|_2
+=\|\Delta\|_2
+\le
+\frac{2\|\widetilde E\|_2}{\sigma_J(A)}.
+\]
+This proves the stated NNLS robustness bound.
+
+\paragraph{Ray distance for nonweak fingerprints
+(Equation~\ref{eq:ray_distance_coherence_relation}).}
+Fix nonweak projected fingerprints \(\widetilde{\mathbf h}_i,
+\widetilde{\mathbf h}_j\), so \(\widetilde{\mathbf h}_j\ne0\).  The ray distance
+minimizes
+\[
+g(\alpha)=\frac{\|\widetilde{\mathbf h}_i-\alpha\widetilde{\mathbf h}_j\|_2^2}
+{\|\widetilde{\mathbf h}_i\|_2^2}
+\]
+over \(\alpha\in\mathbb R\).  This is strictly convex in \(\alpha\), and
+\(g'(\alpha)=0\) gives
+\(-2\widetilde{\mathbf h}_j^\top(\widetilde{\mathbf h}_i-\alpha
+\widetilde{\mathbf h}_j)=0\), i.e.
+\[
+\alpha^\star=\frac{\widetilde{\mathbf h}_i^\top\widetilde{\mathbf h}_j}
+{\|\widetilde{\mathbf h}_j\|_2^2}.
+\]
+Substituting,
+\[
+\|\widetilde{\mathbf h}_i-\alpha^\star\widetilde{\mathbf h}_j\|_2^2
+=\|\widetilde{\mathbf h}_i\|_2^2
+-\frac{(\widetilde{\mathbf h}_i^\top\widetilde{\mathbf h}_j)^2}
+{\|\widetilde{\mathbf h}_j\|_2^2},
+\]
+and dividing by \(\|\widetilde{\mathbf h}_i\|_2^2\) yields
+\((d^{\mathrm{ray}}_{ij})^2=1-\rho_{ij}^2\), so
+\(d^{\mathrm{ray}}_{ij}=\sqrt{1-\rho_{ij}^2}\).  Minimizing over signed
+\(\alpha\) makes the sign inside \(\rho_{ij}\) immaterial.
+
+\paragraph{Proof of Proposition~\ref{prop:operator_perturbation}.}
+Let \(\widehat A=\widehat{\widetilde H}_\Phi\) have full column rank and let
+\(A^\star=\widetilde H_\Phi^\star\) with \(\|\widehat A-A^\star\|_2\le\delta_H\).
+The data obey
+\(\widetilde Y=A^\star\mathbf c+\widetilde E
+=\widehat A\mathbf c+[\widetilde E+(A^\star-\widehat A)\mathbf c]\).
+The least-squares estimate using \(\widehat A\) is
+\(\widehat{\mathbf c}=\widehat A^\dagger\widetilde Y\), and
+\(\widehat A^\dagger\widehat A=I_J\), so
+\[
+\widehat{\mathbf c}-\mathbf c
+=\widehat A^\dagger\bigl[\widetilde E+(A^\star-\widehat A)\mathbf c\bigr].
+\]
+Taking norms with \(\|\widehat A^\dagger\|_2=1/\sigma_J(\widehat A)\) and
+\(\|(A^\star-\widehat A)\mathbf c\|_2\le\delta_H\|\mathbf c\|_2\) gives
+\[
+\|\widehat{\mathbf c}-\mathbf c\|_2
+\le\frac{\|\widetilde E\|_2+\delta_H\|\mathbf c\|_2}{\sigma_J(\widehat A)},
+\]
+which is Equation~\ref{eq:operator_error_bound}.
+
 \section{Implementation Invariants}
 \label{app:implementation_invariants}
 

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2023.2.18)  3 JUL 2026 15:17
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2023.2.18)  7 JUL 2026 23:22
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -754,11 +754,11 @@ Underfull \hbox (badness 1077) in paragraph at lines 2--3
 LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 63.
  (/usr/share/texlive/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
-)) (./2.related.tex
-Underfull \vbox (badness 3138) has occurred while \output is active []
-
- [2]) (./3.setup.tex
+)) (./2.related.tex [2]) (./3.setup.tex
 Underfull \vbox (badness 10000) has occurred while \output is active []
+
+
+Underfull \vbox (badness 1303) has occurred while \output is active []
 
  [3] [4]) (./4.method.tex
 Overfull \hbox (5.03818pt too wide) detected at line 35
@@ -770,11 +770,18 @@ Overfull \hbox (12.75505pt too wide) detected at line 63
 [][][]\OML/cmm/m/it/10 v[]\OT1/cmr/m/n/10 (\OT1/cmr/bx/n/10 x[]\OML/cmm/m/it/10 ; t\OT1/cmr/m/n/10 ) = []\OML/cmm/m/it/10 ;  v[]\OT1/cmr/m/n/10 (\OT1/cmr/bx/n/10 x[]\OML/cmm/m/it/10 ; t\OT1/cmr/m/n/10 ) = []\OML/cmm/m/it/10 :
  []
 
-[5]
-Underfull \vbox (badness 1122) has occurred while \output is active []
+[5] [6]) (./5.theory.tex [7] [8] [9]
+Overfull \hbox (89.92563pt too wide) in paragraph at lines 367--387
+ [][] 
+ []
 
- [6]) (./5.theory.tex [7] [8]
-LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 781.
+
+Overfull \hbox (36.10722pt too wide) detected at line 420
+[][][]\OML/cmm/m/it/10 F[]\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 i\OT1/cmr/m/n/10 ) = [][]\OML/cmm/m/it/10 OG[]\OT1/cmr/m/n/10 ([])[][]  \OMS/cmsy/m/n/10 ^^U \OT1/cmr/m/n/10 0\OML/cmm/m/it/10 ;  F[]\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 i\OT1/cmr/m/n/10 ) = [] \OML/cmm/m/it/10 F[]\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 i\OT1/cmr/m/n/10 )\OML/cmm/m/it/10 ;
+ []
+
+) (./6.algorithm.tex [10] [11]
+LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 581.
  (/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1pcr.fd
 File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
 )
@@ -782,46 +789,15 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             `pcr' (encoding: OT1).
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
-) (./6.algorithm.tex [9]
-Underfull \hbox (badness 1515) in paragraph at lines 533--546
-\OT1/ptm/m/n/10 (+20) i-cal quan-tiles across en-sem-ble mem-bers. These in-
- []
 
-
-Underfull \hbox (badness 1748) in paragraph at lines 533--546
-\OT1/ptm/m/n/10 (+20) tion and transport-response con-struc-tion. Ev-ery en-
- []
-
-
-Underfull \hbox (badness 1205) in paragraph at lines 533--546
-\OT1/ptm/m/n/10 (+20) sem-ble is tagged by prove-nance. Wind and dis-per-
- []
-
-[10]
-Underfull \hbox (badness 1400) in paragraph at lines 573--581
+Underfull \hbox (badness 1400) in paragraph at lines 621--629
 \OT1/ptm/m/n/10 (+20) wise, time-wise, and au-to-cor-re-la-tion sum-maries with
  []
 
-) (./7.evaluation.tex [11]
-Underfull \hbox (badness 6380) in paragraph at lines 14--24
-[]\OT1/ptm/m/n/10 (+20) The au-thor-i-ta-tive lo-cal ta-ble con-tains hourly gov-
+[12]) (./7.evaluation.tex
+Overfull \hbox (44.05415pt too wide) in paragraph at lines 75--85
+ [][] 
  []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 14--24
-\OT1/ptm/m/n/10 (+20) ern-ment ob-ser-va-tions with columns \OT1/pcr/m/n/10 monitor[]id\OT1/ptm/m/n/10 (+20) ,
- []
-
-
-Underfull \hbox (badness 1297) in paragraph at lines 14--24
-\OT1/ptm/m/n/10 (+20) en-tries, 72.8% of wind-speed en-tries, and 90.5% of
- []
-
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
- [12]) (./8.evaluation.tex
-Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
@@ -829,56 +805,63 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
  [13]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
+) (./8.evaluation.tex
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-Underfull \hbox (badness 10000) in paragraph at lines 124--128
+ [14]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [15]
+Underfull \hbox (badness 10000) in paragraph at lines 146--150
 []\OT1/ptm/b/n/10 (+20) Results pend-ing. \OT1/ptm/m/n/10 (+20) The ta-ble will com-pare re-
  []
 
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [14]) (./8.conclusion.tex
+
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [15])
+ [16]) (./8.conclusion.tex
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [16] (./main.bbl
-Underfull \hbox (badness 10000) in paragraph at lines 81--86
+ [17]) (./main.bbl
+Underfull \hbox (badness 10000) in paragraph at lines 88--93
 \OT1/pcr/m/n/10 com / ccr / # / caaqm-[]dashboard-[]all /
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 81--86
+Underfull \hbox (badness 10000) in paragraph at lines 88--93
 \OT1/pcr/m/n/10 caaqm-[]landing / caaqm-[]comparison-[]data$[][]\OT1/ptm/m/n/10 (+20) ,
  []
 
-
-Underfull \hbox (badness 1748) in paragraph at lines 99--107
+[18]
+Underfull \hbox (badness 1748) in paragraph at lines 106--114
 \OT1/ptm/m/n/10 (+20) for air pol-lu-tion anal-y-sis in delhi, in-dia.  \OT1/ptm/m/it/10 (+20) At-mo-
  []
 
-[17]) [18
+) [19] (./9.appendix.tex [20
 
-] (./9.appendix.tex [19
-
-]) [20] [21] (./main.aux)
+] [21] [22]) [23] (./main.aux)
 Package rerunfilecheck Info: File `main.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 28750 strings out of 480247
- 538490 string characters out of 5896151
- 826869 words of memory out of 5000000
- 45678 multiletter control sequences out of 15000+600000
- 507954 words of font info for 266 fonts, out of 8000000 for 9000
+ 28823 strings out of 480247
+ 539533 string characters out of 5896151
+ 829681 words of memory out of 5000000
+ 45698 multiletter control sequences out of 15000+600000
+ 510009 words of font info for 294 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 99i,20n,94p,2107b,504s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 99i,20n,94p,2140b,504s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmex9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmib10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmmib7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy5.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm7.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (21 pages, 431915 bytes).
+Output written on main.pdf (23 pages, 461432 bytes).
 PDF statistics:
- 558 PDF objects out of 1000 (max. 8388607)
- 476 compressed objects within 5 object streams
- 200 named destinations out of 1000 (max. 500000)
+ 601 PDF objects out of 1000 (max. 8388607)
+ 516 compressed objects within 6 object streams
+ 211 named destinations out of 1000 (max. 500000)
  54797 words of extra memory for PDF output out of 61914 (max. 10000000)
 

@@ -4,45 +4,45 @@ The top-level auxiliary file: main.aux
 The style file: icml2026/icml2026.bst
 Database file #1: refs.bib
 Warning--empty journal in mircea2020european
-You've used 33 entries,
+You've used 35 entries,
             2773 wiz_defined-function locations,
-            790 strings with 11849 characters,
-and the built_in function-call counts, 16604 in all, are:
-= -- 1365
-> -- 1306
-< -- 15
-+ -- 442
-- -- 408
-* -- 1460
-:= -- 2678
-add.period$ -- 103
-call.type$ -- 33
-change.case$ -- 225
-chr.to.int$ -- 32
-cite$ -- 67
-duplicate$ -- 653
-empty$ -- 1161
-format.name$ -- 452
-if$ -- 3357
+            803 strings with 12111 characters,
+and the built_in function-call counts, 17429 in all, are:
+= -- 1440
+> -- 1348
+< -- 17
++ -- 456
+- -- 420
+* -- 1525
+:= -- 2805
+add.period$ -- 109
+call.type$ -- 35
+change.case$ -- 235
+chr.to.int$ -- 34
+cite$ -- 71
+duplicate$ -- 693
+empty$ -- 1233
+format.name$ -- 470
+if$ -- 3531
 int.to.chr$ -- 2
 int.to.str$ -- 1
-missing$ -- 34
-newline$ -- 177
-num.names$ -- 132
-pop$ -- 453
+missing$ -- 37
+newline$ -- 187
+num.names$ -- 140
+pop$ -- 470
 preamble$ -- 1
-purify$ -- 197
+purify$ -- 205
 quote$ -- 0
-skip$ -- 538
+skip$ -- 569
 stack$ -- 0
-substring$ -- 377
-swap$ -- 38
+substring$ -- 406
+swap$ -- 40
 text.length$ -- 3
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 338
+type$ -- 355
 warning$ -- 1
-while$ -- 126
+while$ -- 134
 width$ -- 0
-write$ -- 429
+write$ -- 456
 (There was 1 warning)
