@@ -1461,7 +1461,8 @@ w_hat_t(x_g) = f_omega(x_g, t; {(z_i, t', u_i, m_i)})   for g = 1..n
   protocol. Because the upstream checkpoints are scalar (`out_dim=1`) and IASA
   wind needs a 2-vector `(Ux, Vy)` (`out_dim=2`), a wind checkpoint must be
   trained to activate it; the default imputer remains the kernel coordinate-query
-  interpolator (`KernelCoordinateQueryImputer`) as a fallback.
+  interpolator (`KernelCoordinateQueryImputer`) as a fallback. Training that
+  checkpoint is Task 9D.
 - Validate on real data by masking observed station vectors and measuring
   held-out station-time vector, direction, and speed error; dense city-wide wind
   truth is not assumed.
@@ -1600,6 +1601,89 @@ max_{i!=j, i,j not in W} rho_ij^ref <= tau_rho^ref   (default tau_rho^ref = tau_
 - A refinement that lowers `sigma_J` below the acceptance threshold or raises
   eligible coherence above `tau_rho^ref` is rejected.
 - The fixed-response estimate remains available and is the default report.
+
+### Task 9D: Train the FieldFormer 2-vector wind checkpoint
+
+**Objective**
+
+Train the coordinate-query FieldFormer to impute the 2-vector transport wind
+field `(Ux, Vy)` for New Delhi, producing the checkpoint that activates the
+`FieldFormerCoordinateQueryImputer` vendored in Task 9A. Task 9A wired the
+adapter behind the `CoordinateQueryImputer` protocol but shipped only the kernel
+fallback, because the upstream FieldFormer checkpoints are scalar (`out_dim=1`)
+pollution/heat/SWE fields and no 2-vector wind checkpoint exists. This task
+removes that gap so the paper-facing New Delhi runs (and Task 10's observed-mode
+wind) can use the learned coordinate-query field rather than the kernel
+interpolator.
+
+**Likely files**
+
+- New `scripts/train_fieldformer_wind.py` (or `experiments/fieldformer_wind/`)
+- `baselines/fieldformer/model.py` (vendored model; training-only helpers may be
+  added alongside, kept separate from the inference module)
+- `model/iasa/fieldformer_adapter.py` (no API change; default-imputer switch only
+  after validation)
+- New checkpoint artifact, e.g. `data/fieldformer_wind_new_delhi.pt`
+
+**Implementation details**
+
+- Build supervision from the government `WD/WS` record: convert to transport
+  vectors with `transport_vectors_from_wd_ws` (paper eq. wind_direction_conversion),
+  preserve the observation mask, and map station lon/lat to response-grid
+  coordinates exactly as `gridded_new_delhi_wind_field`. Supervision is the sparse
+  observed station-time tuples `(x, y, t) -> (Ux, Vy)`; there is no dense
+  city-wide wind truth.
+- Train `FieldFormerCoordinateQuery` with `out_dim=2` under the **same
+  conventions the adapter queries with**: min-max `xy` normalization to `[0, 1]`,
+  time `t/(T-1)`, and identical `k_neighbors`/`time_radius`. The checkpoint and
+  the adapter must agree on these or the learned attention is queried
+  off-distribution (see `baselines/fieldformer/README.md`).
+- Loss is supervised regression (Huber or MSE) on held-in observed tuples; the
+  upstream scalar-field physics regularizers (sponge/radiation) are not assumed
+  to transfer to wind and are opt-in only if justified. Hold out a station-time
+  split for validation; never read held-out tuples as neighbors
+  (`allowed_indices`).
+- Record full provenance: seed, config, data hashes, normalization, `out_dim=2`,
+  `k_neighbors`/`time_radius`, EMA setting, device/dtype. Save a checkpoint
+  loadable by `load_fieldformer_checkpoint(out_dim=2)` and
+  `build_fieldformer_wind_imputer(checkpoint_path=...)`.
+- Validate on the held-out split with `evaluate_gridded_wind_heldout` (vector
+  RMSE, circular direction error, speed error) and compare against the kernel
+  interpolator and a city-mean baseline on the identical split. The learned
+  imputer must add value on held-out error to justify replacing the kernel
+  default; if it does not, keep the kernel default and record why.
+- Only after the checkpoint passes held-out validation, switch the paper-facing
+  `gridded_new_delhi_wind_field` default imputer to FieldFormer; the kernel
+  imputer remains available as a labeled fallback and for smoke checks.
+- Run training on a SLURM GPU node (container + overlay); training is the heavy
+  step, so record wall-clock, checkpoint size, and reproducibility command.
+
+**Outputs and artifacts**
+
+- Trained 2-vector `(Ux, Vy)` FieldFormer wind checkpoint with recorded config,
+  seed, data hashes, and normalization/neighbor settings.
+- Held-out station-time validation report (vector/direction/speed error) with the
+  kernel and city-mean baselines on the same split.
+- Transport wind-field ensembles from the trained model (checkpoint ensembles,
+  station bootstrap, or validation-residual-matched perturbations), tagged
+  `ensemble_kind="transport"`.
+
+**Acceptance checks**
+
+- A `out_dim=2` checkpoint trains, saves, and loads via
+  `load_fieldformer_checkpoint`/`build_fieldformer_wind_imputer` and drives
+  `build_gridded_wind_field` end to end.
+- Training and query use identical normalization and `k_neighbors`/`time_radius`,
+  recorded in provenance so the checkpoint and adapter are consistent.
+- Held-out station-time error is reported and compared to the kernel and
+  city-mean baselines on the same masked split; the FieldFormer default is
+  adopted only if it improves held-out error, otherwise the kernel default and
+  the reason are recorded.
+- The kernel imputer remains available as a labeled fallback; no untrained or
+  unvalidated model is presented as a scientific wind product.
+- Depends on Task 9A (vendored adapter). Should complete before Task 10's
+  paper-facing observed-New-Delhi wind, though Task 10 may run on the kernel
+  fallback and be upgraded once the checkpoint validates.
 
 ### Task 10: Controlled experiment suite
 
