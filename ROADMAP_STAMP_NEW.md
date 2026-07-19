@@ -50,6 +50,12 @@ The implementation needs these new capabilities:
 - Separate named source inventories instead of one aggregate source field.
 - Government `WD`/`WS` ingestion, missing-data imputation, and conversion to simulator-ready wind vectors.
 - A wind-provider interface that supports real imputed New Delhi wind and controlled synthetic wind regimes.
+- A gridded FieldFormer wind field: a coordinate-query imputer queried on every
+  response-grid cell and hour to produce a per-cell field `W in R^(T x n x 2)`,
+  plus wind-field ensembles (held-out-calibrated error, station bootstrap,
+  checkpoint ensembles) tagged as transport uncertainty. The earlier city-level
+  sequence is the v1 adapter; the paper-facing New Delhi response uses the
+  gridded field.
 - Source activity parameterization over inventory groups and temporal activity bases.
 - Construction of `H_lag` from a dedicated open-boundary source-response operator under real or synthetic wind sequences.
 - Background basis construction and projection.
@@ -57,8 +63,19 @@ The implementation needs these new capabilities:
 - Nonnegative source-activity fitting.
 - Uncertainty intervals and ambiguity reporting.
 - Merge recommendations for indistinguishable source groups.
-- Controlled experiments matching the new paper hypotheses, including the claim that wind diversity improves source separability.
-- Real New Delhi apportionment reporting from observed `pm25`.
+- Per-sensor source footprints and spatial attribution: a per-sensor
+  contribution decomposition and a nonnegative footprint field that pulls each
+  sensor's response row back onto the source grid, aggregated to the identifiable
+  report groups so no per-sensor separation exceeds the global resolution.
+- An optional constrained end-to-end refinement stage that jointly adjusts wind,
+  dispersion, source, and background coefficients under physical constraints and
+  is accepted only if it does not degrade identifiability.
+- Controlled experiments matching the new paper's Experiment 1--10 matrix,
+  including the claim that wind diversity improves source separability, and
+  separate observed-New-Delhi reporting from observed `pm25`.
+- An auxiliary edge-hold advection--diffusion simulator retained as the labeled
+  structural forward-model mismatch generator (Experiment 5), never silently
+  substituted for the open-boundary puff response.
 
 The active tree should contain only code needed for this IASA path. Old STAMP,
 SimGrad, heat, shallow-water, notebook, free-field pollution, and ablation files
@@ -110,7 +127,7 @@ monitor_id, timestamp_round, AT, RH, WD, WS, pm10, pm25
 
 The local file has 32 stations and 21,960 timestamps. `WD` and `WS` have substantial missingness, so real New Delhi apportionment needs an imputation stage before the wind can drive the transport model. The roadmap should treat this CSV as the authoritative local source for both observed `pm25` and weather fields.
 
-There are references to FieldFormer-style data generation in the repository, but no local ImputeFormer implementation is currently visible in the tracked code paths. The implementation should therefore either locate the existing FieldFormer/ImputeFormer baseline used by the project or vendor/adapt it into a documented local path before claiming full New Delhi wind-imputation support.
+There are references to FieldFormer-style data generation in the repository, but no local FieldFormer implementation is currently visible in the tracked code paths. The paper's wind imputer is FieldFormer, a coordinate-query model. The implementation should therefore either locate the existing FieldFormer baseline used by the project or vendor/adapt it into a documented local path before claiming full New Delhi wind-imputation support.
 
 ### Data generation
 
@@ -147,7 +164,7 @@ sanity path runs without depending on `archive/`.
 
 Each task below is intended to be implemented in order. Later tasks should not assume future infrastructure exists.
 
-### Task 1: Runtime and dependency baseline
+### ~~Task 1: Runtime and dependency baseline~~
 
 **Objective**
 
@@ -183,7 +200,7 @@ Make the expected runtime environment explicit and add minimal smoke checks for 
 - It imports `sim.polsim`, builds a 40x40 grid, loads source maps, and exits successfully.
 - No tracked data artifacts are rewritten by the smoke check.
 
-### Task 2: Weather data and wind imputation
+### ~~Task 2: Weather data and wind imputation~~
 
 **Objective**
 
@@ -192,7 +209,7 @@ Build the real New Delhi wind pipeline from government `WD` and `WS` observation
 **Likely files**
 
 - New `data/pol_weather.py` or `model/iasa/wind.py`
-- Optional: `baselines/imputeformer/` if the FieldFormer/ImputeFormer implementation is vendored into this repo
+- Optional: `baselines/fieldformer/` if the FieldFormer implementation is vendored into this repo
 - Optional: `scripts/impute_new_delhi_wind.py`
 - Optional: `scripts/smoke_iasa_runtime.py`
 
@@ -205,7 +222,7 @@ Build the real New Delhi wind pipeline from government `WD` and `WS` observation
   - units and source column names
   - alignment with `pm25` observations
 - Treat `sim/govdata_1H_current.csv` as the authoritative local New Delhi weather and air-quality source.
-- Use the FieldFormer/ImputeFormer baseline implementation for wind imputation. If that implementation is not present in this repository, explicitly add or adapt it under a documented path such as `baselines/imputeformer/` or `model/imputation/`.
+- Use the FieldFormer coordinate-query baseline implementation for wind imputation. If that implementation is not present in this repository, explicitly add or adapt it under a documented path such as `baselines/fieldformer/` or `model/imputation/`.
 - Impute `WD` and `WS` over the selected experiment window before simulator use. Preserve both raw and imputed arrays for auditability.
 - Convert imputed meteorological direction and speed into simulator coordinates:
 
@@ -230,7 +247,7 @@ imputation_config
 direction_conversion_convention
 ```
 
-- Support both station-level wind fields and a city-level aggregate wind sequence. The v1 New Delhi apportionment path should use a city-level sequence unless spatially varying wind is implemented.
+- Support both station-level wind fields and a city-level aggregate wind sequence. The v1 New Delhi apportionment path uses a city-level sequence; the paper-facing New Delhi response is later upgraded to the gridded FieldFormer field in Task 9A. This task supplies the loaded/imputed station data and conversion that both paths share.
 
 **Outputs and artifacts**
 
@@ -240,13 +257,17 @@ direction_conversion_convention
 
 **Acceptance checks**
 
-- Loader reports 32 stations and the expected timestamp range for the local government CSV.
+- Loader reports 32 stations and the expected timestamp range for the local
+  government CSV. Per the paper, the record spans 21,960 hourly timestamps from
+  1 May 2018 through 31 October 2020 (IST), and the two Pusa monitors
+  (`Pusa_IMD`, `Pusa_DPCC`) are averaged by timestamp into `Pusa_averaged` at the
+  mean of their coordinates to yield the 32-sensor layout.
 - Raw `WD`/`WS` missingness masks are preserved.
 - Imputed `WD`/`WS` have no missing values over the selected experiment window.
 - Cardinal-direction conversion tests pass for known synthetic `WD`/`WS` cases.
 - `Vx` and `Vy` are aligned to the same timestamps used for `pm25` observations.
 
-### Task 3: Inventory source refactor
+### ~~Task 3: Inventory source refactor~~
 
 **Objective**
 
@@ -306,7 +327,7 @@ raw_metadata: dict
   loader is maintained.
 - Traffic time-of-day maps are available for constructing a diurnal traffic basis.
 
-### Task 3A: Clean slate active tree
+### ~~Task 3A: Clean slate active tree~~
 
 **Objective**
 
@@ -356,7 +377,7 @@ free of dependencies on archived files.
 - Source/weather tests, `scripts/smoke_iasa_runtime.py`, and
   `scripts/run_iasa_sanity.py` pass.
 
-### Task 4: Simulator support for inventory activities and wind providers
+### ~~Task 4: Simulator support for inventory activities and wind providers~~
 
 **Objective**
 
@@ -457,7 +478,7 @@ theta_k(t) >= 0
 - Activity metadata records source-default assumptions, the industry operating
   fraction, and the seed used for deterministic proxy profiles.
 
-### Task 5: Open-boundary Gaussian puff response matrix builder
+### ~~Task 5: Open-boundary Gaussian puff response matrix builder~~
 
 **Objective**
 
@@ -585,7 +606,7 @@ zero_wind_orientation
 - For each source group and temporal basis component, generate an open-boundary unit response and record its sensor trajectory.
 - Stack each `(source group, temporal basis component)` fingerprint into one column. Constant source activities are represented as the special case with one constant temporal basis per source.
 - Support response-matrix construction under:
-  - city-level imputed New Delhi wind from the required ImputeFormer pipeline
+  - imputed New Delhi wind from the required FieldFormer pipeline (city-level v1 or gridded field)
   - single-direction synthetic wind
   - progressively more diverse synthetic wind regimes
   - fixed supplied `Vx/Vy` arrays
@@ -664,7 +685,7 @@ Task 5 should also create the reusable tiny sanity runner that later tasks exten
 --strict-all
 ```
 
-The default sanity setup should be fully synthetic and should not require New Delhi data or ImputeFormer training:
+The default sanity setup should be fully synthetic and should not require New Delhi data or FieldFormer training:
 
 ```text
 grid size: 16x16
@@ -770,7 +791,7 @@ max_abs(retained_mass + dropped_mass - emitted_mass) <= 1e-5
 If the response approximation is intentionally diffuse, adjust only the ratio
 thresholds, not the qualitative checks.
 
-### Task 6: Background basis and projection
+### ~~Task 6: Background basis and projection~~
 
 **Objective**
 
@@ -903,7 +924,7 @@ overflexible_projection_visibility_ratio < normal_projection_visibility_ratio
 overflexible_background_absorption_ratio > normal_background_absorption_ratio
 ```
 
-### Task 6A: PyTorch computational backend consolidation
+### ~~Task 6A: PyTorch computational backend consolidation~~
 
 **Objective**
 
@@ -1334,114 +1355,313 @@ The end-to-end gate must verify:
 
 Task 10 should not begin until Gates S1 through S6 pass, except when a gate is explicitly marked blocked with a documented implementation reason.
 
+### Task 9A: Gridded FieldFormer wind field and transport ensembles
+
+**Objective**
+
+Upgrade the New Delhi wind input from the v1 city-level sequence to the
+paper-facing gridded FieldFormer field, and add transport ensembles. The paper
+(`4.method.tex`, Section "Masked Wind Preparation") specifies a coordinate-query
+imputer queried on every response-grid cell and hour.
+
+**Likely files**
+
+- `model/iasa/wind.py`
+- `scripts/impute_new_delhi_wind.py`
+- Optional: `baselines/fieldformer/` if the coordinate-query imputer is vendored locally
+- `model/iasa/response.py` (sampler adapter only)
+
+**Implementation details**
+
+- Convert observed `WD/WS` to transport vectors with the paper convention
+  `Ux = -WS*sin(WD*pi/180)`, `Vy = -WS*cos(WD*pi/180)`.
+- Supply masked station vectors to a FieldFormer coordinate-query wind imputer
+  and query it on every response-grid cell `x_g` and hour `t`:
+
+```text
+w_hat_t(x_g) = f_omega(x_g, t; {(z_i, t', u_i, m_i)})   for g = 1..n
+```
+
+  producing a gridded field `W_hat in R^(T x n x 2)` rather than a station-only
+  or city-averaged sequence.
+- Feed the gridded field through the existing `WindSampler`
+  `sample(t, position_xy) -> [Vx, Vy]` interface so the Task 5 response builder,
+  diagnostics, and fitting APIs are unchanged.
+- Convert physical velocity to grid displacement before puff advection using the
+  recorded `dt_s`, `dx_m`, `dy_m` scales, and store the scales and convention in
+  the response artifact.
+- Build wind-field ensembles `{w_hat^(r)}` from held-out-calibrated prediction
+  error, station bootstrap resampling, checkpoint ensembles, or
+  validation-residual-matched perturbations. Query each member on the same grid,
+  convert to displacement, and tag the resulting responses with
+  `ensemble_kind="transport"`.
+- Keep the v1 city-level provider available for smoke checks under a distinct
+  provider label; the gridded field is the default for paper-facing New Delhi
+  results.
+- Validate on real data by masking observed station vectors and measuring
+  held-out station-time vector, direction, and speed error; dense city-wide wind
+  truth is not assumed.
+
+**Outputs and artifacts**
+
+- Gridded FieldFormer wind product with raw values, masks, station coordinates,
+  held-out splits, model/checkpoint metadata, seed, device/dtype, and the
+  gridded query field used by the response operator.
+- Transport wind-field ensembles tagged `ensemble_kind="transport"`.
+
+**Acceptance checks**
+
+- The gridded field has shape `[T, n, 2]` aligned to the response grid.
+- Held-out station-time error is reported over a masked validation split.
+- A gridded field drives `build_lagged_response_matrix` through the sampler with
+  no change to response/diagnostics/fitting signatures.
+- Ensemble members are tagged `transport` and never pooled with inventory
+  scenarios.
+
+### Task 9B: Per-sensor footprints and spatial attribution
+
+**Objective**
+
+Implement the per-sensor contribution decomposition and sensor footprints of the
+paper (`5.theory.tex`, "Per-Sensor Source Footprints and Spatial Attribution"),
+so that each monitor's fitted signal is resolved into contributing source groups
+and spatial cells of origin.
+
+**Likely files**
+
+- New `model/iasa/footprints.py`
+- Update `model/iasa/reporting.py`
+- Update `model/iasa/diagnostics.py` (per-sensor submatrix inheritance note)
+
+**Implementation details**
+
+- Because the response is linear in `c`, the background-corrected fit decomposes
+  exactly per observed row `(s,t)`:
+
+```text
+y_tilde_{s,t} = sum_{k,b} H_tilde_{Phi,(s,t),(k,b)} * c_hat_{kb}
+```
+
+  Report the contribution of source `k` to sensor `s` over the record as
+  `Y_hat^{(s)}_k = sum_t sum_b H_lag_{(s,t),(k,b)} * c_hat_{kb}`. Expose both the
+  projected (identifiable) and unprojected (raw fitted) forms.
+- Construct the sensor footprint as the nonnegative pullback of the sensor's
+  response row onto the source grid:
+
+```text
+F_{s,t}(i) = sum_{ell in L_t} [ O G^partial_{t,t-ell}(w_hat) ]_{s,i} >= 0,
+F_s(i) = sum_t F_{s,t}(i)
+```
+
+  weighting by `phi_b(t-ell)`, the inventory map `s_k`, and `c_hat_{kb}` to
+  resolve each source group's contribution to each sensor by cell of origin.
+  This reuses the Task 5 puff response read backward from the sensor; no new
+  transport operator is built.
+- Record the inheritance guarantee: for the per-sensor row submatrix
+  `H_tilde^{(s)}`, `sigma_J(H_tilde^{(s)}) <= sigma_J(H_tilde)` and
+  `rank(H_tilde^{(s)}) <= rank(H_tilde)`, so a single sensor is never more
+  identifiable than the pooled network.
+- Aggregate per-sensor source shares to the identifiable report groups from
+  Task 9 wherever the pooled diagnostics require grouping; never assert a
+  per-sensor separation finer than the global resolution.
+
+**Outputs and artifacts**
+
+- Per-sensor source-group contribution tables (projected and raw).
+- Nonnegative footprint fields `F_s(i)` over source cells per sensor and source
+  group.
+
+**Acceptance checks**
+
+- Per-sensor contributions sum to the fitted sensor-time signal.
+- Footprints are nonnegative and localize known upwind source origins on
+  controlled trials.
+- Per-sensor shares aggregate to report groups and never exceed the pooled
+  identifiable resolution.
+
+### Task 9C: Constrained end-to-end refinement (optional)
+
+**Objective**
+
+Implement the optional constrained refinement stage of the paper
+(`4.method.tex`, "Constrained End-to-End Refinement"; `6.algorithm.tex`,
+"Acceptance Criteria for Refinement") that jointly corrects wind, dispersion,
+source, and background coefficients only within physical limits and only when
+identifiability is preserved.
+
+**Likely files**
+
+- New `model/iasa/refine.py`
+- Update `model/iasa/fit.py`
+
+**Implementation details**
+
+- Initialize at the fixed-response IASA solution (pretrained wind, default
+  dispersion). Refine wind-imputer parameters `phi`, dispersion `psi`
+  (`sigma_parallel`, `sigma_perp`, minimum dispersion age), source coefficients
+  `c >= 0`, and background coefficients `gamma` by minimizing
+
+```text
+L_refine = ||Y - H_lag(phi,psi) c - Q gamma||^2
+         + lambda_theta R(c)
+         + lambda_w ||w_phi - w_phi0||^2
+         + lambda_psi ||psi - psi0||^2
+         + lambda_sm R_sm(w_phi)
+```
+
+  subject to `c >= 0`, `psi in Psi_phys`, and
+  `||w_phi - w_phi0||_inf <= eps_w`.
+- Accept the refined response only if it does not degrade separability:
+
+```text
+sigma_J(H_tilde_ref) >= (1 - eta_id) * sigma_J(H_tilde_0)
+max_{i!=j, i,j not in W} rho_ij^ref <= tau_rho^ref   (default tau_rho^ref = tau_rho)
+```
+
+  If either response has fewer than `J` numerically nonzero singular values, its
+  `sigma_J` is taken as zero, so refinement cannot be accepted by exploiting a
+  rank-deficient response.
+- Report the refined solution with its own response diagnostics, and keep the
+  fixed-response solution as the default reported estimate. Refinement is an
+  optional stage, not the primary estimator.
+
+**Outputs and artifacts**
+
+- Refined wind/dispersion/source/background estimates with the refinement
+  acceptance decision and pre/post identifiability diagnostics.
+
+**Acceptance checks**
+
+- Refinement stays within `eps_w` and `Psi_phys`.
+- A refinement that lowers `sigma_J` below the acceptance threshold or raises
+  eligible coherence above `tau_rho^ref` is rejected.
+- The fixed-response estimate remains available and is the default report.
+
 ### Task 10: Controlled experiment suite
 
 **Objective**
 
-Implement the paper's one-factor controlled experiment matrix on the New Delhi
-platform after Gates S1--S6 pass.
+Implement the paper's Experiment 1--10 controlled matrix on the single New Delhi
+platform after Gates S1--S6 pass. The paper (`7.evaluation.tex`) fixes one
+platform -- one regulatory sensor geometry, one PM2.5/wind record, one set of
+proxy inventories -- and `8.evaluation.tex` varies exactly one controlled axis
+per experiment. This task implements that platform and the ten experiments;
+Task 11 produces the matching result tables.
 
 **Likely files**
 
-- New `experiments/iasa_pol/`
+- New `experiments/iasa_pol/` with `configs/`, `run_experiment.py`, `summarize_results.py`
 - New scripts under `scripts/` or `experiments/iasa_pol/`
-- New IASA data loading utilities if experiment-specific loaders are needed
-- New IASA evaluation utilities if experiment-specific metrics are needed
+- `sim/polsim.py` retained and labeled as the Experiment 5 structural
+  edge-hold PDE generator
+- New IASA data loading and evaluation utilities if experiment-specific loaders/metrics are needed
 
 **Implementation details**
 
-Define one shared base configuration, then reproducible one-factor sweeps for:
+Define the single shared New Delhi base platform, then implement one-factor
+experiments. Every wind, source, background, and geometry comparison must use
+identical source, temporal-basis, sensor, observation-mask, and background
+columns on both sides. Real imputed New Delhi wind is used as a controlled
+transport input with synthetic coefficients; the observed-PM2.5 mode is a
+separate evaluation and is never assigned synthetic recovery metrics.
 
-- Noise levels.
-- Wind regimes:
-  - constant wind
-  - single-direction synthetic wind
-  - diurnal wind
-  - AR(1)-perturbed wind
-  - multi-directional episodes
-  - real imputed New Delhi wind
-- Sensor layouts:
-  - regulatory layout
-  - random layouts
-  - downwind-focused layouts
-  - layouts optimized for larger `sigma_J(H_tilde)` or lower maximum eligible coherence
-- Background bases:
-  - no background
-  - preregistered primary rank-four basis: constant, centered linear trend,
-    first daily sine, and first daily cosine
-  - preregistered redundant/source-independent sensitivity bases
-  - intentionally over-flexible source-like stress basis
-- Source group variants:
-  - base named inventories
-  - spatial splits such as north/south, near/far, or upwind/downwind
-  - deliberately coherent source pairs for controlled ambiguity tests
-- Activity-basis variants:
-  - constant source activities
-  - traffic diurnal profiles
-  - brick-kiln intermittent profiles
-  - industry day-to-day profiles
-  - mixed temporal bases with known synthetic coefficients
-- Lag candidates derived before fitting from physical travel/residence bounds.
-  For every adjacent pair, compute
-  `||H(L+delta)-H(L)||_F / max(||H(L+delta)||_F, eps)`, select the smallest
-  `L` at or below `tau_L=1e-3`, and retain rank, condition, and component
-  stability across the sweep. The observation row count must remain fixed.
-- Inventory robustness variants with tagged changes to source locations, map
-  scales, category assignments, and inventory versions.
-- Omitted-source adequacy variants containing both a residual-visible signature
-  outside `span([H_lag, Q])` and an aligned signature inside that span.
-- Historical and simulated wind-window ensembles for distributional network
-  diagnostics, with fixed source/basis/sensor/mask/background definitions.
+Implement the paper's ten controlled experiments:
 
-Every wind-diversity comparison must use identical source, temporal-basis,
-sensor, observation-mask, and background columns. Real imputed New Delhi wind
-is included as a controlled transport input with synthetic coefficients, not as
-an observed-source ground-truth experiment.
+- **Experiment 1 -- conditioning predicts recovery.** Vary source geometry and
+  Gaussian observation noise at 0%, 1%, 5%, 10%, 20% of the maximum clean sensor
+  signal. Compare coefficient and reconstructed-activity error against
+  `sigma_J`, numerical/effective rank, condition number, and visibility.
+- **Experiment 2 -- coherent sources require grouped reporting.** Form
+  increasingly coherent source pairs by shifting a copy of one inventory map by a
+  controlled spatial offset (smaller shift drives coherence toward one). Compare
+  individual-source error with summed activity/sensor-contribution error of each
+  recommended connected component; retain the triggering source--basis pair.
+- **Experiment 3 -- background correction can help or hurt.** Compare no
+  background, the primary rank-four basis (constant, centered linear trend, first
+  daily sine, first daily cosine), a redundant-column basis with the same span,
+  and a labeled source-like stress basis. Audit through visibility and the
+  removed/raw absorption ratio. Every basis is declared before fitting; none is
+  selected from `Y` or its recovery score.
+- **Experiment 4 -- wind diversity and sensor geometry change resolution.**
+  Evaluate matched columns under constant, single-direction, diurnal, AR(1),
+  multi-directional, and real imputed New Delhi wind, crossed with sensor
+  layouts: regulatory, seeded random, downwind-focused, and layouts selected to
+  increase `sigma_J` or reduce maximum eligible coherence. Add separate
+  historical and simulated wind-window ensembles for the 5th/50th/95th
+  percentiles of `sigma_J`, rank probabilities, coefficient-weakness
+  probabilities, pairwise-ambiguity probabilities, and conservative-component
+  frequencies.
+- **Experiment 5 -- transport error is amplified by ill-conditioning.** Use two
+  kinds of transport error: (a) *parametric* perturbations of wind speed,
+  direction, and dispersion within the puff family, and (b) a *structural*
+  mismatch that generates observations with the auxiliary edge-hold
+  advection--diffusion PDE (`sim/polsim.py`: first-order upwind advection,
+  five-point Laplacian, two-stage Heun, diffusivity `3e-4`, edge-hold
+  boundaries) while fitting with the open-boundary puff response. Report operator
+  error norm, coefficient/activity error, residual, and singular spectrum
+  together. Parametric transport ensembles may support transport-uncertainty
+  intervals; the structural case additionally drives the residual-adequacy test
+  and reports its rejection rate.
+- **Experiment 6 -- inventory error changes the attribution target.** Perturb
+  inventory locations, spatial scales, category assignments, and map versions
+  with transport held fixed. Each alternative inventory is a separate robustness
+  scenario, never pooled with Experiment 5 transport error and never reported as
+  a confidence interval.
+- **Experiment 7 -- lag-window sensitivity.** Derive the candidate grid from
+  physical travel/residence times. For adjacent candidates compute
+  `||H(L+delta)-H(L)||_F / max(||H(L+delta)||_F, eps)`, select the smallest `L`
+  at or below `tau_L=1e-3`, and report rank, conditioning, and report-component
+  stability across the grid. The observation row count stays fixed and fitted
+  coefficients are never used for selection.
+- **Experiment 8 -- missing-source model adequacy.** Omit either a
+  residual-visible source outside `span([H_lag, Q])` or an aligned source whose
+  signature lies inside that span. Evaluate the refitted parametric-bootstrap
+  test (independently declared Gaussian noise covariance, 1,000 replicates,
+  `alpha=0.05`) for calibration and power. The aligned case is a required
+  negative control demonstrating that non-rejection cannot certify inventory
+  completeness.
+- **Experiment 9 -- temporal-basis recovery.** Reconstruct known traffic
+  diurnal, brick-kiln intermittent, industry day/night, and mixed source--basis
+  coefficients at increasing noise, separating coefficient error from
+  reconstructed activity-trajectory error.
+- **Experiment 10 -- per-sensor footprints and spatial attribution.** On
+  controlled trials with known source origins, verify the Task 9B footprints
+  localize the responsible upwind cells and that per-sensor contributions sum to
+  the fitted sensor signal. On observed New Delhi data, report per-monitor fitted
+  source-group contributions and their spatial cells of origin, aggregated to the
+  identifiable report groups.
 
-Map the experiment suite to the new paper hypotheses:
+The experiments map to the paper's hypotheses as follows: Experiment 1 -> H1
+(conditioning predicts recovery), Experiment 2 -> H2 (coherent sources merged),
+Experiment 3 -> H3 (background helps or hurts), Experiment 4 -> H4 (wind
+diversity and geometry change resolution), Experiment 5 -> H5a (transport error),
+Experiment 6 -> H5b (inventory robustness). Do not encode the expected direction
+of any hypothesis as an empirical conclusion before results exist.
 
-- H1: Singular values predict attribution stability.
-- H2: High-coherence groups should be merged.
-- H3: Background correction can help or hurt.
-- H4: Wind diversity and sensor geometry change resolution. Include a dedicated wind-diversity sweep where all else is fixed and wind changes from single-direction transport to increasingly diverse directions.
-- H5a: Wind, dispersion, and transport-operator error amplify attribution error.
-- H5b: Inventory perturbation and misspecification alter source-specific
-  attribution and must be reported as robustness scenarios.
-
-For the wind-diversity sweep, report numerical/effective rank, `sigma_J`,
-condition status, weak coefficients, maximum eligible coherence, minimum ray
-distance, report components, and source-activity error. Do not encode the
-expected direction as an empirical conclusion before results exist.
-
-Add a separate temporal-recovery family for traffic diurnal, brick-kiln
-intermittent, industry day/night, and mixed bases. H5a includes controlled
-wind/dispersion perturbations and the explicitly labeled edge-hold-PDE versus
-open-boundary-puff mismatch. H5b never contributes draws to H5a uncertainty
-intervals.
-
-For residual adequacy, use an independently declared Gaussian noise covariance,
-run 1,000 refitted bootstrap replicates for paper results, and report calibration
-and power across omitted-source strength. The aligned omitted-source case is a
-required negative control: it may pass and must be explained as evidence that
-adequacy non-rejection cannot certify inventory completeness.
+Also implement the observed-New-Delhi study mode (real PM2.5, its observation
+mask, gridded imputed wind, named normalized inventories, declared proxy temporal
+bases) with no ground-truth source activities; it reports residuals, geometry,
+uncertainty, weak/ambiguous coefficients, normalized proxy contributions, and
+recommended report groups rather than recovery error.
 
 **Outputs and artifacts**
 
-- Configured experiment runs.
+- Configured Experiment 1--10 runs plus the observed New Delhi run.
 - Saved `H_lag`, `H_tilde`, masks, diagnostics, fits, uncertainty, report
-  components, lag sweeps, adequacy results, inventory scenarios,
-  wind-distribution summaries, device/dtype, and evaluation outputs.
+  components, per-sensor footprints, lag sweeps, adequacy results, inventory
+  scenarios, wind-distribution summaries, device/dtype, and evaluation outputs.
 - Summary CSV or JSON tables for analysis.
 
 **Acceptance checks**
 
-- Each H1--H5b hypothesis and temporal-recovery family has at least one runnable
-  one-factor configuration.
+- Each of Experiments 1--10 has at least one runnable one-factor configuration.
 - Results include both attribution accuracy and identifiability diagnostics.
 - Runs are reproducible from saved config and seed.
 - The primary `Q`, lag rule, fixed-zero mask, and inventory version are
   recoverable from provenance and are not selected from final fit quality.
 - Transport and inventory ensembles remain type-separated through aggregation.
+- The Experiment 5 structural generator is labeled `edge_hold_pde` and is never
+  silently substituted for the open-boundary puff response.
 
 ### Task 11: Evaluation and reporting
 
@@ -1454,6 +1674,7 @@ the paper's result placeholders.
 
 - New `evaluation/eval_pol_iasa.py`
 - New `model/iasa/reporting.py`
+- `model/iasa/footprints.py` (from Task 9B) for per-sensor spatial attribution tables
 - Optional plotting scripts
 
 **Implementation details**
@@ -1485,10 +1706,18 @@ Compute:
   `alpha`, replicate count, noise-model provenance, and sensor/time/ACF
   summaries. Never serialize an adequacy pass for an uncalibrated run.
 - Correlation between diagnostics and attribution error across experiment sweeps.
+- Per-sensor footprint localization error against known source origins
+  (controlled trials) and the per-sensor contribution reconstruction, verifying
+  contributions sum to the fitted sensor signal.
+- Held-out New Delhi wind-imputation validation: station-time vector error,
+  direction/speed error, mask coverage, query-grid resolution, checkpoint, seed,
+  and device/dtype metadata.
 - Real New Delhi summaries from observed-only PM2.5 rows, imputed `WD/WS`, named
   inventories, and temporal activity bases, without source-ground-truth error.
 - Normalized proxy coefficient/activity tables and sensor-space source/group
   contribution tables with active-set and transport/bootstrap intervals.
+- Per-monitor fitted source-group contributions and their spatial cells of
+  origin, aggregated to the identifiable report groups.
 - Inventory-version scenario tables kept separate and labeled as robustness,
   not confidence intervals.
 - Wind-distribution tables containing 5th/50th/95th percentiles of `sigma_J`,
@@ -1499,14 +1728,20 @@ Compute:
 - If percentages are shown, label them as fractions of the fitted
   inventory-attributed sensor signal, never physical-emission shares.
 
-Produce:
+Produce tables matching the paper's evaluation result subsections
+(`8.evaluation.tex`):
 
-- Human-readable run summaries.
-- Machine-readable result files.
-- Tables matching every placeholder subsection in the paper evaluation.
+- Controlled result tables, one per Experiment 1--10 (conditioning/recovery;
+  coherence/grouped reporting; background stress; wind diversity and sensor
+  geometry; transport error; inventory robustness; lag-window selection;
+  missing-source adequacy; temporal-basis recovery; per-sensor footprints).
+- Observed New Delhi result tables: wind-imputation validation; identifiability
+  and report groups; proxy apportionment and uncertainty; sensor fit and residual
+  diagnostics.
+- Human-readable run summaries and machine-readable result files.
 - New Delhi tables that clearly separate identifiable source-level contributions from merged or ambiguous groups.
-- H5a transport uncertainty and H5b inventory robustness tables that cannot be
-  mistaken for one combined interval.
+- Experiment 5 transport-uncertainty and Experiment 6 inventory-robustness tables
+  that cannot be mistaken for one combined interval.
 
 **Outputs and artifacts**
 
@@ -1519,6 +1754,8 @@ Produce:
 - Evaluation aggregates multiple runs into one summary table.
 - Grouped metrics are reported whenever a non-singleton report component exists.
 - New Delhi smoke run emits an apportionment report without requiring ground-truth source activities.
+- Per-sensor contribution and footprint tables are produced, with contributions
+  summing to the fitted sensor signal and shares aggregated to report groups.
 - Undefined weak-pair metrics remain `null` through single-run and aggregate
   reporting.
 - An `A-B-C` chain retains both trigger edges in the aggregate report.
@@ -1545,7 +1782,9 @@ are outside the active repository contract.
 
 ```text
 1. Build or load named inventories.
-2. Load and impute New Delhi `WD/WS`, or choose a synthetic wind provider.
+2. Load and impute New Delhi `WD/WS` into a gridded FieldFormer wind field
+   queried per response-grid cell, or choose a synthetic wind provider; build
+   transport wind-field ensembles as needed.
 3. Build temporal activity bases.
 4. Declare the primary Q, lag-candidate grid, inventory version, and any
    fixed-zero coefficient mask.
@@ -1555,9 +1794,12 @@ are outside the active repository contract.
 8. Run realized-wind and, when requested, wind-distribution diagnostics.
 9. Fit nonnegative source-basis coefficients and check residual adequacy when a
    calibrated noise model is available.
-10. Report source contributions, observation/transport uncertainty, inventory
-    robustness, and conservative merge recommendations.
-11. Evaluate controlled experiments and real New Delhi apportionment.
+10. Optionally run constrained end-to-end refinement, accepting it only if it
+    does not degrade identifiability.
+11. Report source contributions, per-sensor contributions and footprints,
+    observation/transport uncertainty, inventory robustness, and conservative
+    merge recommendations.
+12. Evaluate controlled Experiments 1--10 and real New Delhi apportionment.
 ```
 
 - State that pandas/NumPy are ingestion and serialization tools while response,
@@ -1709,6 +1951,35 @@ Y_tilde.shape == (num_observed_pm25_rows,)
 - Clearly separated sources remain separate and weak sources remain independent
   flags rather than invented edges.
 
+### Gridded wind tests
+
+- The FieldFormer imputer queried on the response grid returns a field of shape
+  `[T, n, 2]` aligned to the grid cells.
+- Held-out station-time vector, direction, and speed error are reported over a
+  masked validation split.
+- A gridded field drives `build_lagged_response_matrix` through the `WindSampler`
+  interface with no change to response/diagnostics/fitting signatures.
+- Wind-field ensemble members are tagged `ensemble_kind="transport"` and are
+  rejected from any pooling with inventory scenarios.
+
+### Per-sensor footprint tests
+
+- Per-sensor contributions sum to the fitted sensor-time signal.
+- Footprint fields are nonnegative and localize a known upwind source origin on a
+  controlled trial.
+- Deleting rows to a single sensor never increases `sigma_J` or rank
+  (`sigma_J(H_tilde^(s)) <= sigma_J(H_tilde)`), and per-sensor shares aggregate to
+  report groups.
+
+### Constrained-refinement tests
+
+- Refinement stays within the `eps_w` wind-drift cap and the physical dispersion
+  set `Psi_phys`.
+- A refinement that lowers `sigma_J` below `(1 - eta_id) * sigma_J(H_tilde_0)` or
+  raises eligible coherence above `tau_rho^ref` is rejected.
+- The fixed-response estimate remains available and is the default reported
+  result.
+
 ### Clean-slate regression tests
 
 - The active tree does not depend on ignored `archive/` files.
@@ -1753,6 +2024,8 @@ model/iasa/
   diagnostics.py    # rank, singular values, coherence, visibility, absorption
   fit.py            # NNLS / nonnegative fitting
   merge.py          # merge recommendations
+  footprints.py     # per-sensor contribution decomposition and spatial footprints
+  refine.py         # optional constrained end-to-end refinement
   reporting.py      # summaries and tables
 ```
 
@@ -1781,10 +2054,14 @@ experiments/iasa_pol/
 Optional baseline or imputation area:
 
 ```text
-baselines/imputeformer/
+baselines/fieldformer/
 ```
 
-Use this path only if the FieldFormer/ImputeFormer implementation is not already available elsewhere in the project. The roadmap should document whether the code is vendored, referenced as an external dependency, or reimplemented locally.
+The paper's wind imputer is FieldFormer, a coordinate-query model queried on the
+response grid (`4.method.tex`). Use this path only if that implementation is not
+already available elsewhere in the project. The roadmap should document whether
+the code is vendored, referenced as an external dependency, or reimplemented
+locally.
 
 ## 6. Defaults and Assumptions
 
@@ -1806,7 +2083,22 @@ Use this path only if the FieldFormer/ImputeFormer implementation is not already
 - Traffic should have a diurnal activity basis, brick kilns should support seasonal or intermittent activity, and industry should support day-to-day or slowly varying activity.
 - The response-matrix builder should support fixed supplied `Vx/Vy` sequences, imputed New Delhi wind, and synthetic wind providers.
 - Paper-facing `H_lag` construction should prefer the dedicated open-boundary puff/plume response implementation over minimal reuse of the current edge-hold PDE simulator.
-- Spatially varying wind can be added after v1; a city-level imputed wind sequence is acceptable for the first open-boundary response path if the metadata documents that choice.
+- A city-level imputed wind sequence is acceptable for the v1 open-boundary
+  response path if the metadata documents that choice, but the paper-facing New
+  Delhi response uses the gridded FieldFormer wind field queried per response-grid
+  cell (Task 9A). The city-level sequence and the gridded field share the same
+  `WindSampler` interface, so upgrading does not change response, diagnostics, or
+  fitting APIs.
+- Wind-imputation uncertainty is propagated through transport wind-field
+  ensembles tagged `ensemble_kind="transport"`; these may support uncertainty
+  intervals and are never pooled with inventory scenarios.
+- Per-sensor footprints and per-sensor contributions are spatial overlays of the
+  same global fit; per-sensor source shares are asserted only at the globally
+  identifiable resolution and aggregate to report groups where the pooled
+  diagnostics require it.
+- Constrained end-to-end refinement is optional; the fixed-response estimate is
+  the default report, and refinement is accepted only if it does not degrade
+  `sigma_J` or raise eligible coherence above `tau_rho^ref`.
 - Background projection should be implemented before diagnostics and fitting, because the new paper treats `H_tilde` as the central object.
 - After ingestion, use PyTorch for response, projection, diagnostics, fitting,
   covariance, and ensemble computation. SciPy is not a required dependency.
@@ -1828,7 +2120,7 @@ Use this path only if the FieldFormer/ImputeFormer implementation is not already
 - Independently normalized inventory coefficients are normalized proxy units,
   not physical emission totals or physical source shares.
 - Any generated large matrices or experiment outputs should go under `logs/` or a clearly named generated-data path, not be committed by default.
-- If the FieldFormer/ImputeFormer code is not present in this repo, adding or adapting it is required before the real New Delhi apportionment experiment can be considered complete.
+- If the FieldFormer code is not present in this repo, adding or adapting it is required before the real New Delhi apportionment experiment can be considered complete.
 
 ## 7. Implementation Milestones
 
@@ -1867,12 +2159,20 @@ Deliverable:
 
 ### Milestone C: Paper-style experiments
 
-Complete Tasks 10 and 11.
+Complete Tasks 9A, 9B, 9C, 10, and 11.
 
 Deliverable:
 
-- Controlled sweeps evaluate H1--H5b, lag selection, missing-source adequacy,
-  and realized/distributional wind diagnostics.
+- Gridded FieldFormer wind field and transport ensembles drive the paper-facing
+  New Delhi response.
+- Per-sensor footprints and spatial attribution are available for controlled and
+  observed runs.
+- Optional constrained refinement is available and gated on identifiability.
+- Controlled Experiment 1--10 runs cover conditioning/recovery, coherence
+  grouping, background stress, wind diversity and geometry, transport error,
+  inventory robustness, lag selection, missing-source adequacy, temporal-basis
+  recovery, and per-sensor footprints, plus realized/distributional wind
+  diagnostics.
 - Results tables connect attribution error to response-matrix geometry.
 - New Delhi tables report source-level and merged-source apportionment numbers.
 
