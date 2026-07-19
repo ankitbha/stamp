@@ -1233,6 +1233,19 @@ Run the nonnegative fitter. The gate must verify:
 - A mask case confirms the full result restores exact declared zeros and that a
   fitted near-zero unmasked coefficient does not trigger post-hoc column removal.
 - An uncalibrated residual case emits summaries but no adequacy decision.
+- A synthetic temporal case with a multi-column temporal basis `Phi` recovers a
+  known diurnal traffic profile and an intermittent brick-kiln profile within
+  tolerance, confirming the source-activity reconstruction
+  `theta_k(t) = sum_b c_kb phi_b(t)` and its contribution summaries (diurnal
+  mean, active-period fraction, day-to-day totals).
+- A calibrated case with a **residual-visible** omitted signal is detected: the
+  observed `T_res` exceeds the bootstrap `(1 - alpha)` quantile and inadequacy is
+  flagged, while a correctly specified fit is not systematically rejected.
+- A calibrated case whose omitted signal lies in `span([H_lag, Q])` is absorbed
+  by the fitted source and background terms and is **not** detected: `T_res`
+  stays within the bootstrap null and no inadequacy is declared. This
+  demonstrates that non-rejection does not establish inventory completeness, in
+  contrast with the residual-visible case above.
 
 Suggested pass/fail tolerances:
 
@@ -1242,6 +1255,11 @@ noisy_relative_coefficient_error <= 0.1
 residual_norm < zero_model_residual_norm
 min(c_hat) >= -1e-8
 duplicate_pair_sum_error <= 1e-4 in noiseless duplicate case
+temporal_relative_activity_error <= 0.1 in noiseless temporal case
+residual_visible_omission_inadequate == true
+residual_visible_omission_T_res > correctly_specified_T_res
+span_absorbed_omission_inadequate == false
+span_absorbed_omission_T_res within bootstrap null (<= (1-alpha) quantile)
 ```
 
 ### Task 9: Merge recommendation system
@@ -1351,9 +1369,47 @@ The end-to-end gate must verify:
   dtype, and response boundary metadata.
 - The well-conditioned case recovers source coefficients.
 - The duplicate-source case recommends a merge and reports stable merged contribution.
+- The fit is exercised on a `H_tilde` produced by the open-boundary response
+  builder and background projection (not a hand-constructed matrix), at a
+  representative multi-source, multi-basis, multi-sensor scale, confirming that
+  projected FISTA converges and recovers coefficients in the response-derived
+  regime the experiments use. This closes the gap that Gate S4 only exercises the
+  solver on small synthetic matrices.
 - Generated artifacts are small and go to `logs/` or `/tmp`, not tracked source paths.
 
-Task 10 should not begin until Gates S1 through S6 pass, except when a gate is explicitly marked blocked with a documented implementation reason.
+**Gate S7 (adequacy calibration study), completed before Task 10 begins.** Gate
+S4 confirms the adequacy check on single instances; Gate S7 confirms it is
+statistically calibrated so the p-values the experiments report can be trusted.
+Extend the sanity runner with `--gate calibration`. Under a correctly specified,
+externally calibrated noise model, simulate a predeclared number of independent
+observation sets, refit each, run the refitted parametric-bootstrap adequacy
+check, and estimate the empirical rejection rate at `alpha`. The gate must
+verify:
+
+- The empirical false-positive (rejection) rate of a correctly specified model is
+  close to the nominal `alpha`, within Monte Carlo error for the configured
+  number of trials.
+- The bootstrap-calibrated `p`-values of correctly specified fits are
+  approximately uniform on `[0, 1]` (report a distributional summary, e.g.
+  quantiles or a Kolmogorov--Smirnov-style statistic, without tuning to pass).
+- A misspecified model with an increasing omitted-signal amplitude yields
+  monotonically increasing power (rejection probability rises toward 1).
+- The study is deterministic under a fixed seed and records trial count, `alpha`,
+  bootstrap replicate count per trial, and noise-model provenance.
+
+Suggested pass/fail tolerances:
+
+```text
+correctly_specified_rejection_rate within alpha +/- 2 * sqrt(alpha (1-alpha) / n_trials)
+p_value_ks_statistic <= configured_uniformity_threshold
+power_increases_monotonically_with_omission_amplitude == true
+```
+
+This gate is heavier than S1--S6 (nested bootstrap over many trials); run it on a
+GPU allocation with batched refits and a modest per-trial replicate count.
+
+Task 10 should not begin until Gates S1 through S7 pass, except when a gate is
+explicitly marked blocked with a documented implementation reason.
 
 ### Task 9A: Gridded FieldFormer wind field and transport ensembles
 
@@ -1857,9 +1913,11 @@ Task 5 complete -> Gate S1 response sanity passes
 Task 6 complete -> Gate S2 projection sanity passes
 Task 6A complete -> PyTorch CPU/CUDA parity and device-preservation checks pass
 Task 7 complete -> Gate S3 diagnostic sanity passes
-Task 8 complete -> Gate S4 fitting sanity passes
+Task 8 complete -> Gate S4 fitting sanity passes (incl. temporal recovery and
+                   residual-visible / span-absorbed adequacy cases)
 Task 9 complete -> Gate S5 merge sanity passes
 Before Task 10 -> Gate S6 minimal end-to-end IASA sanity passes
+Before Task 10 -> Gate S7 adequacy calibration study passes
 ```
 
 These sanity gates are not replacements for the unit tests below. Unit tests check local contracts; sanity gates check whether the assembled method behaves as intended on toy scientific cases.
