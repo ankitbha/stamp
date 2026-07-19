@@ -100,6 +100,59 @@ class CityWindSampler:
 
 
 @dataclass(frozen=True)
+class GriddedWindSampler:
+    """Sampler over a gridded wind field ``[T, Nx, Ny, 2]`` (Task 9A).
+
+    Implements the ``WindSampler`` protocol so a spatially varying field drives
+    ``build_lagged_response_matrix`` with no change to response/diagnostics/fitting
+    signatures. ``sample`` does bilinear spatial interpolation over grid cells
+    (clamped to the grid) and linear temporal interpolation; it returns the
+    grid-displacement vector ``[vx, vy]`` (cells per response step).
+    """
+
+    field: np.ndarray  # [T, Nx, Ny, 2] grid displacement
+    provider: str
+    metadata: dict[str, Any]
+    interpolation: str = "linear"
+
+    @classmethod
+    def from_gridded_wind_field(cls, wind_field: Any, *, interpolation: str = "linear") -> "GriddedWindSampler":
+        return cls(
+            field=np.asarray(wind_field.field, dtype=np.float32),
+            provider=wind_field.provider,
+            metadata=dict(wind_field.metadata),
+            interpolation=interpolation,
+        )
+
+    def sample(self, t_index: float, position_xy: np.ndarray) -> np.ndarray:
+        field = self.field
+        T, nx, ny = field.shape[0], field.shape[1], field.shape[2]
+        pos = np.asarray(position_xy, dtype=np.float64).reshape(-1)
+        x = float(np.clip(pos[0], 0.0, nx - 1))
+        y = float(np.clip(pos[1], 0.0, ny - 1))
+        x0 = int(np.floor(x)); x1 = min(x0 + 1, nx - 1)
+        y0 = int(np.floor(y)); y1 = min(y0 + 1, ny - 1)
+        fx = x - x0; fy = y - y0
+
+        def spatial(frame: np.ndarray) -> np.ndarray:
+            c00 = frame[x0, y0]; c10 = frame[x1, y0]
+            c01 = frame[x0, y1]; c11 = frame[x1, y1]
+            return (
+                (1 - fx) * (1 - fy) * c00 + fx * (1 - fy) * c10
+                + (1 - fx) * fy * c01 + fx * fy * c11
+            )
+
+        t = float(np.clip(t_index, 0.0, max(0, T - 1)))
+        if self.interpolation == "nearest":
+            return spatial(field[int(round(t))]).astype(np.float32)
+        if self.interpolation != "linear":
+            raise ValueError("GriddedWindSampler interpolation must be 'linear' or 'nearest'")
+        lo = int(np.floor(t)); hi = min(lo + 1, T - 1)
+        frac = t - lo
+        return ((1.0 - frac) * spatial(field[lo]) + frac * spatial(field[hi])).astype(np.float32)
+
+
+@dataclass(frozen=True)
 class ResponseMatrixResult:
     H_lag: torch.Tensor
     metadata: dict[str, Any]
@@ -519,6 +572,7 @@ __all__ = [
     "RESPONSE_IMPLEMENTATION",
     "CityWindSampler",
     "DispersionConfig",
+    "GriddedWindSampler",
     "Observer",
     "ResponseConfig",
     "ResponseMatrixResult",

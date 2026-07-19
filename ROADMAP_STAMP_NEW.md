@@ -1411,7 +1411,7 @@ GPU allocation with batched refits and a modest per-trial replicate count.
 Task 10 should not begin until Gates S1 through S7 pass, except when a gate is
 explicitly marked blocked with a documented implementation reason.
 
-### Task 9A: Gridded FieldFormer wind field and transport ensembles
+### ~~Task 9A: Gridded FieldFormer wind field and transport ensembles~~
 
 **Objective**
 

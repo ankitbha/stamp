@@ -1256,6 +1256,130 @@ def run_end_to_end_gate() -> dict[str, Any]:
     }
 
 
+def run_wind_field_gate() -> dict[str, Any]:
+    from model.iasa.response import GriddedWindSampler
+    from model.iasa.fit import FitConfig, aggregate_transport_ensemble, fit_sources
+    from model.iasa.wind import (
+        KernelCoordinateQueryImputer,
+        build_gridded_wind_field,
+        build_wind_field_ensemble,
+        evaluate_gridded_wind_heldout,
+        transport_vectors_from_wd_ws,
+    )
+
+    # Transport-vector convention (paper eq. wind_direction_conversion).
+    conv = {
+        "wd0": transport_vectors_from_wd_ws(0.0, 1.0).tolist(),
+        "wd90": transport_vectors_from_wd_ws(90.0, 1.0).tolist(),
+        "wd270": transport_vectors_from_wd_ws(270.0, 1.0).tolist(),
+    }
+    if not (np.allclose(conv["wd0"], [0.0, -1.0], atol=1e-6)
+            and np.allclose(conv["wd90"], [-1.0, 0.0], atol=1e-6)
+            and np.allclose(conv["wd270"], [1.0, 0.0], atol=1e-6)):
+        raise RuntimeError(f"transport-vector convention incorrect: {conv}")
+
+    nx = ny = 16
+    T = 12
+    station_coords = np.asarray([[2.0, 2.0], [13.0, 2.0], [2.0, 13.0], [13.0, 13.0]], dtype=np.float64)
+    S = station_coords.shape[0]
+    # Distinct per-station meteorological winds -> spatially varying field.
+    station_wd = np.asarray([[45.0], [135.0], [225.0], [315.0]], dtype=np.float64) + np.zeros((S, T))
+    station_ws = np.full((S, T), 1.0, dtype=np.float64)
+    station_vectors = transport_vectors_from_wd_ws(station_wd, station_ws).astype(np.float32)  # [S,T,2]
+    station_mask = np.ones((S, T), dtype=bool)
+
+    imputer = KernelCoordinateQueryImputer(length_scale=2.0)
+    field = build_gridded_wind_field(
+        station_coords, station_vectors, station_mask,
+        np.arange(T), (nx, ny), imputer=imputer, dt_s=1.0, dx_m=1.0, dy_m=1.0, seed=0,
+    )
+    if field.field.shape != (T, nx, ny, 2):
+        raise RuntimeError(f"gridded field shape {field.field.shape}; expected {(T, nx, ny, 2)}")
+    cell_std = float(np.mean(np.std(field.field.reshape(T, nx * ny, 2), axis=1)))
+    if cell_std < 1e-3:
+        raise RuntimeError("gridded field is spatially uniform; expected spatial variation")
+
+    sampler = GriddedWindSampler.from_gridded_wind_field(field)
+    # The sampler recovers station vectors near station cells (tight kernel).
+    recovery_error = 0.0
+    for s in range(S):
+        got = sampler.sample(0.0, station_coords[s])
+        recovery_error = max(recovery_error, float(np.max(np.abs(got - station_vectors[s, 0]))))
+    if recovery_error > 0.05:
+        raise RuntimeError(f"sampler station recovery error {recovery_error:.3e} exceeds 0.05")
+
+    # Gridded field drives the response builder with no signature change.
+    source_maps = _compact_source(nx, ny, (8.0, 8.0))[None]
+    basis = TemporalBasis(names=["constant"], values=np.ones((T, 1), dtype=np.float32), metadata={"gate": "wind_field"})
+    observer = Observer(
+        sensor_ids=["a", "b", "c"],
+        sensor_xy=np.asarray([[4.0, 8.0], [12.0, 8.0], [8.0, 12.0]], dtype=np.float32),
+    )
+    response = build_lagged_response_matrix(
+        source_maps, ["interior"], basis, observer, sampler,
+        response_config=ResponseConfig(dt=1.0, lag_window_steps=8, substep_dt=0.25, kernel_truncation_radius=3.0),
+        dispersion_config=DispersionConfig(sigma_parallel=0.7, sigma_perp=0.25, min_dispersion_time=0.25),
+    )
+    H = to_numpy(response.H_lag)
+    if not np.isfinite(H).all() or not np.any(H > 0):
+        raise RuntimeError("gridded-field-driven response must be finite and nonzero")
+
+    # Held-out validation over a masked split.
+    heldout = evaluate_gridded_wind_heldout(
+        station_coords, station_vectors, station_mask, np.arange(T),
+        imputer=imputer, holdout_station_indices=(0,),
+    )
+    for key in ("vector_rmse", "direction_mae_degrees", "speed_mae"):
+        if not np.isfinite(heldout[key]):
+            raise RuntimeError(f"held-out metric {key} is not finite")
+
+    # Transport ensemble: members tagged transport and distinct.
+    members = build_wind_field_ensemble(
+        station_coords, station_vectors, station_mask, np.arange(T), (nx, ny),
+        n_members=4, method="station_bootstrap", imputer=imputer, dt_s=1.0, dx_m=1.0, dy_m=1.0, seed=0,
+    )
+    if len(members) != 4 or any(m.ensemble_kind != "transport" for m in members):
+        raise RuntimeError("all ensemble members must be tagged transport")
+    member_spread = float(np.max([np.max(np.abs(m.field - members[0].field)) for m in members[1:]]))
+    if member_spread <= 0.0:
+        raise RuntimeError("ensemble members must differ")
+
+    # Transport products are never pooled with inventory (Task 8 guard, driven by
+    # the transport-tagged wind ensemble).
+    Hs = torch.eye(6, 3, dtype=torch.float64)
+    c_true = torch.tensor([1.0, 0.5, 0.2], dtype=torch.float64)
+    cols = _column_index(["s0", "s1", "s2"], ["c"])
+    transport_fits = [fit_sources(Hs, Hs @ c_true, cols, config=FitConfig(ensemble_kind="transport")) for _ in range(3)]
+    inventory_fit = fit_sources(Hs, Hs @ c_true, cols, config=FitConfig(ensemble_kind="inventory"))
+    pooling_rejected = False
+    try:
+        aggregate_transport_ensemble(transport_fits + [inventory_fit])
+    except ValueError:
+        pooling_rejected = True
+    if not pooling_rejected:
+        raise RuntimeError("transport/inventory ensemble products must not be pooled")
+
+    return {
+        "status": "ok",
+        "gate": "wind_field",
+        "convention": conv,
+        "field_shape": list(field.field.shape),
+        "cell_std": cell_std,
+        "sampler_station_recovery_error": recovery_error,
+        "response_H_shape": list(H.shape),
+        "heldout": heldout,
+        "n_ensemble_members": len(members),
+        "ensemble_all_transport": all(m.ensemble_kind == "transport" for m in members),
+        "ensemble_member_spread": member_spread,
+        "transport_inventory_pooling_rejected": pooling_rejected,
+        "dt_s": field.dt_s,
+        "dx_m": field.dx_m,
+        "dy_m": field.dy_m,
+        "convention_recorded": field.convention,
+        "imputer": field.metadata["imputer"],
+    }
+
+
 def run_sanity(*, start: str, end: str) -> dict[str, Any]:
     return run_task3a_sanity(start=start, end=end)
 
@@ -1264,7 +1388,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--gate",
-        choices=("task3a", "response", "projection", "parity", "diagnostics", "fit", "merge", "end_to_end", "all"),
+        choices=("task3a", "response", "projection", "parity", "diagnostics", "fit", "merge", "end_to_end", "wind_field", "all"),
         default="task3a",
     )
     parser.add_argument("--strict-all", action="store_true")
@@ -1287,6 +1411,8 @@ def main() -> None:
         result = run_merge_gate()
     elif args.gate == "end_to_end":
         result = run_end_to_end_gate()
+    elif args.gate == "wind_field":
+        result = run_wind_field_gate()
     elif args.gate == "all":
         result = {
             "status": "ok",
@@ -1299,6 +1425,7 @@ def main() -> None:
             "fit": run_fit_gate(),
             "merge": run_merge_gate(),
             "end_to_end": run_end_to_end_gate(),
+            "wind_field": run_wind_field_gate(),
             "skipped_gates": ["calibration"],
         }
         if args.strict_all:
