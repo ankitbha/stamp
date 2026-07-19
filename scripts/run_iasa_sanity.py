@@ -794,6 +794,166 @@ def run_diagnostics_gate() -> dict[str, Any]:
     }
 
 
+def _well_conditioned_H(device, dtype) -> torch.Tensor:
+    # Near-orthogonal, well-scaled columns for exact/near-exact recovery.
+    return torch.tensor(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [0.1, 0.05, 0.0],
+            [0.0, 0.1, 0.05],
+            [0.05, 0.0, 0.1],
+        ],
+        dtype=dtype, device=device,
+    )
+
+
+def run_fit_gate() -> dict[str, Any]:
+    from model.iasa.diagnostics import diagnose_identifiability
+    from model.iasa.fit import (
+        AdequacyConfig,
+        FitConfig,
+        NoiseModel,
+        fit_sources,
+        residual_adequacy_check,
+    )
+
+    device = torch.device("cpu")
+    dtype = torch.float64
+    cols = _column_index(["s0", "s1", "s2"], ["c"])
+
+    # 1. noiseless recovery of c_true = [1.5, 0.7, 0.0].
+    H = _well_conditioned_H(device, dtype)
+    c_true = torch.tensor([1.5, 0.7, 0.0], dtype=dtype, device=device)
+    Y = H @ c_true
+    fit = fit_sources(H, Y, cols, config=FitConfig())
+    noiseless_error = float(torch.linalg.vector_norm(fit.c_hat - c_true) / torch.linalg.vector_norm(c_true))
+    if noiseless_error > 1e-4:
+        raise RuntimeError(f"noiseless relative coefficient error {noiseless_error:.3e} exceeds 1e-4")
+    if float(fit.c_hat.min()) < -1e-8:
+        raise RuntimeError("noiseless fit violated nonnegativity")
+    if fit.kkt_residual > FitConfig().tol_kkt:
+        raise RuntimeError(f"noiseless KKT residual {fit.kkt_residual:.3e} exceeds tol {FitConfig().tol_kkt:.1e}")
+
+    # 2. small Gaussian noise: close recovery and residual below the zero model.
+    gen = torch.Generator(device=device)
+    gen.manual_seed(0)
+    noise = 0.01 * torch.randn(H.shape[0], dtype=dtype, device=device, generator=gen)
+    fit_noisy = fit_sources(H, Y + noise, cols, config=FitConfig())
+    noisy_error = float(torch.linalg.vector_norm(fit_noisy.c_hat - c_true) / torch.linalg.vector_norm(c_true))
+    if noisy_error > 0.1:
+        raise RuntimeError(f"noisy relative coefficient error {noisy_error:.3e} exceeds 0.1")
+    if not (fit_noisy.residual_norm < fit_noisy.zero_model_residual_norm):
+        raise RuntimeError("noisy residual norm not below the zero-coefficient baseline")
+
+    # 3. duplicate columns: individual split unstable, summed contribution exact.
+    H_dup = H.clone()
+    H_dup[:, 1] = H_dup[:, 0]
+    pair_true_sum = 2.2
+    Y_dup = H_dup[:, 0] * pair_true_sum + H_dup[:, 2] * 0.0
+    dup_cols = _column_index(["dup_a", "dup_b", "other"], ["c"])
+    fit_dup = fit_sources(H_dup, Y_dup, dup_cols, config=FitConfig())
+    dup_pair_sum_error = abs(float(fit_dup.c_hat[0] + fit_dup.c_hat[1]) - pair_true_sum)
+    if dup_pair_sum_error > 1e-4:
+        raise RuntimeError(f"duplicate pair sum error {dup_pair_sum_error:.3e} exceeds 1e-4")
+
+    # 4. ill-conditioned: near-duplicate columns must raise a warning.
+    H_ill = H.clone()
+    H_ill[:, 1] = H_ill[:, 0] + 1e-9
+    fit_ill = fit_sources(H_ill, H_ill @ c_true, dup_cols, config=FitConfig())
+    if not any("ill_conditioned" in w for w in fit_ill.warnings):
+        raise RuntimeError("ill-conditioned fit must emit an ill_conditioning warning")
+
+    # 5. mask: declared zeros restored exactly; near-zero unmasked column stays fitted.
+    c_masked_true = torch.tensor([1.5, 0.0, 1e-7], dtype=dtype, device=device)
+    Y_masked = H @ c_masked_true
+    fit_masked = fit_sources(H, Y_masked, cols, config=FitConfig(fixed_zero_indices=(1,)))
+    if float(fit_masked.c_hat[1]) != 0.0:
+        raise RuntimeError("masked coefficient must be exactly zero")
+    if fit_masked.reduced_to_original != [0, 2]:
+        raise RuntimeError("mask reduced_to_original mapping incorrect")
+    if 2 not in fit_masked.original_to_reduced or fit_masked.original_to_reduced[2] != 1:
+        raise RuntimeError("mask original_to_reduced mapping incorrect")
+    # The near-zero unmasked coefficient (index 2) is still part of the fit.
+    diag = diagnose_identifiability(H, cols, config=None)
+    from model.iasa.diagnostics import DiagnosticsConfig
+    diag_masked = diagnose_identifiability(H, cols, config=DiagnosticsConfig(fixed_zero_indices=(1,)))
+    try:
+        fit_sources(H, Y_masked, cols, config=FitConfig(fixed_zero_indices=(1,)), diagnostics=diag)
+        mismatch_rejected = False
+    except ValueError:
+        mismatch_rejected = True
+    if not mismatch_rejected:
+        raise RuntimeError("fit must reject a fit/diagnostic mask mismatch")
+    fit_sources(H, Y_masked, cols, config=FitConfig(fixed_zero_indices=(1,)), diagnostics=diag_masked)
+
+    # 6. uncalibrated residual adequacy: summaries only, no pass/fail.
+    from model.iasa.projection import project_response_and_observations
+    from model.iasa.background import BackgroundBasisConfig, build_background_basis
+    row_index = [{"time_index": t, "sensor_index": 0, "sensor_id": "s"} for t in range(H.shape[0])]
+    ts = np.datetime64("2026-06-01T00:00") + np.arange(H.shape[0]) * np.timedelta64(1, "h")
+    empty_bg = build_background_basis(row_index, ts, config=BackgroundBasisConfig(include_constant=False))
+    projection = project_response_and_observations(H, Y, empty_bg, row_index, cols)
+    fit_proj = fit_sources(H, Y, cols, config=FitConfig())
+    uncal = residual_adequacy_check(fit_proj, projection, None)
+    if uncal.calibration_status != "uncalibrated" or uncal.inadequate is not None or uncal.p_value is not None:
+        raise RuntimeError("missing noise model must yield an uncalibrated adequacy result with no decision")
+
+    # 7. calibrated adequacy: correctly specified not systematically flagged, and a
+    #    residual-visible omitted signal strictly increases T_res.
+    sigma_e = 0.05
+    gen2 = torch.Generator(device=device)
+    gen2.manual_seed(7)
+    Y_obs = Y + sigma_e * torch.randn(H.shape[0], dtype=dtype, device=device, generator=gen2)
+    proj_obs = project_response_and_observations(H, Y_obs, empty_bg, row_index, cols)
+    fit_obs = fit_sources(H, Y_obs, cols, config=FitConfig())
+    noise_model = NoiseModel(covariance=sigma_e ** 2, calibrated=True, source="external_field_calibration_v1")
+    adequacy = residual_adequacy_check(
+        fit_obs, proj_obs, noise_model, config=AdequacyConfig(alpha=0.05, n_replicates=200, seed=1)
+    )
+    if adequacy.calibration_status != "calibrated" or adequacy.T_res is None or adequacy.p_value is None:
+        raise RuntimeError("calibrated adequacy must return a decision and statistics")
+    if not (0.0 < adequacy.p_value <= 1.0):
+        raise RuntimeError("adequacy p-value must lie in (0, 1]")
+
+    # Omit a residual-visible signal: force the fit to miss real mass in column 2.
+    Y_omit = Y_obs + 2.0 * H[:, 2]
+    proj_omit = project_response_and_observations(H, Y_omit, empty_bg, row_index, cols)
+    fit_wrong = fit_sources(H, Y_omit, cols, config=FitConfig(fixed_zero_indices=(2,)))
+    adequacy_omit = residual_adequacy_check(
+        fit_wrong, proj_omit, noise_model, config=AdequacyConfig(alpha=0.05, n_replicates=200, seed=1)
+    )
+    if not (adequacy_omit.T_res > adequacy.T_res):
+        raise RuntimeError("omitted residual-visible signal must increase T_res")
+
+    return {
+        "status": "ok",
+        "gate": "fit",
+        "noiseless_relative_coefficient_error": noiseless_error,
+        "noiseless_kkt_residual": fit.kkt_residual,
+        "noiseless_iterations": fit.iteration_count,
+        "noiseless_min_coefficient": float(fit.c_hat.min()),
+        "noisy_relative_coefficient_error": noisy_error,
+        "noisy_residual_norm": fit_noisy.residual_norm,
+        "zero_model_residual_norm": fit_noisy.zero_model_residual_norm,
+        "duplicate_pair_sum_error": dup_pair_sum_error,
+        "duplicate_c0": float(fit_dup.c_hat[0]),
+        "duplicate_c1": float(fit_dup.c_hat[1]),
+        "ill_conditioned_warnings": fit_ill.warnings,
+        "mask_reduced_to_original": fit_masked.reduced_to_original,
+        "mask_masked_value": float(fit_masked.c_hat[1]),
+        "mask_mismatch_rejected": mismatch_rejected,
+        "uncalibrated_status": uncal.calibration_status,
+        "calibrated_T_res": adequacy.T_res,
+        "calibrated_bootstrap_quantile": adequacy.bootstrap_quantile,
+        "calibrated_p_value": adequacy.p_value,
+        "calibrated_inadequate": adequacy.inadequate,
+        "omitted_signal_T_res": adequacy_omit.T_res,
+        "fit_keys": sorted(fit.to_json_summary().keys()),
+    }
+
+
 def run_sanity(*, start: str, end: str) -> dict[str, Any]:
     return run_task3a_sanity(start=start, end=end)
 
@@ -819,6 +979,8 @@ def main() -> None:
         result = run_parity_gate()
     elif args.gate == "diagnostics":
         result = run_diagnostics_gate()
+    elif args.gate == "fit":
+        result = run_fit_gate()
     elif args.gate == "all":
         result = {
             "status": "ok",
@@ -828,10 +990,11 @@ def main() -> None:
             "projection": run_projection_gate(),
             "parity": run_parity_gate(),
             "diagnostics": run_diagnostics_gate(),
-            "skipped_gates": ["fit", "merge"],
+            "fit": run_fit_gate(),
+            "skipped_gates": ["merge"],
         }
         if args.strict_all:
-            raise NotImplementedError("Strict all-gate mode requires Tasks 7-9 gates.")
+            raise NotImplementedError("Strict all-gate mode requires the Task 9 merge gate.")
     else:
         raise NotImplementedError(f"Gate {args.gate!r} is implemented by a later roadmap task.")
     print(json.dumps(result, indent=2, sort_keys=True))

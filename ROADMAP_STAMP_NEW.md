@@ -1107,7 +1107,7 @@ two_direction_max_coherence <= eastward_max_coherence + 1e-8
 
 If the toy geometry does not satisfy the wind-diversity inequalities, redesign the sanity setup; do not silently weaken this gate.
 
-### Task 8: IASA nonnegative fitting
+### ~~Task 8: IASA nonnegative fitting~~
 
 **Objective**
 
