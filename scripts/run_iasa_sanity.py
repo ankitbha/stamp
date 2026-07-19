@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,7 @@ if str(REPO_ROOT) not in sys.path:
 from model.iasa.activity import TemporalBasis  # noqa: E402
 from model.iasa.backend import to_numpy  # noqa: E402
 from model.iasa.background import BackgroundBasisConfig, build_background_basis  # noqa: E402
+from model.iasa.diagnostics import DiagnosticsConfig, diagnose_identifiability  # noqa: E402
 from model.iasa.projection import fit_background_projector, project_response_and_observations  # noqa: E402
 from model.iasa.response import (  # noqa: E402
     DispersionConfig,
@@ -636,6 +638,162 @@ def run_parity_gate() -> dict[str, Any]:
     return summary
 
 
+def _column_index(source_names: list[str], basis_names: list[str]) -> list[dict[str, Any]]:
+    cols = []
+    for k, source in enumerate(source_names):
+        for b, basis in enumerate(basis_names):
+            cols.append({"source_index": k, "source_name": source, "basis_index": b, "basis_name": basis})
+    return cols
+
+
+def _max_eligible_coherence(diag) -> float:
+    coh = to_numpy(diag.coherence)
+    best = 0.0
+    J = coh.shape[0]
+    for i in range(J):
+        for j in range(i + 1, J):
+            v = coh[i, j]
+            if not np.isnan(v) and v > best:
+                best = float(v)
+    return best
+
+
+def _matched_wind_diagnostics() -> dict[str, Any]:
+    # Two compact sources on the same y-line, offset in x. Under pure eastward
+    # advection both stream along y=8 to the east sensor with nearly proportional
+    # fingerprints (high coherence). A two-direction regime (east then north)
+    # separates them, so sigma_J must not drop and coherence must not rise.
+    nx = ny = 16
+    source_maps = np.stack(
+        [_compact_source(nx, ny, (5.0, 8.0)), _compact_source(nx, ny, (8.0, 8.0))], axis=0
+    )
+    source_names = ["source_a", "source_b"]
+    T = 40
+    basis = TemporalBasis(
+        names=["constant"], values=np.ones((T, 1), dtype=np.float32),
+        metadata={"gate": "diagnostics", "purpose": "matched_wind"},
+    )
+    observer = Observer(
+        sensor_ids=["west_sensor", "east_sensor", "north_sensor"],
+        sensor_xy=np.asarray([[1.0, 8.0], [13.0, 8.0], [8.0, 13.0]], dtype=np.float32),
+    )
+    response_config = ResponseConfig(dt=1.0, lag_window_steps=12, substep_dt=0.25, kernel_truncation_radius=3.0)
+    dispersion_config = DispersionConfig(sigma_parallel=0.7, sigma_perp=0.25, min_dispersion_time=0.25)
+    col_index = _column_index(source_names, list(basis.names))
+
+    eastward = constant_direction(length=T, vx=1.0, vy=0.0)
+    east_vx = np.ones(T, dtype=np.float32)
+    east_vy = np.zeros(T, dtype=np.float32)
+    east_vx[T // 2:] = 0.0
+    east_vy[T // 2:] = 1.0
+    two_direction = WindSequence(
+        timestamps=eastward.timestamps, vx=east_vx, vy=east_vy,
+        provider="two_direction_synthetic", metadata={"switch_time_index": T // 2},
+    )
+
+    def _diag(wind):
+        response = build_lagged_response_matrix(
+            source_maps, source_names, basis, observer, wind,
+            response_config=response_config, dispersion_config=dispersion_config,
+        )
+        return diagnose_identifiability(response.H_lag, col_index, config=DiagnosticsConfig())
+
+    eastward_diag = _diag(eastward)
+    two_direction_diag = _diag(two_direction)
+    return {
+        "eastward_sigma_J": eastward_diag.sigma_J,
+        "two_direction_sigma_J": two_direction_diag.sigma_J,
+        "eastward_max_coherence": _max_eligible_coherence(eastward_diag),
+        "two_direction_max_coherence": _max_eligible_coherence(two_direction_diag),
+    }
+
+
+def run_diagnostics_gate() -> dict[str, Any]:
+    device = torch.device("cpu")
+    dtype = torch.float64
+
+    # orthogonal_case: near-orthogonal columns -> full rank, low coherence.
+    ortho = torch.eye(6, 3, dtype=dtype, device=device)
+    ortho = ortho + 1e-3 * torch.tensor(
+        [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=dtype, device=device
+    )
+    ortho_cols = _column_index(["s0", "s1", "s2"], ["c"])
+    ortho_diag = diagnose_identifiability(ortho, ortho_cols, config=DiagnosticsConfig())
+    ortho_max_coh = _max_eligible_coherence(ortho_diag)
+    if ortho_diag.numerical_rank != 3:
+        raise RuntimeError("orthogonal_case must be full numerical rank")
+    if ortho_max_coh > 0.1:
+        raise RuntimeError(f"orthogonal_case max coherence {ortho_max_coh:.3f} exceeds 0.1")
+    if ortho_diag.condition_status != "finite":
+        raise RuntimeError("orthogonal_case must have finite condition number")
+
+    # duplicate_case: column 1 equals column 0 exactly.
+    base = torch.tensor(
+        [[1.0, 0.0, 0.2], [0.5, 0.0, 0.9], [0.2, 0.0, 0.1], [0.0, 0.0, 0.7], [0.3, 0.0, 0.4], [0.8, 0.0, 0.6]],
+        dtype=dtype, device=device,
+    )
+    base[:, 1] = base[:, 0]
+    dup_cols = _column_index(["dup_a", "dup_b", "other"], ["c"])
+    dup_diag = diagnose_identifiability(base, dup_cols, config=DiagnosticsConfig())
+    dup_pair_coh = float(to_numpy(dup_diag.coherence)[0, 1])
+    if dup_pair_coh < 0.999:
+        raise RuntimeError(f"duplicate_case pair coherence {dup_pair_coh:.5f} below 0.999")
+    if dup_diag.sigma_J > 1e-8:
+        raise RuntimeError(f"duplicate_case sigma_J {dup_diag.sigma_J:.3e} should be ~0")
+    if dup_diag.condition_status != "infinite":
+        raise RuntimeError("duplicate_case condition status must be infinite")
+    if dup_diag.numerical_rank >= 3:
+        raise RuntimeError("duplicate_case must be rank deficient")
+
+    # weak_case: one near-zero column.
+    weak = torch.tensor(
+        [[1.0, 0.0, 0.2], [0.5, 0.0, 0.9], [0.2, 0.0, 0.1], [0.0, 0.0, 0.7], [0.3, 0.0, 0.4], [0.8, 0.0, 0.6]],
+        dtype=dtype, device=device,
+    )
+    weak[:, 1] = 1e-10
+    weak_cols = _column_index(["strong_a", "weak_b", "strong_c"], ["c"])
+    weak_diag = diagnose_identifiability(weak, weak_cols, config=DiagnosticsConfig(tau_v=1e-6))
+    weak_vis = float(to_numpy(weak_diag.visibility)[1])
+    if not (weak_vis <= 1e-8 or weak_diag.weak_flags[1]):
+        raise RuntimeError("weak_case near-zero column must be flagged weakly visible")
+    if 1 not in weak_diag.weak_set:
+        raise RuntimeError("weak_case weak_set must contain the near-zero column")
+    if not math.isnan(to_numpy(weak_diag.coherence)[0, 1]):
+        raise RuntimeError("weak_case pairwise metrics involving the weak column must be null (NaN sentinel)")
+
+    matched = _matched_wind_diagnostics()
+    if matched["two_direction_sigma_J"] < matched["eastward_sigma_J"] - 1e-8:
+        raise RuntimeError(
+            f"wind diversity reduced sigma_J: two_direction {matched['two_direction_sigma_J']:.4g} "
+            f"< eastward {matched['eastward_sigma_J']:.4g}"
+        )
+    if matched["two_direction_max_coherence"] > matched["eastward_max_coherence"] + 1e-8:
+        raise RuntimeError(
+            f"wind diversity raised max coherence: two_direction {matched['two_direction_max_coherence']:.4g} "
+            f"> eastward {matched['eastward_max_coherence']:.4g}"
+        )
+
+    return {
+        "status": "ok",
+        "gate": "diagnostics",
+        "orthogonal_numerical_rank": ortho_diag.numerical_rank,
+        "orthogonal_max_coherence": ortho_max_coh,
+        "orthogonal_condition_status": ortho_diag.condition_status,
+        "duplicate_pair_coherence": dup_pair_coh,
+        "duplicate_sigma_J": dup_diag.sigma_J,
+        "duplicate_condition_status": dup_diag.condition_status,
+        "duplicate_numerical_rank": dup_diag.numerical_rank,
+        "weak_column_visibility": weak_vis,
+        "weak_visibility_flag": bool(weak_diag.weak_flags[1]),
+        "weak_set": weak_diag.weak_set,
+        "eastward_sigma_J": matched["eastward_sigma_J"],
+        "two_direction_sigma_J": matched["two_direction_sigma_J"],
+        "eastward_max_coherence": matched["eastward_max_coherence"],
+        "two_direction_max_coherence": matched["two_direction_max_coherence"],
+        "diagnostics_keys": sorted(dup_diag.to_json_summary().keys()),
+    }
+
+
 def run_sanity(*, start: str, end: str) -> dict[str, Any]:
     return run_task3a_sanity(start=start, end=end)
 
@@ -659,6 +817,8 @@ def main() -> None:
         result = run_projection_gate()
     elif args.gate == "parity":
         result = run_parity_gate()
+    elif args.gate == "diagnostics":
+        result = run_diagnostics_gate()
     elif args.gate == "all":
         result = {
             "status": "ok",
@@ -667,7 +827,8 @@ def main() -> None:
             "response": run_response_gate(),
             "projection": run_projection_gate(),
             "parity": run_parity_gate(),
-            "skipped_gates": ["diagnostics", "fit", "merge"],
+            "diagnostics": run_diagnostics_gate(),
+            "skipped_gates": ["fit", "merge"],
         }
         if args.strict_all:
             raise NotImplementedError("Strict all-gate mode requires Tasks 7-9 gates.")

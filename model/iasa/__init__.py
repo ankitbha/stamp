@@ -10,6 +10,13 @@ from model.iasa.backend import (
     validate_ensemble_kind,
 )
 from model.iasa.background import BackgroundBasisConfig, BackgroundBasisResult, build_background_basis
+from model.iasa.diagnostics import (
+    DiagnosticsConfig,
+    DiagnosticsResult,
+    diagnose_identifiability,
+    diagnose_projection,
+    summarize_wind_ensemble,
+)
 from model.iasa.projection import (
     BackgroundProjector,
     ProjectionConfig,
@@ -43,6 +50,11 @@ __all__ = [
     "BackgroundBasisConfig",
     "BackgroundBasisResult",
     "BackgroundProjector",
+    "DiagnosticsConfig",
+    "DiagnosticsResult",
+    "diagnose_identifiability",
+    "diagnose_projection",
+    "summarize_wind_ensemble",
     "CityWindSampler",
     "DispersionConfig",
     "Observer",

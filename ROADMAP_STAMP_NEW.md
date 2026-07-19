@@ -983,7 +983,7 @@ serialization boundaries.
 - Gates S1 and S2 pass without SciPy.
 - Task 7 does not begin until this consolidation passes.
 
-### Task 7: Identifiability diagnostics
+### ~~Task 7: Identifiability diagnostics~~
 
 **Objective**
 
