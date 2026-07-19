@@ -926,6 +926,63 @@ def run_fit_gate() -> dict[str, Any]:
     )
     if not (adequacy_omit.T_res > adequacy.T_res):
         raise RuntimeError("omitted residual-visible signal must increase T_res")
+    if not adequacy_omit.inadequate:
+        raise RuntimeError("residual-visible omission must be flagged inadequate")
+
+    # 8. span([H_lag, Q])-absorbed omission: an omitted signal that lies in the
+    #    fitted span is absorbed by a free coefficient, leaving the residual (and
+    #    thus T_res) within the bootstrap null -> NOT detected. Non-rejection does
+    #    not establish inventory completeness.
+    Y_span = Y_obs + 1.5 * H[:, 1]
+    proj_span = project_response_and_observations(H, Y_span, empty_bg, row_index, cols)
+    fit_span = fit_sources(H, Y_span, cols, config=FitConfig())
+    adequacy_span = residual_adequacy_check(
+        fit_span, proj_span, noise_model, config=AdequacyConfig(alpha=0.05, n_replicates=200, seed=1)
+    )
+    if adequacy_span.inadequate:
+        raise RuntimeError("span-absorbed omission must not be flagged inadequate")
+    if adequacy_span.T_res > adequacy_span.bootstrap_quantile:
+        raise RuntimeError("span-absorbed omission T_res must stay within the bootstrap null")
+
+    # 9. Temporal multi-basis recovery: a known diurnal traffic profile and an
+    #    intermittent brick-kiln profile reconstructed via theta_k(t)=sum_b c_kb phi_b(t).
+    from datetime import datetime, timedelta
+    T = 24
+    diurnal = [math.exp(-0.5 * ((h - 8) / 2.0) ** 2) + math.exp(-0.5 * ((h - 18) / 2.0) ** 2) for h in range(T)]
+    block = [1.0 if h < 12 else 0.0 for h in range(T)]
+    Phi = torch.tensor([[diurnal[h], block[h]] for h in range(T)], dtype=dtype, device=device)  # [24, 2]
+    C_true = torch.tensor([[1.0, 0.0], [0.0, 1.0]], dtype=dtype, device=device)  # traffic->diurnal, brick->block
+    theta_true = Phi @ C_true.transpose(0, 1)  # [24, 2]
+    H_temporal = torch.tensor(
+        [
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+            [0.1, 0.05, 0.0, 0.0],
+            [0.0, 0.1, 0.05, 0.0],
+            [0.0, 0.0, 0.1, 0.05],
+            [0.05, 0.0, 0.0, 0.1],
+        ],
+        dtype=dtype, device=device,
+    )
+    c_temporal_true = C_true.reshape(-1)  # source-major/basis-minor: [1,0,0,1]
+    temporal_cols = _column_index(["traffic", "brick_kilns"], ["diurnal", "block"])
+    base_time = datetime(2026, 6, 1, 0, 0)
+    timestamps = [base_time + timedelta(hours=h) for h in range(T)]
+    fit_temporal = fit_sources(
+        H_temporal, H_temporal @ c_temporal_true, temporal_cols,
+        config=FitConfig(), temporal_basis=Phi, timestamps=timestamps,
+    )
+    temporal_error = float(
+        torch.linalg.matrix_norm(fit_temporal.theta - theta_true) / torch.linalg.matrix_norm(theta_true)
+    )
+    if temporal_error > 0.1:
+        raise RuntimeError(f"temporal relative activity error {temporal_error:.3e} exceeds 0.1")
+    temporal_summaries = fit_temporal.source_contribution_summaries
+    for key in ("total_contribution", "diurnal_hourly_mean", "active_period_fraction", "daily_totals"):
+        if key not in temporal_summaries:
+            raise RuntimeError(f"temporal recovery must emit '{key}' summary")
 
     return {
         "status": "ok",
@@ -950,6 +1007,12 @@ def run_fit_gate() -> dict[str, Any]:
         "calibrated_p_value": adequacy.p_value,
         "calibrated_inadequate": adequacy.inadequate,
         "omitted_signal_T_res": adequacy_omit.T_res,
+        "omitted_signal_inadequate": adequacy_omit.inadequate,
+        "span_absorbed_T_res": adequacy_span.T_res,
+        "span_absorbed_bootstrap_quantile": adequacy_span.bootstrap_quantile,
+        "span_absorbed_inadequate": adequacy_span.inadequate,
+        "temporal_relative_activity_error": temporal_error,
+        "temporal_summary_keys": sorted(temporal_summaries.keys()),
         "fit_keys": sorted(fit.to_json_summary().keys()),
     }
 

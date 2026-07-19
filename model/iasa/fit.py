@@ -830,8 +830,14 @@ def residual_adequacy_check(
     bar_r_obs = Z.transpose(0, 1) @ raw_residual
     T_res = float(quad(bar_r_obs)[0])
 
-    # Fitted complete model mean in full observed space (source + best-fit background).
-    background_component = raw_residual if U_r is None or U_r.shape[1] == 0 else (U_r @ (U_r.transpose(0, 1) @ raw_residual))
+    # Fitted complete model mean in full observed space (source + best-fit
+    # background). With no background the background component is zero, not the
+    # whole residual -- otherwise the mean collapses to Y and the bootstrap null
+    # would absorb any omitted signal.
+    if U_r is None or U_r.shape[1] == 0:
+        background_component = torch.zeros_like(raw_residual)
+    else:
+        background_component = U_r @ (U_r.transpose(0, 1) @ raw_residual)
     mean_full = H_lag @ c_full + background_component
 
     gen = torch.Generator(device=device)

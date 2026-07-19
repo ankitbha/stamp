@@ -231,6 +231,62 @@ class FitTests(unittest.TestCase):
         adequacy_omit = residual_adequacy_check(fit_wrong, proj_omit, noise, config=AdequacyConfig(n_replicates=200, seed=1))
         self.assertGreater(adequacy_omit.T_res, adequacy.T_res)
 
+    def test_temporal_multi_basis_recovery(self) -> None:
+        from datetime import datetime, timedelta
+        import math
+
+        T = 24
+        diurnal = [math.exp(-0.5 * ((h - 8) / 2.0) ** 2) + math.exp(-0.5 * ((h - 18) / 2.0) ** 2) for h in range(T)]
+        block = [1.0 if h < 12 else 0.0 for h in range(T)]
+        Phi = torch.tensor([[diurnal[h], block[h]] for h in range(T)], dtype=DTYPE)
+        C_true = torch.tensor([[1.0, 0.0], [0.0, 1.0]], dtype=DTYPE)
+        theta_true = Phi @ C_true.transpose(0, 1)
+        H = torch.tensor(
+            [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+                [0.1, 0.05, 0.0, 0.0],
+                [0.0, 0.1, 0.05, 0.0],
+                [0.0, 0.0, 0.1, 0.05],
+                [0.05, 0.0, 0.0, 0.1],
+            ],
+            dtype=DTYPE,
+        )
+        c_true = C_true.reshape(-1)
+        temporal_cols = cols(["traffic", "brick_kilns"], ["diurnal", "block"])
+        ts = [datetime(2026, 6, 1, 0, 0) + timedelta(hours=h) for h in range(T)]
+        fit = fit_sources(H, H @ c_true, temporal_cols, temporal_basis=Phi, timestamps=ts)
+        err = float(torch.linalg.matrix_norm(fit.theta - theta_true) / torch.linalg.matrix_norm(theta_true))
+        self.assertLessEqual(err, 0.1)
+        for key in ("total_contribution", "diurnal_hourly_mean", "active_period_fraction", "daily_totals"):
+            self.assertIn(key, fit.source_contribution_summaries)
+        # Brick kiln is intermittent (block on for the first half only).
+        self.assertAlmostEqual(fit.source_contribution_summaries["active_period_fraction"]["brick_kilns"], 0.5, places=6)
+
+    def test_calibrated_adequacy_span_absorbed_not_detected(self) -> None:
+        H = well_conditioned_H()
+        c_true = torch.tensor([1.5, 0.7, 0.0], dtype=DTYPE)
+        gen = torch.Generator().manual_seed(3)
+        Y_obs = H @ c_true + 0.05 * torch.randn(H.shape[0], dtype=DTYPE, generator=gen)
+        noise = NoiseModel(covariance=0.05 ** 2, calibrated=True, source="external_v1")
+        cfg = AdequacyConfig(n_replicates=200, seed=1)
+
+        proj = empty_projection(H, Y_obs)
+        base = residual_adequacy_check(fit_projection(proj), proj, noise, config=cfg)
+
+        # An omitted signal in span(H) (column 1 is free) is absorbed by the fit.
+        Y_span = Y_obs + 1.5 * H[:, 1]
+        proj_span = empty_projection(H, Y_span)
+        span = residual_adequacy_check(fit_projection(proj_span), proj_span, noise, config=cfg)
+        self.assertEqual(span.calibration_status, "calibrated")
+        self.assertFalse(span.inadequate)
+        self.assertLessEqual(span.T_res, span.bootstrap_quantile)
+        # The absorbed case behaves like the correctly specified fit, not the
+        # residual-visible omission.
+        self.assertLess(abs(span.T_res - base.T_res), base.bootstrap_quantile)
+
     def test_device_and_dtype_preserved(self) -> None:
         H = well_conditioned_H()
         fit = fit_sources(H, H @ torch.tensor([1.0, 0.5, 0.2], dtype=DTYPE), cols(["s0", "s1", "s2"]))
