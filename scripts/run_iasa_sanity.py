@@ -1402,6 +1402,125 @@ def run_wind_field_gate() -> dict[str, Any]:
     }
 
 
+def run_footprints_gate() -> dict[str, Any]:
+    from model.iasa.diagnostics import DiagnosticsConfig, diagnose_projection
+    from model.iasa.fit import FitConfig, fit_projection
+    from model.iasa.footprints import (
+        compute_sensor_footprints,
+        decompose_per_sensor,
+        per_sensor_identifiability,
+    )
+    from model.iasa.merge import recommend_merges
+
+    nx = ny = 16
+    T = 16
+    source_maps = np.stack(
+        [_compact_source(nx, ny, (5.0, 8.0)), _compact_source(nx, ny, (8.0, 8.0))], axis=0
+    )
+    source_names = ["src_west", "src_mid"]
+    basis = TemporalBasis(names=["constant"], values=np.ones((T, 1), dtype=np.float32), metadata={"gate": "footprints"})
+    observer = Observer(
+        sensor_ids=["west", "east", "north"],
+        sensor_xy=np.asarray([[1.0, 8.0], [13.0, 8.0], [8.0, 13.0]], dtype=np.float32),
+    )
+    wind = constant_direction(length=T, vx=1.0, vy=0.0)  # eastward
+    response_config = ResponseConfig(dt=1.0, lag_window_steps=10, substep_dt=0.25, kernel_truncation_radius=3.0)
+    dispersion_config = DispersionConfig(sigma_parallel=0.7, sigma_perp=0.25, min_dispersion_time=0.25)
+
+    response = build_lagged_response_matrix(
+        source_maps, source_names, basis, observer, wind,
+        response_config=response_config, dispersion_config=dispersion_config,
+    )
+    timestamps = np.datetime64("2026-06-01T00:00") + np.arange(T) * np.timedelta64(1, "h")
+    background = build_background_basis(
+        response.row_index, timestamps, observer.sensor_xy,
+        BackgroundBasisConfig(include_constant=True, temporal_polynomial_degree=1, daily_harmonics=0),
+    )
+    c_true = np.asarray([1.0, 0.6], dtype=np.float64)
+    beta = np.full(len(background.column_names), 0.1, dtype=np.float64)
+    Y = to_numpy(response.H_lag).astype(np.float64) @ c_true + to_numpy(background.Q) @ beta
+    projection = project_response_and_observations(response.H_lag, Y, background, response.row_index, response.column_index)
+    diagnostics = diagnose_projection(projection, DiagnosticsConfig())
+    fit = fit_projection(projection, config=FitConfig())
+    merge = recommend_merges(diagnostics, fit=fit, H_tilde=projection.H_tilde)
+    groups = [c["members"] for c in merge.report_components]
+
+    footprints = compute_sensor_footprints(
+        source_maps, source_names, basis, observer, wind, fit=fit, projection=projection,
+        response_config=response_config, dispersion_config=dispersion_config, groups=groups,
+    )
+
+    # 1. Per-sensor projected contributions sum to the fitted per-sensor signal.
+    fitted_vec = to_numpy(fit.fitted_sensor_vector)
+    decomposition = decompose_per_sensor(
+        projection.H_tilde, projection.H_tilde + projection.H_removed, fit.c_hat,
+        projection.row_index, projection.column_index, groups=groups,
+    )
+    rows_by_sensor = decomposition["sensor_rows"]
+    contrib_sum_error = 0.0
+    for sid, rows in rows_by_sensor.items():
+        proj_total = sum(footprints.per_sensor_source_contribution_projected[sid].values())
+        fitted_total = float(fitted_vec[np.asarray(rows, dtype=np.int64)].sum())
+        contrib_sum_error = max(contrib_sum_error, abs(proj_total - fitted_total))
+    if contrib_sum_error > 1e-6:
+        raise RuntimeError(f"per-sensor contributions do not sum to fitted signal: err {contrib_sum_error:.3e}")
+
+    # 2. Footprints nonnegative.
+    geom_east = np.asarray(footprints.geometric_footprint["east"])
+    geom_west = np.asarray(footprints.geometric_footprint["west"])
+    all_nonneg = all(
+        np.asarray(f).min() >= -1e-9 for f in footprints.geometric_footprint.values()
+    ) and all(
+        np.asarray(fld).min() >= -1e-9 for gd in footprints.fitted_footprint.values() for fld in gd.values()
+    )
+    if not all_nonneg:
+        raise RuntimeError("footprints must be nonnegative")
+
+    # 2b. Localization: the east sensor (downwind of the sources) sees upwind
+    # origins; its footprint mass exceeds the west sensor's (source is downwind of west).
+    peak_ix, peak_iy = np.unravel_index(int(np.argmax(geom_east)), geom_east.shape)
+    east_mass = float(geom_east.sum())
+    west_mass = float(geom_west.sum())
+    if not (peak_ix < 13):
+        raise RuntimeError("east-sensor footprint peak must be upwind of the sensor")
+    if not (east_mass > west_mass):
+        raise RuntimeError("downwind sensor footprint mass must exceed the upwind-of-source sensor")
+
+    # 3. Fitted footprints sum over cells == raw per-sensor group contribution.
+    footprint_sum_error = 0.0
+    for sid in rows_by_sensor:
+        for key, field in footprints.fitted_footprint[sid].items():
+            cell_sum = float(np.asarray(field).sum())
+            raw_group = footprints.per_sensor_group_contribution_raw[sid][key]
+            footprint_sum_error = max(footprint_sum_error, abs(cell_sum - raw_group))
+    if footprint_sum_error > 1e-5:
+        raise RuntimeError(f"fitted footprints do not sum to raw group contributions: err {footprint_sum_error:.3e}")
+
+    # 4. Inheritance: per-sensor sigma_J <= pooled and rank <= pooled.
+    inheritance = []
+    for si in sorted({int(r["sensor_index"]) for r in projection.row_index}):
+        info = per_sensor_identifiability(projection, si, pooled=diagnostics)
+        inheritance.append(info)
+        if not info["inherited"]:
+            raise RuntimeError(f"sensor {si} violates inheritance: {info}")
+
+    return {
+        "status": "ok",
+        "gate": "footprints",
+        "contribution_sum_error": contrib_sum_error,
+        "footprint_sum_error": footprint_sum_error,
+        "footprints_nonnegative": all_nonneg,
+        "east_footprint_peak_cell": [int(peak_ix), int(peak_iy)],
+        "east_footprint_mass": east_mass,
+        "west_footprint_mass": west_mass,
+        "n_active_cells": footprints.metadata["n_active_cells"],
+        "sigma_J_pooled": diagnostics.sigma_J,
+        "per_sensor_sigma_J": {str(i["sensor_index"]): i["sigma_J_sensor"] for i in inheritance},
+        "inheritance_all_ok": all(i["inherited"] for i in inheritance),
+        "report_components": groups,
+    }
+
+
 def run_sanity(*, start: str, end: str) -> dict[str, Any]:
     return run_task3a_sanity(start=start, end=end)
 
@@ -1410,7 +1529,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--gate",
-        choices=("task3a", "response", "projection", "parity", "diagnostics", "fit", "merge", "end_to_end", "wind_field", "all"),
+        choices=("task3a", "response", "projection", "parity", "diagnostics", "fit", "merge", "end_to_end", "wind_field", "footprints", "all"),
         default="task3a",
     )
     parser.add_argument("--strict-all", action="store_true")
@@ -1435,6 +1554,8 @@ def main() -> None:
         result = run_end_to_end_gate()
     elif args.gate == "wind_field":
         result = run_wind_field_gate()
+    elif args.gate == "footprints":
+        result = run_footprints_gate()
     elif args.gate == "all":
         result = {
             "status": "ok",
@@ -1448,6 +1569,7 @@ def main() -> None:
             "merge": run_merge_gate(),
             "end_to_end": run_end_to_end_gate(),
             "wind_field": run_wind_field_gate(),
+            "footprints": run_footprints_gate(),
             "skipped_gates": ["calibration"],
         }
         if args.strict_all:

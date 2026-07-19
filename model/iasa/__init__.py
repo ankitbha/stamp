@@ -35,6 +35,12 @@ from model.iasa.merge import (
     MergeResult,
     recommend_merges,
 )
+from model.iasa.footprints import (
+    FootprintResult,
+    compute_sensor_footprints,
+    decompose_per_sensor,
+    per_sensor_identifiability,
+)
 from model.iasa.projection import (
     BackgroundProjector,
     ProjectionConfig,
@@ -103,6 +109,10 @@ __all__ = [
     "MergeConfig",
     "MergeResult",
     "recommend_merges",
+    "FootprintResult",
+    "compute_sensor_footprints",
+    "decompose_per_sensor",
+    "per_sensor_identifiability",
     "CityWindSampler",
     "DispersionConfig",
     "GriddedWindSampler",

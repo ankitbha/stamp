@@ -1483,7 +1483,7 @@ w_hat_t(x_g) = f_omega(x_g, t; {(z_i, t', u_i, m_i)})   for g = 1..n
 - Ensemble members are tagged `transport` and never pooled with inventory
   scenarios.
 
-### Task 9B: Per-sensor footprints and spatial attribution
+### ~~Task 9B: Per-sensor footprints and spatial attribution~~
 
 **Objective**
 
