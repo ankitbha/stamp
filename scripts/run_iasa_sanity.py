@@ -1017,6 +1017,245 @@ def run_fit_gate() -> dict[str, Any]:
     }
 
 
+def run_merge_gate() -> dict[str, Any]:
+    from model.iasa.diagnostics import DiagnosticsConfig, diagnose_identifiability
+    from model.iasa.fit import FitConfig, fit_sources
+    from model.iasa.merge import recommend_merges
+
+    device = torch.device("cpu")
+    dtype = torch.float64
+
+    def component_of(merge, k):
+        for comp in merge.report_components:
+            if k in comp["members"]:
+                return tuple(comp["members"])
+        raise RuntimeError(f"source {k} missing from components")
+
+    # duplicate_case: sources 0 and 1 share a fingerprint; source 2 is distinct.
+    H_dup = torch.tensor(
+        [[1.0, 1.0, 0.2], [0.5, 0.5, 0.9], [0.2, 0.2, 0.1], [0.0, 0.0, 0.7], [0.3, 0.3, 0.4], [0.8, 0.8, 0.6]],
+        dtype=dtype, device=device,
+    )
+    dup_cols = _column_index(["dup_a", "dup_b", "other"], ["c"])
+    dup_diag = diagnose_identifiability(H_dup, dup_cols, config=DiagnosticsConfig())
+    c_true = torch.tensor([1.1, 1.1, 0.5], dtype=dtype, device=device)
+    Y_dup = H_dup @ c_true
+    dup_fit = fit_sources(H_dup, Y_dup, dup_cols, config=FitConfig())
+    dup_merge = recommend_merges(dup_diag, fit=dup_fit, H_tilde=H_dup)
+    dup_component = component_of(dup_merge, 0)
+    duplicate_pair_in_same_component = dup_component == (0, 1)
+    if not duplicate_pair_in_same_component:
+        raise RuntimeError(f"duplicate pair not merged: component {dup_component}")
+    if component_of(dup_merge, 2) != (2,):
+        raise RuntimeError("distinct source must not be merged")
+    dup_edge = next((e for e in dup_merge.source_edges if e["sources"] == (0, 1)), None)
+    if dup_edge is None or dup_edge["max_coherence"] < 0.999 or "col_i" not in dup_edge["trigger"]:
+        raise RuntimeError("duplicate edge must carry trigger pair and coherence >= 0.999")
+
+    # Grouped activity + sensor contribution equal member sums, no refit.
+    grouped_total = next(g["total_contribution"] for g in dup_merge.grouped_activity["groups"] if g["members"] == [0, 1])
+    merged_duplicate_total_error = abs(grouped_total - float(c_true[0] + c_true[1]))
+    if merged_duplicate_total_error > 1e-4:
+        raise RuntimeError(f"merged duplicate total error {merged_duplicate_total_error:.3e} exceeds 1e-4")
+    grouped_sensor = next(g["contribution"] for g in dup_merge.grouped_sensor_contribution if g["members"] == [0, 1])
+    true_pair_sensor = to_numpy(H_dup[:, 0] * float(c_true[0] + c_true[1]))
+    grouped_sensor_error = float(np.max(np.abs(np.asarray(grouped_sensor) - true_pair_sensor)))
+    if grouped_sensor_error > 1e-4:
+        raise RuntimeError(f"grouped sensor contribution error {grouped_sensor_error:.3e} exceeds 1e-4")
+
+    # separated_case: near-orthogonal sources -> all singleton components.
+    H_sep = torch.eye(6, 3, dtype=dtype, device=device) + 1e-3 * torch.tensor(
+        [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=dtype, device=device
+    )
+    sep_cols = _column_index(["a", "b", "c"], ["c"])
+    sep_diag = diagnose_identifiability(H_sep, sep_cols, config=DiagnosticsConfig())
+    sep_merge = recommend_merges(sep_diag)
+    separated_sources_merged = any(len(comp["members"]) > 1 for comp in sep_merge.report_components)
+    if separated_sources_merged:
+        raise RuntimeError("clearly separated sources must not be merged")
+
+    # weak_case: a near-zero source is flagged weak and forms no edge.
+    H_weak = H_sep.clone()
+    H_weak[:, 1] = 1e-10
+    weak_cols = _column_index(["strong_a", "weak_b", "strong_c"], ["c"])
+    weak_diag = diagnose_identifiability(H_weak, weak_cols, config=DiagnosticsConfig(tau_v=1e-6))
+    weak_merge = recommend_merges(weak_diag)
+    weak_source_flagged = 1 in weak_merge.weak_flags["weak_column_indices"]
+    if not weak_source_flagged:
+        raise RuntimeError("weak source must be flagged")
+    if any(1 in e["sources"] for e in weak_merge.source_edges):
+        raise RuntimeError("weak source must not create an edge")
+
+    # chain_case: A-B and B-C coherent but A-C not -> one component, both edges.
+    e = 0.12
+    H_chain = torch.tensor(
+        [[1.0, 1.0, 1.0], [0.0, e, e], [0.0, 0.0, e], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+        dtype=dtype, device=device,
+    )
+    chain_cols = _column_index(["A", "B", "C"], ["c"])
+    chain_diag = diagnose_identifiability(H_chain, chain_cols, config=DiagnosticsConfig(tau_rho=0.99))
+    chain_merge = recommend_merges(chain_diag)
+    chain_component = component_of(chain_merge, 0)
+    chain_edges = {e["sources"] for e in chain_merge.source_edges}
+    if chain_component != (0, 1, 2):
+        raise RuntimeError(f"A-B-C chain must form one component; got {chain_component}")
+    if not ({(0, 1), (1, 2)} <= chain_edges) or (0, 2) in chain_edges:
+        raise RuntimeError(f"chain must retain edges (0,1) and (1,2) but not (0,2); got {sorted(chain_edges)}")
+
+    # Determinism.
+    repeat_merge = recommend_merges(dup_diag, fit=dup_fit, H_tilde=H_dup)
+    deterministic = json.dumps(repeat_merge.to_json_summary(), sort_keys=True) == json.dumps(
+        dup_merge.to_json_summary(), sort_keys=True
+    )
+    if not deterministic:
+        raise RuntimeError("merge recommendations must be deterministic for identical inputs")
+
+    for comp in dup_merge.report_components:
+        if not comp["is_conservative"]:
+            raise RuntimeError("components must be marked conservative")
+    if dup_merge.resolution["finest_guarantee"]:
+        raise RuntimeError("merge must not claim the finest partition")
+
+    return {
+        "status": "ok",
+        "gate": "merge",
+        "duplicate_pair_in_same_merge_component": duplicate_pair_in_same_component,
+        "duplicate_edge_max_coherence": dup_edge["max_coherence"],
+        "duplicate_edge_min_ray_distance": dup_edge["min_ray_distance"],
+        "merged_duplicate_total_error": merged_duplicate_total_error,
+        "grouped_sensor_contribution_error": grouped_sensor_error,
+        "separated_sources_merged": separated_sources_merged,
+        "weak_source_flagged": weak_source_flagged,
+        "chain_component": list(chain_component),
+        "chain_edges": sorted(list(x) for x in chain_edges),
+        "deterministic": deterministic,
+        "is_conservative": all(c["is_conservative"] for c in dup_merge.report_components),
+        "finest_guarantee": dup_merge.resolution["finest_guarantee"],
+        "n_components_duplicate": len(dup_merge.report_components),
+    }
+
+
+def _run_iasa_pipeline(source_maps, source_names, basis, observer, wind, c_true, *, tau_rho=0.99):
+    """Full toy IASA pipeline on a response-builder-derived H_tilde."""
+    from model.iasa.diagnostics import DiagnosticsConfig, diagnose_projection
+    from model.iasa.fit import FitConfig, fit_projection
+    from model.iasa.merge import recommend_merges
+
+    response_config = ResponseConfig(dt=1.0, lag_window_steps=10, substep_dt=0.25, kernel_truncation_radius=3.0)
+    dispersion_config = DispersionConfig(sigma_parallel=0.7, sigma_perp=0.25, min_dispersion_time=0.25)
+    response = build_lagged_response_matrix(
+        source_maps, source_names, basis, observer, wind,
+        response_config=response_config, dispersion_config=dispersion_config,
+    )
+    T = basis.values.shape[0]
+    timestamps = np.datetime64("2026-06-01T00:00") + np.arange(T) * np.timedelta64(1, "h")
+    background = build_background_basis(
+        response.row_index, timestamps, observer.sensor_xy,
+        BackgroundBasisConfig(include_constant=True, temporal_polynomial_degree=1, daily_harmonics=0),
+    )
+    c_true_np = np.asarray(c_true, dtype=np.float64)
+    beta = np.full(len(background.column_names), 0.1, dtype=np.float64)
+    Y = to_numpy(response.H_lag).astype(np.float64) @ c_true_np + to_numpy(background.Q) @ beta
+    projection = project_response_and_observations(response.H_lag, Y, background, response.row_index, response.column_index)
+    diagnostics = diagnose_projection(projection, DiagnosticsConfig(tau_rho=tau_rho))
+    fit = fit_projection(projection, config=FitConfig())
+    merge = recommend_merges(diagnostics, fit=fit, H_tilde=projection.H_tilde)
+    c_hat = to_numpy(fit.c_hat)
+    coeff_error = float(np.linalg.norm(c_hat - c_true_np) / max(np.linalg.norm(c_true_np), 1e-12))
+    return {
+        "response_boundary_mode": response.metadata["boundary_mode"],
+        "source_basis_names": [(col["source_name"], col["basis_name"]) for col in response.column_index],
+        "c_true": c_true_np.tolist(),
+        "c_hat": c_hat.tolist(),
+        "coefficient_relative_error": coeff_error,
+        "residual_norm": fit.residual_norm,
+        "sigma_J": diagnostics.sigma_J,
+        "numerical_rank": diagnostics.numerical_rank,
+        "effective_rank": diagnostics.effective_rank,
+        "condition_status": diagnostics.condition_status,
+        "weak_set": diagnostics.weak_set,
+        "max_eligible_coherence": _max_eligible_coherence(diagnostics),
+        "report_components": [c["members"] for c in merge.report_components],
+        "source_edges": [{"sources": list(e["sources"]), "max_coherence": e["max_coherence"]} for e in merge.source_edges],
+        "solver_converged": fit.convergence_status == "converged",
+        "device": fit.metadata["device"],
+        "dtype": fit.metadata["dtype"],
+        "_merge": merge,
+    }
+
+
+def run_end_to_end_gate() -> dict[str, Any]:
+    nx = ny = 16
+    T = 24
+    basis = TemporalBasis(
+        names=["impulse_t2", "constant"],
+        values=np.concatenate([np.zeros((T, 1), np.float32), np.ones((T, 1), np.float32)], axis=1),
+        metadata={"gate": "end_to_end"},
+    )
+    basis.values[2, 0] = 1.0
+    observer = Observer(
+        sensor_ids=["west", "east", "north"],
+        sensor_xy=np.asarray([[1.0, 8.0], [13.0, 8.0], [8.0, 13.0]], dtype=np.float32),
+    )
+    two_vx = np.ones(T, dtype=np.float32)
+    two_vy = np.zeros(T, dtype=np.float32)
+    two_vx[T // 2:] = 0.0
+    two_vy[T // 2:] = 1.0
+    diverse_wind = WindSequence(
+        timestamps=constant_direction(length=T, vx=1.0, vy=0.0).timestamps,
+        vx=two_vx, vy=two_vy, provider="two_direction_synthetic", metadata={"switch_time_index": T // 2},
+    )
+
+    # Well-conditioned: two well-separated sources under diverse wind.
+    separated_maps = np.stack([_compact_source(nx, ny, (4.0, 8.0)), _compact_source(nx, ny, (12.0, 8.0))], axis=0)
+    well = _run_iasa_pipeline(
+        separated_maps, ["west_source", "east_source"], basis, observer, diverse_wind,
+        c_true=[1.0, 0.5, 0.4, 0.2],
+    )
+    if well["coefficient_relative_error"] > 0.1:
+        raise RuntimeError(f"end-to-end well-conditioned recovery error {well['coefficient_relative_error']:.3e} > 0.1")
+    if any(len(c) > 1 for c in well["report_components"]):
+        raise RuntimeError("well-separated sources must not be merged in the end-to-end run")
+
+    # Duplicate: identical source maps -> merge recommended.
+    duplicate_maps = np.stack([_compact_source(nx, ny, (6.0, 8.0)), _compact_source(nx, ny, (6.0, 8.0))], axis=0)
+    dup = _run_iasa_pipeline(
+        duplicate_maps, ["src_a", "src_b"], basis, observer,
+        constant_direction(length=T, vx=1.0, vy=0.0), c_true=[0.8, 0.4, 0.7, 0.3],
+    )
+    dup_merged = any(set(c) == {0, 1} for c in dup["report_components"])
+    if not dup_merged:
+        raise RuntimeError("duplicate end-to-end sources must be recommended for merge")
+    dup_grouped = dup["_merge"].grouped_activity["groups"]
+    merged_group = next(g for g in dup_grouped if g["members"] == [0, 1])
+    # Merged contribution equals the summed member coefficient totals (no refit).
+    member_total = sum(
+        v for name, v in dup["_merge"].source_level_activity_summaries["total_contribution"].items()
+    )
+    merged_stable = abs(merged_group["total_contribution"] - member_total) < 1e-6
+
+    required = {
+        "source_basis_names", "c_true", "c_hat", "coefficient_relative_error", "residual_norm",
+        "sigma_J", "numerical_rank", "effective_rank", "condition_status", "weak_set",
+        "max_eligible_coherence", "report_components", "source_edges", "solver_converged",
+        "device", "dtype", "response_boundary_mode",
+    }
+    missing = sorted(required.difference(well))
+    if missing:
+        raise RuntimeError(f"end-to-end summary missing required fields: {missing}")
+
+    well.pop("_merge", None)
+    dup.pop("_merge", None)
+    return {
+        "status": "ok",
+        "gate": "end_to_end",
+        "well_conditioned": well,
+        "duplicate": dup,
+        "duplicate_merge_recommended": dup_merged,
+        "duplicate_merged_contribution_stable": merged_stable,
+    }
+
+
 def run_sanity(*, start: str, end: str) -> dict[str, Any]:
     return run_task3a_sanity(start=start, end=end)
 
@@ -1025,7 +1264,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--gate",
-        choices=("task3a", "response", "projection", "parity", "diagnostics", "fit", "merge", "all"),
+        choices=("task3a", "response", "projection", "parity", "diagnostics", "fit", "merge", "end_to_end", "all"),
         default="task3a",
     )
     parser.add_argument("--strict-all", action="store_true")
@@ -1044,6 +1283,10 @@ def main() -> None:
         result = run_diagnostics_gate()
     elif args.gate == "fit":
         result = run_fit_gate()
+    elif args.gate == "merge":
+        result = run_merge_gate()
+    elif args.gate == "end_to_end":
+        result = run_end_to_end_gate()
     elif args.gate == "all":
         result = {
             "status": "ok",
@@ -1054,10 +1297,12 @@ def main() -> None:
             "parity": run_parity_gate(),
             "diagnostics": run_diagnostics_gate(),
             "fit": run_fit_gate(),
-            "skipped_gates": ["merge"],
+            "merge": run_merge_gate(),
+            "end_to_end": run_end_to_end_gate(),
+            "skipped_gates": ["calibration"],
         }
         if args.strict_all:
-            raise NotImplementedError("Strict all-gate mode requires the Task 9 merge gate.")
+            raise NotImplementedError("Strict all-gate mode requires the Task 10 Gate S7 calibration study.")
     else:
         raise NotImplementedError(f"Gate {args.gate!r} is implemented by a later roadmap task.")
     print(json.dumps(result, indent=2, sort_keys=True))

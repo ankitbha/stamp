@@ -30,6 +30,11 @@ from model.iasa.fit import (
     residual_adequacy_check,
     summarize_report_groups,
 )
+from model.iasa.merge import (
+    MergeConfig,
+    MergeResult,
+    recommend_merges,
+)
 from model.iasa.projection import (
     BackgroundProjector,
     ProjectionConfig,
@@ -79,6 +84,9 @@ __all__ = [
     "fit_sources",
     "residual_adequacy_check",
     "summarize_report_groups",
+    "MergeConfig",
+    "MergeResult",
+    "recommend_merges",
     "CityWindSampler",
     "DispersionConfig",
     "Observer",
