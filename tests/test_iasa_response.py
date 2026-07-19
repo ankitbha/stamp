@@ -6,6 +6,9 @@ import unittest
 from pathlib import Path
 
 import numpy as np
+import torch
+
+torch.set_num_threads(1)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -84,6 +87,14 @@ class IasaResponseTests(unittest.TestCase):
             response_config=ResponseConfig(dt=1.0, lag_window_steps=5, substep_dt=0.25),
         )
         self.assertEqual(result.H_lag.shape, (2 * T, 1))
+        self.assertIsInstance(result.H_lag, torch.Tensor)
+        self.assertIsInstance(result.baseline, torch.Tensor)
+        self.assertEqual(result.H_lag.device.type, "cpu")
+        self.assertEqual(str(result.H_lag.dtype), "torch.float32")
+        for key in ("device", "dtype", "response_dtype", "torch_version", "cuda_version",
+                    "ensemble_kind", "inventory_hash", "wind_realization_hash"):
+            self.assertIn(key, result.metadata)
+        self.assertEqual(result.metadata["ensemble_kind"], "transport")
         self.assertEqual(result.metadata["boundary_mode"], BOUNDARY_MODE)
         self.assertEqual(result.metadata["response_implementation"], RESPONSE_IMPLEMENTATION)
         self.assertEqual(result.column_index[0]["source_name"], "src")

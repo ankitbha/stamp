@@ -4,6 +4,14 @@ from dataclasses import asdict, dataclass
 from typing import Any, Sequence
 
 import numpy as np
+import torch
+
+from model.iasa.backend import (
+    dtype_name,
+    resolve_device,
+    resolve_dtype,
+    runtime_provenance,
+)
 
 
 @dataclass(frozen=True)
@@ -16,11 +24,13 @@ class BackgroundBasisConfig:
     sensor_offsets: bool = False
     max_background_rank: int = 8
     basis_mode: str = "normal"
+    device: str = "cpu"
+    dtype: str = "float64"
 
 
 @dataclass(frozen=True)
 class BackgroundBasisResult:
-    Q: np.ndarray
+    Q: torch.Tensor
     column_names: list[str]
     row_index: list[dict[str, Any]]
     metadata: dict[str, Any]
@@ -89,12 +99,12 @@ def _standardized(values: np.ndarray) -> tuple[np.ndarray, float, float]:
     return (values - mean) / scale, mean, scale
 
 
-def _effective_rank(Q: np.ndarray) -> tuple[int, float, np.ndarray]:
+def _effective_rank(Q: torch.Tensor) -> tuple[int, float, torch.Tensor]:
     if min(Q.shape) == 0:
-        return 0, 0.0, np.empty(0, dtype=np.float64)
-    singular_values = np.linalg.svd(Q, full_matrices=False, compute_uv=False)
-    tolerance = float(max(Q.shape) * np.finfo(np.float64).eps * singular_values[0])
-    return int(np.count_nonzero(singular_values > tolerance)), tolerance, singular_values
+        return 0, 0.0, torch.empty(0, dtype=Q.dtype, device=Q.device)
+    singular_values = torch.linalg.svdvals(Q)
+    tolerance = float(max(Q.shape) * torch.finfo(Q.dtype).eps * float(singular_values[0]))
+    return int(torch.count_nonzero(singular_values > tolerance)), tolerance, singular_values
 
 
 def build_background_basis(
@@ -187,7 +197,12 @@ def build_background_basis(
 
     if len(set(names)) != len(names):
         raise ValueError("background column names must be unique")
-    Q = np.column_stack(columns) if columns else np.empty((mT, 0), dtype=np.float64)
+    device = resolve_device(cfg.device)
+    dtype = resolve_dtype(cfg.dtype, default=torch.float64)
+    if columns:
+        Q = torch.stack([torch.as_tensor(col, dtype=dtype, device=device) for col in columns], dim=1)
+    else:
+        Q = torch.empty((mT, 0), dtype=dtype, device=device)
     rank, tolerance, singular_values = _effective_rank(Q)
     if cfg.basis_mode == "normal" and rank > cfg.max_background_rank:
         raise ValueError(f"normal background effective rank {rank} exceeds max_background_rank={cfg.max_background_rank}")
@@ -198,7 +213,7 @@ def build_background_basis(
         "requested_column_count": int(Q.shape[1]),
         "effective_rank": rank,
         "rank_tolerance": tolerance,
-        "singular_values": singular_values.astype(float).tolist(),
+        "singular_values": [float(v) for v in singular_values.detach().cpu().tolist()],
         "row_count": mT,
         "time_count": T,
         "sensor_count": M,
@@ -211,6 +226,7 @@ def build_background_basis(
             "daily_harmonics": "fractional_local_clock_hours_since_calendar_day_boundary",
         },
         "max_background_rank": cfg.max_background_rank,
+        **runtime_provenance(device, dtype),
     }
     return BackgroundBasisResult(Q=Q, column_names=names, row_index=rows, metadata=metadata)
 

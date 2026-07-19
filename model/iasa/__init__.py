@@ -1,5 +1,14 @@
 """Identifiability-aware source apportionment primitives."""
 
+from model.iasa.backend import (
+    ENSEMBLE_KINDS,
+    INVERSE_DTYPE,
+    RESPONSE_DTYPE,
+    runtime_provenance,
+    tensor_hash,
+    to_numpy,
+    validate_ensemble_kind,
+)
 from model.iasa.background import BackgroundBasisConfig, BackgroundBasisResult, build_background_basis
 from model.iasa.projection import (
     BackgroundProjector,
@@ -23,7 +32,14 @@ from model.iasa.response import (
 
 __all__ = [
     "BOUNDARY_MODE",
+    "ENSEMBLE_KINDS",
+    "INVERSE_DTYPE",
+    "RESPONSE_DTYPE",
     "RESPONSE_IMPLEMENTATION",
+    "runtime_provenance",
+    "tensor_hash",
+    "to_numpy",
+    "validate_ensemble_kind",
     "BackgroundBasisConfig",
     "BackgroundBasisResult",
     "BackgroundProjector",

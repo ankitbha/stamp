@@ -4,8 +4,20 @@ from dataclasses import asdict, dataclass
 from typing import Any, Protocol, Sequence
 
 import numpy as np
+import torch
 
 from model.iasa.activity import TemporalBasis
+from model.iasa.backend import (
+    as_tensor,
+    dtype_name,
+    names_hash,
+    resolve_device,
+    resolve_dtype,
+    runtime_provenance,
+    tensor_hash,
+    to_numpy,
+    validate_ensemble_kind,
+)
 from model.iasa.wind import WindSequence
 
 
@@ -33,6 +45,9 @@ class ResponseConfig:
     zero_wind_orientation: float = 0.0
     trim_initial_lag: bool = False
     max_kernel_diagnostic_records: int | None = 500
+    device: str = "cpu"
+    response_dtype: str = "float32"
+    ensemble_kind: str = "transport"
 
 
 @dataclass(frozen=True)
@@ -86,11 +101,11 @@ class CityWindSampler:
 
 @dataclass(frozen=True)
 class ResponseMatrixResult:
-    H_lag: np.ndarray
+    H_lag: torch.Tensor
     metadata: dict[str, Any]
     row_index: list[dict[str, Any]]
     column_index: list[dict[str, Any]]
-    baseline: np.ndarray
+    baseline: torch.Tensor
 
 
 def _as_basis(activity_basis: TemporalBasis | np.ndarray, T: int) -> tuple[np.ndarray, list[str], dict[str, Any]]:
@@ -168,108 +183,123 @@ def _validate_inputs(
     return maps, names, sensors
 
 
-def _inside_extents(pos: np.ndarray, Nx: int, Ny: int) -> bool:
-    return bool((-0.5 <= pos[0] <= Nx - 0.5) and (-0.5 <= pos[1] <= Ny - 0.5))
+def _inside_extents(pos: torch.Tensor, Nx: int, Ny: int) -> bool:
+    x = float(pos[0])
+    y = float(pos[1])
+    return bool((-0.5 <= x <= Nx - 0.5) and (-0.5 <= y <= Ny - 0.5))
 
 
 def _advect(
-    start: np.ndarray,
+    start: torch.Tensor,
     tau: int,
     target_t: int,
     sampler: WindSampler,
     config: ResponseConfig,
     Nx: int,
     Ny: int,
-) -> tuple[np.ndarray, bool, float | None, np.ndarray]:
-    pos = np.asarray(start, dtype=np.float32).copy()
-    if target_t == tau:
-        wind0 = np.asarray(sampler.sample(float(tau), pos), dtype=np.float32)
-        if wind0.shape != (2,) or not np.isfinite(wind0).all():
+    device: torch.device,
+    dtype: torch.dtype,
+) -> tuple[torch.Tensor, bool, float | None, torch.Tensor]:
+    pos = start.clone()
+
+    def _sample(t_index: float, position: torch.Tensor) -> torch.Tensor:
+        wind = np.asarray(sampler.sample(t_index, to_numpy(position)), dtype=np.float64)
+        if wind.shape != (2,) or not np.isfinite(wind).all():
             raise ValueError("wind sampler must return finite vectors with shape (2,)")
+        return torch.as_tensor(wind, dtype=dtype, device=device)
+
+    if target_t == tau:
+        wind0 = _sample(float(tau), pos)
         return pos, False, None, wind0
     elapsed = 0.0
     duration = float(target_t - tau) * float(config.dt)
-    wind_sum = np.zeros(2, dtype=np.float64)
+    wind_sum = torch.zeros(2, dtype=dtype, device=device)
     wind_weight = 0.0
     while elapsed < duration - 1e-12:
         step = min(float(config.substep_dt), duration - elapsed)
         t_index = float(tau) + elapsed / float(config.dt)
-        wind = np.asarray(sampler.sample(t_index, pos), dtype=np.float32)
-        if wind.shape != (2,) or not np.isfinite(wind).all():
-            raise ValueError("wind sampler must return finite vectors with shape (2,)")
-        wind_sum += wind.astype(np.float64) * step
+        wind = _sample(t_index, pos)
+        wind_sum = wind_sum + wind * step
         wind_weight += step
         pos = pos + step * wind
         elapsed += step
         if not _inside_extents(pos, Nx, Ny):
-            return pos, True, float(tau) + elapsed / float(config.dt), (wind_sum / max(wind_weight, 1e-12)).astype(np.float32)
-    mean_wind = (wind_sum / max(wind_weight, 1e-12)).astype(np.float32)
+            mean_wind = wind_sum / max(wind_weight, 1e-12)
+            return pos, True, float(tau) + elapsed / float(config.dt), mean_wind
+    mean_wind = wind_sum / max(wind_weight, 1e-12)
     return pos, False, None, mean_wind
 
 
-def _orientation(mean_wind: np.ndarray, zero_wind_orientation: float) -> tuple[np.ndarray, np.ndarray]:
-    norm = float(np.linalg.norm(mean_wind))
+def _orientation(mean_wind: torch.Tensor, zero_wind_orientation: float) -> tuple[torch.Tensor, torch.Tensor]:
+    device = mean_wind.device
+    dtype = mean_wind.dtype
+    norm = float(torch.linalg.vector_norm(mean_wind))
     if norm > 1e-8:
-        e_parallel = mean_wind.astype(np.float64) / norm
+        e_parallel = mean_wind / norm
     else:
         angle = float(zero_wind_orientation)
-        e_parallel = np.asarray([np.cos(angle), np.sin(angle)], dtype=np.float64)
-    e_perp = np.asarray([-e_parallel[1], e_parallel[0]], dtype=np.float64)
+        e_parallel = torch.as_tensor([np.cos(angle), np.sin(angle)], dtype=dtype, device=device)
+    e_perp = torch.stack([-e_parallel[1], e_parallel[0]])
     return e_parallel, e_perp
 
 
 def _gaussian_at_points(
-    points: np.ndarray,
-    center: np.ndarray,
-    e_parallel: np.ndarray,
-    e_perp: np.ndarray,
+    points: torch.Tensor,
+    center: torch.Tensor,
+    e_parallel: torch.Tensor,
+    e_perp: torch.Tensor,
     var_parallel: float,
     var_perp: float,
-) -> np.ndarray:
-    delta = points.astype(np.float64) - center.astype(np.float64)
+) -> torch.Tensor:
+    delta = points - center
     d_parallel = delta @ e_parallel
     d_perp = delta @ e_perp
-    norm = 2.0 * np.pi * np.sqrt(var_parallel * var_perp)
-    values = np.exp(-0.5 * ((d_parallel ** 2) / var_parallel + (d_perp ** 2) / var_perp)) / norm
-    return values.astype(np.float32)
+    norm = 2.0 * np.pi * float(np.sqrt(var_parallel * var_perp))
+    values = torch.exp(-0.5 * ((d_parallel ** 2) / var_parallel + (d_perp ** 2) / var_perp)) / norm
+    return values
 
 
 def _retained_kernel_mass(
-    center: np.ndarray,
-    e_parallel: np.ndarray,
-    e_perp: np.ndarray,
+    center: torch.Tensor,
+    e_parallel: torch.Tensor,
+    e_perp: torch.Tensor,
     var_parallel: float,
     var_perp: float,
     Nx: int,
     Ny: int,
     truncation: float,
+    device: torch.device,
+    dtype: torch.dtype,
 ) -> float:
     max_sigma = float(np.sqrt(max(var_parallel, var_perp)))
     radius = float(truncation) * max_sigma
-    xmin = max(0, int(np.floor(center[0] - radius)))
-    xmax = min(Nx - 1, int(np.ceil(center[0] + radius)))
-    ymin = max(0, int(np.floor(center[1] - radius)))
-    ymax = min(Ny - 1, int(np.ceil(center[1] + radius)))
+    cx = float(center[0])
+    cy = float(center[1])
+    xmin = max(0, int(np.floor(cx - radius)))
+    xmax = min(Nx - 1, int(np.ceil(cx + radius)))
+    ymin = max(0, int(np.floor(cy - radius)))
+    ymax = min(Ny - 1, int(np.ceil(cy + radius)))
     if xmin > xmax or ymin > ymax:
         return 0.0
-    offsets = np.asarray([-0.4, -0.2, 0.0, 0.2, 0.4], dtype=np.float32)
-    xs, ys, ox, oy = np.meshgrid(
-        np.arange(xmin, xmax + 1, dtype=np.float32),
-        np.arange(ymin, ymax + 1, dtype=np.float32),
+    offsets = torch.as_tensor([-0.4, -0.2, 0.0, 0.2, 0.4], dtype=dtype, device=device)
+    xs, ys, ox, oy = torch.meshgrid(
+        torch.arange(xmin, xmax + 1, dtype=dtype, device=device),
+        torch.arange(ymin, ymax + 1, dtype=dtype, device=device),
         offsets,
         offsets,
         indexing="ij",
     )
-    points = np.stack([(xs + ox).ravel(), (ys + oy).ravel()], axis=1).astype(np.float32)
+    points = torch.stack([(xs + ox).reshape(-1), (ys + oy).reshape(-1)], dim=1)
     inside = (
         (points[:, 0] >= -0.5)
         & (points[:, 0] <= Nx - 0.5)
         & (points[:, 1] >= -0.5)
         & (points[:, 1] <= Ny - 0.5)
     )
-    if not np.any(inside):
+    if not bool(inside.any()):
         return 0.0
-    return float(np.sum(_gaussian_at_points(points[inside], center, e_parallel, e_perp, var_parallel, var_perp)) / 25.0)
+    values = _gaussian_at_points(points[inside], center, e_parallel, e_perp, var_parallel, var_perp)
+    return float(values.sum() / 25.0)
 
 
 def _make_row_index(sensor_ids: list[str], T: int, trim_start: int) -> list[dict[str, Any]]:
@@ -299,11 +329,14 @@ def build_lagged_response_matrix(
 ) -> ResponseMatrixResult:
     config = response_config or ResponseConfig()
     dispersion = dispersion_config or DispersionConfig()
-    maps, names, sensors = _validate_inputs(source_maps, source_names, observer, config, dispersion)
+    device = resolve_device(config.device)
+    dtype = resolve_dtype(config.response_dtype, default=torch.float32)
+    ensemble_kind = validate_ensemble_kind(config.ensemble_kind)
+    maps_np, names, sensors_np = _validate_inputs(source_maps, source_names, observer, config, dispersion)
     sampler = _as_wind_sampler(wind_sampler_or_sequence, config)
     if isinstance(sampler, CityWindSampler):
         T = len(sampler.vx)
-        basis_values, basis_names, basis_metadata = _as_basis(activity_basis, T)
+        basis_values_np, basis_names, basis_metadata = _as_basis(activity_basis, T)
     else:
         if not hasattr(activity_basis, "values") and np.asarray(activity_basis).ndim == 2:
             T = int(np.asarray(activity_basis).shape[0])
@@ -311,7 +344,11 @@ def build_lagged_response_matrix(
             T = int(np.asarray(activity_basis.values).shape[0])
         else:
             raise ValueError("Cannot infer T for custom wind sampler without activity basis values")
-        basis_values, basis_names, basis_metadata = _as_basis(activity_basis, T)
+        basis_values_np, basis_names, basis_metadata = _as_basis(activity_basis, T)
+
+    maps = torch.as_tensor(maps_np, dtype=dtype, device=device)
+    sensors = torch.as_tensor(sensors_np, dtype=dtype, device=device)
+    basis_values = torch.as_tensor(basis_values_np, dtype=dtype, device=device)
 
     K, Nx, Ny = maps.shape
     B = basis_values.shape[1]
@@ -320,8 +357,8 @@ def build_lagged_response_matrix(
     T_effective = T - trim_start
     if T_effective <= 0:
         raise ValueError("trim_initial_lag removed all rows")
-    H = np.zeros((M * T_effective, K * B), dtype=np.float32)
-    baseline = np.zeros(M * T_effective, dtype=np.float32)
+    H = torch.zeros((M * T_effective, K * B), dtype=dtype, device=device)
+    baseline = torch.zeros(M * T_effective, dtype=dtype, device=device)
     col_index = _column_index(names, basis_names)
     row_index = _make_row_index(list(observer.sensor_ids), T, trim_start)
 
@@ -337,24 +374,27 @@ def build_lagged_response_matrix(
     kernel_summaries: list[dict[str, Any]] = []
     kernel_diagnostic_total_count = 0
 
+    maps_cpu = maps_np  # ingestion array reused for cell enumeration
     for k in range(K):
-        cells = np.argwhere(maps[k] > float(config.source_cell_threshold))
+        cells = np.argwhere(maps_cpu[k] > float(config.source_cell_threshold))
         for b in range(B):
             col = k * B + b
             for tau in range(T):
-                basis_mass = float(basis_values[tau, b])
+                basis_mass = float(basis_values_np[tau, b])
                 if basis_mass == 0.0:
                     continue
                 for ix, iy in cells:
-                    cell_mass = float(maps[k, ix, iy]) * basis_mass
+                    cell_mass = float(maps_cpu[k, ix, iy]) * basis_mass
                     if cell_mass <= 0.0:
                         continue
-                    start = np.asarray([float(ix), float(iy)], dtype=np.float32)
+                    start = torch.as_tensor([float(ix), float(iy)], dtype=dtype, device=device)
                     release_exited = False
                     for t in range(tau, min(T, tau + int(config.lag_window_steps))):
                         if t < trim_start:
                             continue
-                        pos, exited, exit_time, mean_wind = _advect(start, tau, t, sampler, config, Nx, Ny)
+                        pos, exited, exit_time, mean_wind = _advect(
+                            start, tau, t, sampler, config, Nx, Ny, device, dtype
+                        )
                         if exited:
                             if not release_exited:
                                 exited_by_col[col] += 1
@@ -376,7 +416,7 @@ def build_lagged_response_matrix(
                         e_parallel, e_perp = _orientation(mean_wind, config.zero_wind_orientation)
                         sensor_values = _gaussian_at_points(sensors, pos, e_parallel, e_perp, var_parallel, var_perp)
                         row_base = (t - trim_start) * M
-                        H[row_base: row_base + M, col] += (cell_mass * sensor_values).astype(np.float32)
+                        H[row_base: row_base + M, col] += cell_mass * sensor_values
                         raw_retained_fraction = _retained_kernel_mass(
                             pos,
                             e_parallel,
@@ -386,6 +426,8 @@ def build_lagged_response_matrix(
                             Nx,
                             Ny,
                             config.kernel_truncation_radius,
+                            device,
+                            dtype,
                         )
                         retained_fraction = float(np.clip(raw_retained_fraction, 0.0, 1.0))
                         retained_mass = cell_mass * retained_fraction
@@ -417,6 +459,15 @@ def build_lagged_response_matrix(
                                 "dropped_mass": dropped_mass,
                             })
 
+    wind_vx = getattr(sampler, "vx", None)
+    wind_vy = getattr(sampler, "vy", None)
+    wind_vx_list = np.asarray(wind_vx).astype(float).tolist() if wind_vx is not None else None
+    wind_vy_list = np.asarray(wind_vy).astype(float).tolist() if wind_vy is not None else None
+    if wind_vx is not None and wind_vy is not None:
+        wind_realization_hash = tensor_hash(np.stack([np.asarray(wind_vx), np.asarray(wind_vy)]))
+    else:
+        wind_realization_hash = None
+
     metadata: dict[str, Any] = {
         "boundary_mode": BOUNDARY_MODE,
         "response_implementation": RESPONSE_IMPLEMENTATION,
@@ -427,15 +478,15 @@ def build_lagged_response_matrix(
         "basis_metadata": basis_metadata,
         "wind_provider": getattr(sampler, "provider", "custom_wind_sampler"),
         "wind_metadata": getattr(sampler, "metadata", {}),
-        "wind_vx": getattr(sampler, "vx", None).tolist() if hasattr(sampler, "vx") else None,
-        "wind_vy": getattr(sampler, "vy", None).tolist() if hasattr(sampler, "vy") else None,
+        "wind_vx": wind_vx_list,
+        "wind_vy": wind_vy_list,
         "T": T,
         "T_effective": T_effective,
         "trim_start": trim_start,
         "row_index": row_index,
         "column_index": col_index,
         "baseline_policy": config.baseline_policy,
-        "baseline": baseline.astype(float).tolist(),
+        "baseline": to_numpy(baseline).astype(float).tolist(),
         "kernel_emitted_mass_by_column": emitted_by_col.astype(float).tolist(),
         "kernel_observation_count_by_column": kernel_count_by_col.astype(int).tolist(),
         "kernel_mass_retained_by_column": retained_by_col.astype(float).tolist(),
@@ -449,6 +500,16 @@ def build_lagged_response_matrix(
         "released_mass_exited_by_column": released_exit_mass_by_col.astype(float).tolist(),
         "first_exit_by_release": first_exit_by_release,
         "kernel_mass_summaries": kernel_summaries,
+        # Task 6A provenance
+        **runtime_provenance(device, dtype),
+        "response_dtype": dtype_name(dtype),
+        "ensemble_kind": ensemble_kind,
+        "inventory_hash": tensor_hash(maps_np),
+        "inventory_names_hash": names_hash(names),
+        "dispersion_settings": asdict(dispersion),
+        "wind_realization_hash": wind_realization_hash,
+        "observation_mask": None,
+        "parent_artifact_hashes": [],
     }
     return ResponseMatrixResult(H_lag=H, metadata=metadata, row_index=row_index, column_index=col_index, baseline=baseline)
 

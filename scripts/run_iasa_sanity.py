@@ -10,6 +10,13 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import torch
+
+# The open-boundary response builder issues many tiny per-kernel tensor ops in a
+# Python loop; default CPU multithreading thrashes on them. Pin to one thread for
+# the sanity/parity harness so builds stay fast and do not trip node CPU-time
+# guards. This is a harness-level choice and does not constrain library callers.
+torch.set_num_threads(1)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +26,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from model.iasa.activity import TemporalBasis  # noqa: E402
+from model.iasa.backend import to_numpy  # noqa: E402
 from model.iasa.background import BackgroundBasisConfig, build_background_basis  # noqa: E402
 from model.iasa.projection import fit_background_projector, project_response_and_observations  # noqa: E402
 from model.iasa.response import (  # noqa: E402
@@ -223,7 +231,7 @@ def run_response_gate() -> dict[str, Any]:
     source_maps, source_names, basis, observer, response_config, dispersion_config = _response_sanity_inputs()
     wind = constant_direction(length=basis.values.shape[0], vx=1.0, vy=0.0)
     result, _, _, _ = _build_response_sanity_result()
-    H = result.H_lag
+    H = to_numpy(result.H_lag)
     expected_shape = (len(observer.sensor_ids) * basis.values.shape[0], len(source_names) * len(basis.names))
     if H.shape != expected_shape:
         raise RuntimeError(f"response H_lag shape {H.shape}; expected {expected_shape}")
@@ -316,7 +324,7 @@ def run_response_gate() -> dict[str, Any]:
         response_config=response_config,
         dispersion_config=dispersion_config,
     )
-    north_rows = north.H_lag[(release_t + 8) * M:(release_t + 12) * M, 0].reshape(-1, M)
+    north_rows = to_numpy(north.H_lag)[(release_t + 8) * M:(release_t + 12) * M, 0].reshape(-1, M)
     north_peak = float(north_rows[:, 2].max())
     south_late_peak = float(north_rows[:, 3].max())
     if north_peak <= south_late_peak:
@@ -346,7 +354,7 @@ def run_response_gate() -> dict[str, Any]:
         source_maps[3:4], ["interior_source"], constant_basis, observer, two_direction,
         response_config=response_config, dispersion_config=dispersion_config,
     )
-    two_direction_max_difference = float(np.max(np.abs(two_constant.H_lag - east_constant.H_lag)))
+    two_direction_max_difference = float(np.max(np.abs(to_numpy(two_constant.H_lag) - to_numpy(east_constant.H_lag))))
     if two_direction_max_difference <= 1e-6:
         raise RuntimeError("two-direction fingerprint must differ from eastward-only fingerprint")
 
@@ -376,7 +384,7 @@ def run_response_gate() -> dict[str, Any]:
         response_config=response_config,
         dispersion_config=DispersionConfig(sigma_parallel=0.4, sigma_perp=0.4, min_dispersion_time=0.25),
     )
-    if np.allclose(iso.H_lag, H):
+    if np.allclose(to_numpy(iso.H_lag), H):
         raise RuntimeError("anisotropic and isotropic dispersion should produce different response matrices")
 
     repeat = build_lagged_response_matrix(
@@ -388,7 +396,7 @@ def run_response_gate() -> dict[str, Any]:
         response_config=response_config,
         dispersion_config=dispersion_config,
     )
-    np.testing.assert_allclose(repeat.H_lag, H, rtol=0.0, atol=0.0)
+    np.testing.assert_allclose(to_numpy(repeat.H_lag), H, rtol=0.0, atol=0.0)
 
     return {
         "status": "ok",
@@ -437,13 +445,16 @@ def run_projection_gate() -> dict[str, Any]:
     normal = build_background_basis(response.row_index, timestamps, observer.sensor_xy, normal_config)
     if normal.column_names != ["constant", "time_polynomial_1", "daily_sin_1", "daily_cos_1"]:
         raise RuntimeError("normal Gate S2 background columns changed")
+    H_lag_np = to_numpy(response.H_lag).astype(np.float64)
+    normal_Q_np = to_numpy(normal.Q)
     c_true = np.asarray([1.0, 0.5, 0.0, 0.25, 0.75, 0.0, 0.4, 0.2], dtype=np.float64)
     beta = np.asarray([0.3, -0.1, 0.2, 0.15], dtype=np.float64)
-    Y = np.asarray(response.H_lag, dtype=np.float64) @ c_true + normal.Q @ beta
+    Y = H_lag_np @ c_true + normal_Q_np @ beta
     projected = project_response_and_observations(
         response.H_lag, Y, normal, response.row_index, response.column_index,
     )
     projector = fit_background_projector(normal)
+    U_r_np = to_numpy(projector.U_r)
 
     empty = build_background_basis(
         response.row_index, timestamps, observer.sensor_xy,
@@ -452,24 +463,24 @@ def run_projection_gate() -> dict[str, Any]:
     empty_projection = project_response_and_observations(
         response.H_lag, Y, empty, response.row_index, response.column_index,
     )
-    np.testing.assert_allclose(empty_projection.H_tilde, response.H_lag, rtol=0.0, atol=0.0)
-    np.testing.assert_allclose(empty_projection.Y_tilde, Y, rtol=0.0, atol=0.0)
+    np.testing.assert_allclose(to_numpy(empty_projection.H_tilde), H_lag_np, rtol=0.0, atol=1e-12)
+    np.testing.assert_allclose(to_numpy(empty_projection.Y_tilde), Y, rtol=0.0, atol=1e-12)
 
-    expected_y_tilde = projected.H_tilde @ c_true
-    np.testing.assert_allclose(projected.Y_tilde, expected_y_tilde, rtol=1e-6, atol=1e-8)
-    np.testing.assert_allclose(projected.H_removed + projected.H_tilde, response.H_lag, rtol=1e-10, atol=1e-12)
-    np.testing.assert_allclose(projected.Y_removed + projected.Y_tilde, Y, rtol=1e-10, atol=1e-12)
-    reconstructed = np.asarray(response.H_lag, dtype=np.float64) - projector.U_r @ (
-        projector.U_r.T @ np.asarray(response.H_lag, dtype=np.float64)
-    )
-    np.testing.assert_allclose(reconstructed, projected.H_tilde, rtol=0.0, atol=1e-12)
+    projected_H_tilde = to_numpy(projected.H_tilde)
+    projected_Y_tilde = to_numpy(projected.Y_tilde)
+    expected_y_tilde = projected_H_tilde @ c_true
+    np.testing.assert_allclose(projected_Y_tilde, expected_y_tilde, rtol=1e-6, atol=1e-8)
+    np.testing.assert_allclose(to_numpy(projected.H_removed) + projected_H_tilde, H_lag_np, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(to_numpy(projected.Y_removed) + projected_Y_tilde, Y, rtol=1e-10, atol=1e-12)
+    reconstructed = H_lag_np - U_r_np @ (U_r_np.T @ H_lag_np)
+    np.testing.assert_allclose(reconstructed, projected_H_tilde, rtol=0.0, atol=1e-12)
     if projector.effective_rank != 4:
         raise RuntimeError("normal Gate S2 background must have effective rank four")
 
     redundant = build_background_basis(
         response.row_index, timestamps, observer.sensor_xy,
         BackgroundBasisConfig(include_constant=False, basis_mode="stress"),
-        user_basis=np.column_stack([normal.Q, normal.Q[:, 0]]),
+        user_basis=np.column_stack([normal_Q_np, normal_Q_np[:, 0]]),
         user_basis_names=normal.column_names + ["constant_duplicate"],
     )
     redundant_projection = project_response_and_observations(
@@ -477,15 +488,15 @@ def run_projection_gate() -> dict[str, Any]:
     )
     if redundant_projection.metadata["effective_rank"] != 4:
         raise RuntimeError("redundant background must retain effective rank four")
-    np.testing.assert_allclose(redundant_projection.H_tilde, projected.H_tilde, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(to_numpy(redundant_projection.H_tilde), projected_H_tilde, rtol=1e-10, atol=1e-12)
 
     stress_column_index = 7
-    source_like = np.asarray(response.H_lag[:, stress_column_index], dtype=np.float64)
+    source_like = H_lag_np[:, stress_column_index].copy()
     source_like /= max(float(np.linalg.norm(source_like)), np.finfo(np.float64).eps)
     stress = build_background_basis(
         response.row_index, timestamps, observer.sensor_xy,
         BackgroundBasisConfig(include_constant=False, basis_mode="stress"),
-        user_basis=np.column_stack([normal.Q, source_like]),
+        user_basis=np.column_stack([normal_Q_np, source_like]),
         user_basis_names=normal.column_names + ["stress_interior_source_constant"],
     )
     stress_projection = project_response_and_observations(
@@ -535,6 +546,96 @@ def run_projection_gate() -> dict[str, Any]:
     }
 
 
+def _build_response_on_device(device: str):
+    source_maps, source_names, basis, observer, response_config, dispersion_config = _response_sanity_inputs()
+    wind = constant_direction(length=basis.values.shape[0], vx=1.0, vy=0.0)
+    from dataclasses import replace
+
+    result = build_lagged_response_matrix(
+        source_maps, source_names, basis, observer, wind,
+        response_config=replace(response_config, device=device),
+        dispersion_config=dispersion_config,
+    )
+    timestamps = np.datetime64("2026-06-01T00:00") + np.arange(basis.values.shape[0]) * np.timedelta64(1, "h")
+    return result, timestamps, observer
+
+
+def _project_on_device(response, timestamps, observer, device: str):
+    normal_config = BackgroundBasisConfig(
+        include_constant=True, temporal_polynomial_degree=1, daily_harmonics=1,
+        max_background_rank=8, basis_mode="normal", device=device,
+    )
+    normal = build_background_basis(response.row_index, timestamps, observer.sensor_xy, normal_config)
+    c_true = np.asarray([1.0, 0.5, 0.0, 0.25, 0.75, 0.0, 0.4, 0.2], dtype=np.float64)
+    beta = np.asarray([0.3, -0.1, 0.2, 0.15], dtype=np.float64)
+    Y = to_numpy(response.H_lag).astype(np.float64) @ c_true + to_numpy(normal.Q) @ beta
+    return project_response_and_observations(
+        response.H_lag, Y, normal, response.row_index, response.column_index,
+    )
+
+
+def run_parity_gate() -> dict[str, Any]:
+    """CPU/CUDA parity summary for Gate S1 (response) and Gate S2 (projection)."""
+    import torch
+
+    cpu_response, timestamps, observer = _build_response_on_device("cpu")
+    cpu_projection = _project_on_device(cpu_response, timestamps, observer, "cpu")
+    if cpu_response.H_lag.device.type != "cpu" or cpu_projection.H_tilde.device.type != "cpu":
+        raise RuntimeError("CPU outputs must remain on the requested cpu device")
+
+    summary: dict[str, Any] = {
+        "status": "ok",
+        "gate": "parity",
+        "cuda_available": bool(torch.cuda.is_available()),
+        "response_dtype": cpu_response.metadata["response_dtype"],
+        "projection_dtype": cpu_projection.metadata["dtype"],
+        "torch_version": cpu_response.metadata["torch_version"],
+        "cuda_version": cpu_response.metadata["cuda_version"],
+    }
+    if not torch.cuda.is_available():
+        summary["status"] = "cpu_only"
+        summary["note"] = "CUDA unavailable on this node; run the parity gate on a SLURM GPU allocation."
+        return summary
+
+    cuda_response, _, _ = _build_response_on_device("cuda")
+    if cuda_response.H_lag.device.type != "cuda":
+        raise RuntimeError("CUDA response must remain on the requested cuda device")
+
+    # Response parity compares the float32 response built independently on each
+    # device (relative tolerance appropriate to float32 accumulation order).
+    response_ref = float(np.max(np.abs(to_numpy(cpu_response.H_lag))))
+    response_diff = float(np.max(np.abs(to_numpy(cpu_response.H_lag) - to_numpy(cuda_response.H_lag))))
+    response_rel = response_diff / max(response_ref, 1e-12)
+    response_tol = 1e-4
+
+    # Projection parity is isolated by projecting the SAME (CPU-built) response on
+    # each device, so the comparison reflects only the float64 background SVD /
+    # projection backend, not the upstream float32 response divergence.
+    cpu_only_projection = _project_on_device(cpu_response, timestamps, observer, "cpu")
+    cuda_only_projection = _project_on_device(cpu_response, timestamps, observer, "cuda")
+    if cuda_only_projection.H_tilde.device.type != "cuda":
+        raise RuntimeError("CUDA projection must remain on the requested cuda device")
+    projection_ref = float(np.max(np.abs(to_numpy(cpu_only_projection.H_tilde))))
+    projection_diff = float(np.max(np.abs(
+        to_numpy(cpu_only_projection.H_tilde) - to_numpy(cuda_only_projection.H_tilde)
+    )))
+    projection_rel = projection_diff / max(projection_ref, 1e-12)
+    projection_tol = 1e-6
+    if response_rel > response_tol:
+        raise RuntimeError(f"response CPU/CUDA relative parity {response_rel:.3e} exceeds {response_tol:.1e}")
+    if projection_rel > projection_tol:
+        raise RuntimeError(f"projection CPU/CUDA relative parity {projection_rel:.3e} exceeds {projection_tol:.1e}")
+    summary.update({
+        "response_cpu_cuda_max_abs_diff": response_diff,
+        "response_cpu_cuda_relative_diff": response_rel,
+        "projection_cpu_cuda_max_abs_diff": projection_diff,
+        "projection_cpu_cuda_relative_diff": projection_rel,
+        "response_relative_tolerance": response_tol,
+        "projection_relative_tolerance": projection_tol,
+    })
+    return summary
+
+
 def run_sanity(*, start: str, end: str) -> dict[str, Any]:
     return run_task3a_sanity(start=start, end=end)
 
@@ -543,7 +644,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--gate",
-        choices=("task3a", "response", "projection", "diagnostics", "fit", "merge", "all"),
+        choices=("task3a", "response", "projection", "parity", "diagnostics", "fit", "merge", "all"),
         default="task3a",
     )
     parser.add_argument("--strict-all", action="store_true")
@@ -556,6 +657,8 @@ def main() -> None:
         result = run_response_gate()
     elif args.gate == "projection":
         result = run_projection_gate()
+    elif args.gate == "parity":
+        result = run_parity_gate()
     elif args.gate == "all":
         result = {
             "status": "ok",
@@ -563,6 +666,7 @@ def main() -> None:
             "task3a": run_task3a_sanity(start=args.start, end=args.end),
             "response": run_response_gate(),
             "projection": run_projection_gate(),
+            "parity": run_parity_gate(),
             "skipped_gates": ["diagnostics", "fit", "merge"],
         }
         if args.strict_all:

@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from typing import Any, Sequence
 
 import numpy as np
+import torch
+
+from model.iasa.backend import to_numpy
 
 
 TRAFFIC_SLOT_HOURS: tuple[int, ...] = (0, 6, 12, 18)
@@ -159,7 +162,13 @@ def build_theta_from_temporal_basis(
         raise ValueError("timestamps length must match basis time dimension")
     if not np.isfinite(basis_values).all() or not np.isfinite(coeff).all():
         raise ValueError("basis and coefficients must contain only finite values")
-    theta = np.einsum("tb,kb->tk", basis_values, coeff, optimize=True).astype(np.float32)
+    theta = to_numpy(
+        torch.einsum(
+            "tb,kb->tk",
+            torch.as_tensor(basis_values, dtype=torch.float32),
+            torch.as_tensor(coeff, dtype=torch.float32),
+        )
+    ).astype(np.float32)
     if nonnegative and np.any(theta < 0):
         raise ValueError("temporal-basis coefficients produced negative activity")
     metadata: dict[str, Any] = {
@@ -189,9 +198,11 @@ def combine_inventory_sources(
         raise ValueError("source_maps must contain only finite values")
     if nonnegative and np.any(maps < 0):
         raise ValueError("source_maps must be nonnegative")
+    maps_t = torch.as_tensor(maps, dtype=torch.float32)
+    theta_t = torch.as_tensor(theta_arr, dtype=torch.float32)
     if theta_arr.ndim == 1:
-        return np.einsum("k,kxy->xy", theta_arr, maps, optimize=True).astype(np.float32)
-    return np.einsum("tk,kxy->txy", theta_arr, maps, optimize=True).astype(np.float32)
+        return to_numpy(torch.einsum("k,kxy->xy", theta_t, maps_t)).astype(np.float32)
+    return to_numpy(torch.einsum("tk,kxy->txy", theta_t, maps_t)).astype(np.float32)
 
 
 __all__ = [

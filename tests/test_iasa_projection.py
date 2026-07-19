@@ -4,8 +4,10 @@ import json
 import unittest
 
 import numpy as np
+import torch
 
 import model.iasa as iasa
+from model.iasa.backend import to_numpy
 from model.iasa.background import BackgroundBasisConfig, build_background_basis
 from model.iasa.projection import ProjectionConfig, fit_background_projector, project_response_and_observations
 from scripts.run_iasa_sanity import run_projection_gate
@@ -35,15 +37,17 @@ class ProjectionTests(unittest.TestCase):
     def test_empty_and_constant_projection(self) -> None:
         empty = build_background_basis(ROWS, TIMESTAMPS, config=BackgroundBasisConfig(include_constant=False))
         empty_result = project_response_and_observations(self.H, self.y, empty, ROWS, self.columns)
-        np.testing.assert_array_equal(empty_result.H_tilde, self.H)
-        np.testing.assert_array_equal(empty_result.Y_tilde, self.y)
-        self.assertEqual(empty_result.U_r.shape, (6, 0))
+        self.assertIsInstance(empty_result.H_tilde, torch.Tensor)
+        self.assertEqual(empty_result.H_tilde.device.type, "cpu")
+        np.testing.assert_array_equal(to_numpy(empty_result.H_tilde), self.H)
+        np.testing.assert_array_equal(to_numpy(empty_result.Y_tilde), self.y)
+        self.assertEqual(tuple(empty_result.U_r.shape), (6, 0))
 
         constant = build_background_basis(ROWS, TIMESTAMPS)
         result = project_response_and_observations(self.H, self.y, constant, ROWS, self.columns)
-        np.testing.assert_allclose(result.H_tilde.mean(axis=0), 0.0, atol=1e-12)
-        np.testing.assert_allclose(result.Y_tilde.mean(), 0.0, atol=1e-12)
-        np.testing.assert_allclose(result.H_tilde + result.H_removed, self.H)
+        np.testing.assert_allclose(to_numpy(result.H_tilde).mean(axis=0), 0.0, atol=1e-12)
+        np.testing.assert_allclose(to_numpy(result.Y_tilde).mean(), 0.0, atol=1e-12)
+        np.testing.assert_allclose(to_numpy(result.H_tilde) + to_numpy(result.H_removed), self.H)
         self.assertEqual(result.metadata["effective_rank"], 1)
         json.dumps(result.metadata)
 
@@ -53,9 +57,10 @@ class ProjectionTests(unittest.TestCase):
         projector = fit_background_projector(redundant)
         self.assertEqual(projector.effective_rank, 2)
         self.assertEqual(projector.metadata["dependent_column_names"], ["constant_copy"])
-        once = projector.project(self.H)
-        np.testing.assert_allclose(projector.project(once), once, atol=1e-12)
-        np.testing.assert_allclose(once, self.H - projector.U_r @ (projector.U_r.T @ self.H), atol=1e-12)
+        once = to_numpy(projector.project(self.H))
+        np.testing.assert_allclose(to_numpy(projector.project(once)), once, atol=1e-12)
+        U_r = to_numpy(projector.U_r)
+        np.testing.assert_allclose(once, self.H - U_r @ (U_r.T @ self.H), atol=1e-12)
         high_tolerance = fit_background_projector(redundant, ProjectionConfig(rank_tolerance=1e6))
         self.assertEqual(high_tolerance.effective_rank, 0)
         with self.assertRaisesRegex(ValueError, "nonnegative"):
