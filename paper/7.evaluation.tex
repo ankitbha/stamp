@@ -72,7 +72,9 @@ spatial congestion is not represented.
 \setlength{\tabcolsep}{4pt}
 \caption{New Delhi source groups, spatial proxies, and temporal-basis components.}
 \label{tab:new_delhi_inventories}
-\begin{tabular}{lll}
+\begin{tabularx}{\columnwidth}{l
+  >{\raggedright\arraybackslash}X
+  >{\raggedright\arraybackslash}X}
 \toprule
 Source group & Spatial proxy & Temporal-basis components \\
 \midrule
@@ -81,7 +83,7 @@ Industries & regional industry map & continuous + daytime (07--19) \\
 Population density & gridded population & peaks 07:00, 13:00, 19:00 \\
 Traffic & road-network map & diurnal slots 00/06/12/18 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
 Brick-kiln activity uses deterministic alternating 12-hour blocks as a controlled

@@ -364,7 +364,10 @@ fingerprint.
 activity estimates.  The lower block lists the set- and graph-valued outputs that
 accompany the scalar diagnostics.}
 \label{tab:diagnostics}
-\begin{tabular}{llll}
+\begin{tabularx}{\columnwidth}{l
+  >{\raggedright\arraybackslash}X
+  >{\raggedright\arraybackslash}X
+  >{\raggedright\arraybackslash}X}
 \toprule
 Symbol & Name & Interpretation & Action \\
 \midrule
@@ -383,7 +386,7 @@ Symbol & Name & Interpretation & Action \\
 \(\mathcal G\) & connected report groups & identifiable resolution & report grouped \\
 --- & global unresolved warning & deficient, no edge & warn globally \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
 \subsection{Per-Sensor Source Footprints and Spatial Attribution}
