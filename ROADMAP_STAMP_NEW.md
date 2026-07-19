@@ -1454,6 +1454,14 @@ w_hat_t(x_g) = f_omega(x_g, t; {(z_i, t', u_i, m_i)})   for g = 1..n
 - Keep the v1 city-level provider available for smoke checks under a distinct
   provider label; the gridded field is the default for paper-facing New Delhi
   results.
+- Implementation note (2026-07-19): the coordinate-query FieldFormer from the
+  sibling repo is vendored inference-only into `baselines/fieldformer/` and
+  wrapped by `model/iasa/fieldformer_adapter.py`
+  (`FieldFormerCoordinateQueryImputer`) behind the `CoordinateQueryImputer`
+  protocol. Because the upstream checkpoints are scalar (`out_dim=1`) and IASA
+  wind needs a 2-vector `(Ux, Vy)` (`out_dim=2`), a wind checkpoint must be
+  trained to activate it; the default imputer remains the kernel coordinate-query
+  interpolator (`KernelCoordinateQueryImputer`) as a fallback.
 - Validate on real data by masking observed station vectors and measuring
   held-out station-time vector, direction, and speed error; dense city-wide wind
   truth is not assumed.

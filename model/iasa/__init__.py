@@ -65,6 +65,11 @@ from model.iasa.wind import (
     gridded_new_delhi_wind_field,
     transport_vectors_from_wd_ws,
 )
+from model.iasa.fieldformer_adapter import (
+    FieldFormerCoordinateQueryImputer,
+    build_fieldformer_wind_imputer,
+    build_untrained_wind_model,
+)
 
 __all__ = [
     "BOUNDARY_MODE",
@@ -110,6 +115,9 @@ __all__ = [
     "CoordinateQueryImputer",
     "GriddedWindField",
     "KernelCoordinateQueryImputer",
+    "FieldFormerCoordinateQueryImputer",
+    "build_fieldformer_wind_imputer",
+    "build_untrained_wind_model",
     "build_gridded_wind_field",
     "build_wind_field_ensemble",
     "evaluate_gridded_wind_heldout",

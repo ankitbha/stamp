@@ -1359,9 +1359,31 @@ def run_wind_field_gate() -> dict[str, Any]:
     if not pooling_rejected:
         raise RuntimeError("transport/inventory ensemble products must not be pooled")
 
+    # FieldFormer coordinate-query adapter plumbing (UNTRAINED smoke): the vendored
+    # model drives the same gridded-field path. Output is meaningless until a
+    # 2-vector wind checkpoint is trained; this only exercises the plumbing. The
+    # DEFAULT imputer remains the kernel interpolator.
+    from model.iasa.fieldformer_adapter import build_fieldformer_wind_imputer, build_untrained_wind_model
+    ff_imputer = build_fieldformer_wind_imputer(model=build_untrained_wind_model(), k_neighbors=8, time_radius=2)
+    ff_field = build_gridded_wind_field(
+        station_coords, station_vectors, station_mask, np.arange(T), (nx, ny),
+        imputer=ff_imputer, dt_s=1.0, dx_m=1.0, dy_m=1.0,
+    )
+    fieldformer_smoke_ok = (
+        ff_field.field.shape == (T, nx, ny, 2)
+        and bool(np.isfinite(ff_field.field).all())
+        and ff_field.metadata["imputer"] == "fieldformer_coordinate_query"
+        and field.metadata["imputer"] == "kernel_coordinate_query"  # default stays kernel
+    )
+    if not fieldformer_smoke_ok:
+        raise RuntimeError("FieldFormer adapter plumbing (untrained smoke) failed")
+
     return {
         "status": "ok",
         "gate": "wind_field",
+        "fieldformer_untrained_smoke_ok": fieldformer_smoke_ok,
+        "default_imputer": field.metadata["imputer"],
+        "fieldformer_note": "untrained; requires a trained 2-vector wind checkpoint to activate",
         "convention": conv,
         "field_shape": list(field.field.shape),
         "cell_std": cell_std,
