@@ -37,6 +37,13 @@ class FieldFormerCoordinateQueryImputer:
     coordinates are min-max normalized to roughly ``[0, 1]`` from the station
     extent (or fixed ``domain_bounds``), and time is normalized by ``T - 1``;
     these are the conventions a wind checkpoint must be trained under.
+
+    NOTE: the vendored neighbor indexer keeps the first ``k_neighbors`` candidates
+    in s-major (lowest-sensor-index-first) order, NOT by spatial distance (upstream
+    FieldFormer design). When ``S * (2*time_radius + 1) > k_neighbors`` only the
+    lowest-index sensors feed the model and spatial selectivity rests on the
+    learned ``log_gammas``. Set ``k_neighbors``/``time_radius`` to match what the
+    wind checkpoint was trained with (see ``baselines/fieldformer/README.md``).
     """
 
     model: Any

@@ -38,3 +38,17 @@ opt-in via `model/iasa/fieldformer_adapter.py`
    transport vectors (upstream training script, adapted for the 2-vector target).
 2. `from model.iasa.fieldformer_adapter import build_fieldformer_wind_imputer`
    and pass the resulting imputer to `build_gridded_wind_field(..., imputer=...)`.
+
+## Caveat for training/inference: neighbor selection is not spatially local
+
+`SplitAwareSparseNeighborIndexer._filter_and_pad` keeps the first `k_neighbors`
+valid candidates in **s-major enumeration order (lowest sensor index first), not
+by spatial distance**. This is the upstream FieldFormer design, vendored
+faithfully. When the candidate set (`S * (2*time_radius + 1)` sensor-time tuples)
+exceeds `k_neighbors`, only the lowest-index sensors feed the transformer and
+spatial selectivity relies entirely on the learned `log_gammas`. For New Delhi
+(~32 stations) the adapter default `k_neighbors=32` with `time_radius=3` yields
+224 candidates, so raise `k_neighbors` to cover the station-time window (or
+accept the learned-attention regime) — and **train the wind checkpoint under the
+same `k_neighbors`/`time_radius` the adapter queries with**, since the two must
+match for the learned attention to behave as trained.
