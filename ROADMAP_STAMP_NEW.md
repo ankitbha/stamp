@@ -1604,6 +1604,15 @@ max_{i!=j, i,j not in W} rho_ij^ref <= tau_rho^ref   (default tau_rho^ref = tau_
 
 ### Task 9D: Train the FieldFormer 2-vector wind checkpoint
 
+**Status (2026-07-19):** training pipeline landed and smoke-verified
+(`scripts/train_fieldformer_wind.py`, `tests/test_fieldformer_wind_training.py`,
+`--gate fieldformer_train`); the real ~300-epoch run (early stopping, persistent
+resumable checkpoints in `checkpoints/`) has been launched on a GPU node. The
+FieldFormer default-imputer switch remains gated on that run completing and
+beating the kernel + city-mean baselines on the held-out split
+(`checkpoints/<run>.report.json`); until then the kernel imputer stays the
+default. Not struck through pending that validation decision.
+
 **Objective**
 
 Train the coordinate-query FieldFormer to impute the 2-vector transport wind

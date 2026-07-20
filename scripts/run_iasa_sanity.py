@@ -1618,6 +1618,70 @@ def run_refine_gate() -> dict[str, Any]:
     }
 
 
+def run_fieldformer_train_gate() -> dict[str, Any]:
+    """FieldFormer 2-vector wind training smoke (Task 9D): a tiny training run on
+    the REAL New Delhi station record trains, saves, loads via
+    load_fieldformer_checkpoint(out_dim=2)/build_fieldformer_wind_imputer, drives
+    build_gridded_wind_field end to end, and reports held-out error vs the kernel
+    and city-mean baselines on the same split. The kernel remains the default; the
+    FieldFormer default switch is validation-gated and out of scope for the smoke.
+    """
+    import tempfile
+
+    import train_fieldformer_wind as tfw
+    from baselines.fieldformer.model import load_fieldformer_checkpoint
+    from model.iasa.fieldformer_adapter import FieldFormerCoordinateQueryImputer
+    from model.iasa.wind import build_gridded_wind_field
+
+    with tempfile.TemporaryDirectory() as tmp:
+        cfg = tfw.WindTrainConfig(
+            smoke=True, seed=0, patience=5, checkpoint_dir=tmp, run_name="gate_wind", device="cpu",
+        )
+        report = tfw.train_fieldformer_wind(cfg)
+        best = report["best_checkpoint"]
+        if not Path(best).exists():
+            raise RuntimeError("training did not write a best checkpoint")
+
+        model = load_fieldformer_checkpoint(
+            best, d_model=cfg.d_model, nhead=cfg.nhead, layers=cfg.layers, d_ff=cfg.d_ff,
+            out_dim=2, device="cpu", use_ema=True,
+        )
+        if int(model.out_dim) != 2:
+            raise RuntimeError("loaded checkpoint is not a 2-vector (Ux,Vy) model")
+        imputer = FieldFormerCoordinateQueryImputer(
+            model=model, time_radius=cfg.time_radius, k_neighbors=cfg.k_neighbors, device="cpu",
+        )
+
+        data = tfw.load_new_delhi_supervision(cfg)
+        stations = data["station_grid_xy"]
+        vectors = data["observed_vectors"]
+        mask = data["station_mask"]
+        timestamps = data["timestamps"]
+        gwf = build_gridded_wind_field(stations, vectors, mask, timestamps, (8, 8), imputer=imputer)
+        field_finite = bool(np.isfinite(gwf.physical_field).all())
+        if not field_finite:
+            raise RuntimeError("FieldFormer-driven gridded wind field is not finite")
+
+    hv = report.get("heldout_validation", {})
+    return {
+        "status": "ok",
+        "gate": "fieldformer_train",
+        "out_dim": int(model.out_dim),
+        "epochs_run": report["epochs_run"],
+        "best_val_rmse": report["best_val_rmse"],
+        "checkpoint_loaded": True,
+        "gridded_field_finite": field_finite,
+        "gridded_field_shape": list(gwf.physical_field.shape),
+        "recommended_default": report.get("recommended_default", "kernel"),
+        "heldout_vector_rmse": {
+            k: hv.get(k, {}).get("vector_rmse") for k in ("fieldformer", "kernel", "city_mean")
+        },
+        "n_train_tuples": report["n_train_tuples"],
+        "n_val_tuples": report["n_val_tuples"],
+        "holdout_indices": report["holdout_indices"],
+    }
+
+
 def run_sanity(*, start: str, end: str) -> dict[str, Any]:
     return run_task3a_sanity(start=start, end=end)
 
@@ -1626,7 +1690,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--gate",
-        choices=("task3a", "response", "projection", "parity", "diagnostics", "fit", "merge", "end_to_end", "wind_field", "footprints", "refine", "all"),
+        choices=("task3a", "response", "projection", "parity", "diagnostics", "fit", "merge", "end_to_end", "wind_field", "footprints", "refine", "fieldformer_train", "all"),
         default="task3a",
     )
     parser.add_argument("--strict-all", action="store_true")
@@ -1655,6 +1719,8 @@ def main() -> None:
         result = run_footprints_gate()
     elif args.gate == "refine":
         result = run_refine_gate()
+    elif args.gate == "fieldformer_train":
+        result = run_fieldformer_train_gate()
     elif args.gate == "all":
         result = {
             "status": "ok",
@@ -1670,6 +1736,7 @@ def main() -> None:
             "wind_field": run_wind_field_gate(),
             "footprints": run_footprints_gate(),
             "refine": run_refine_gate(),
+            "fieldformer_train": run_fieldformer_train_gate(),
             "skipped_gates": ["calibration"],
         }
         if args.strict_all:
