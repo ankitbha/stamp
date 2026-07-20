@@ -139,11 +139,19 @@ def stations_to_grid(sensors_lonlat: np.ndarray, grid_shape: tuple[int, int]) ->
     return np.stack([ix, iy], axis=1).astype(np.float64)
 
 
-def choose_holdout(n_stations: int, holdout_frac: float, seed: int) -> list[int]:
-    n_hold = max(1, int(round(float(holdout_frac) * n_stations)))
-    n_hold = min(n_hold, n_stations - 1)  # keep >=1 train station
+def choose_holdout(station_mask: np.ndarray, holdout_frac: float, seed: int) -> list[int]:
+    """Pick held-out stations only among those with >=1 observed timestep, and
+    keep at least one observed station for training (else validation or training
+    would have no tuples). ``station_mask`` is the [S, T] observation mask.
+    """
+    mask = np.asarray(station_mask, dtype=bool)
+    observed = np.flatnonzero(mask.any(axis=1))
+    if observed.size < 2:
+        raise ValueError("need at least 2 observed stations to form a held-out split")
+    n_hold = max(1, int(round(float(holdout_frac) * observed.size)))
+    n_hold = min(n_hold, observed.size - 1)  # keep >=1 observed train station
     rng = np.random.default_rng(int(seed))
-    perm = rng.permutation(n_stations)
+    perm = rng.permutation(observed)
     return sorted(int(i) for i in perm[:n_hold])
 
 
@@ -286,6 +294,9 @@ def train_from_supervision(supervision: dict[str, Any], cfg: WindTrainConfig, *,
         start_epoch = int(ckpt["epoch"]) + 1
         best_rmse = float(ckpt.get("best_val_rmse", float("inf")))
         stopper.best = best_rmse
+        # Restore accumulated non-improving epochs so early stopping is not reset
+        # by a resume (otherwise a resumed run can overshoot by up to `patience`).
+        stopper.bad_epochs = int(ckpt.get("early_stop_bad_epochs", 0))
 
     gen = torch.Generator(device="cpu")
     gen.manual_seed(int(cfg.seed))
@@ -341,6 +352,9 @@ def train_from_supervision(supervision: dict[str, Any], cfg: WindTrainConfig, *,
 
         completed_epoch = epoch
         improved = rmse < best_rmse - cfg.min_delta
+        # Step the stopper first so the persisted bad_epochs reflects this epoch,
+        # making a later --resume pick up early stopping exactly where it left off.
+        stopper.step(rmse)
         prov = dict(provenance or {})
         prov.update({"epoch": epoch, "device": device})
         payload = {
@@ -350,6 +364,7 @@ def train_from_supervision(supervision: dict[str, Any], cfg: WindTrainConfig, *,
             "scheduler_state_dict": scheduler.state_dict(),
             "epoch": epoch,
             "best_val_rmse": min(best_rmse, rmse),
+            "early_stop_bad_epochs": int(stopper.bad_epochs),
             "config": asdict(cfg),
             "provenance": prov,
         }
@@ -359,7 +374,6 @@ def train_from_supervision(supervision: dict[str, Any], cfg: WindTrainConfig, *,
             payload["best_val_rmse"] = best_rmse
             torch.save(payload, best_path)
 
-        stopper.step(rmse)
         if stopper.stopped:
             print(f"[early-stop] patience={cfg.patience} reached at epoch {epoch}.", file=sys.stderr, flush=True)
             break
@@ -395,7 +409,7 @@ def load_new_delhi_supervision(cfg: WindTrainConfig) -> dict[str, Any]:
     else:
         timestamps = wind.timestamps
     station_grid_xy = stations_to_grid(np.asarray(wind.sensors_xy, dtype=np.float64), cfg.grid_shape)
-    holdout = choose_holdout(vectors.shape[0], cfg.holdout_frac, cfg.seed)
+    holdout = choose_holdout(mask, cfg.holdout_frac, cfg.seed)
     return {
         "station_grid_xy": station_grid_xy,
         "observed_vectors": vectors,
@@ -483,14 +497,28 @@ def train_fieldformer_wind(cfg: WindTrainConfig) -> dict[str, Any]:
         ff_imputer = build_fieldformer_wind_imputer(
             checkpoint_path=report["best_checkpoint"], d_model=cfg.d_model, nhead=cfg.nhead,
             layers=cfg.layers, d_ff=cfg.d_ff, time_radius=cfg.time_radius, k_neighbors=cfg.k_neighbors,
-            domain_bounds=None, device="cpu", use_ema=True,
+            # Pin the training-time normalization extent instead of recomputing it
+            # from the eval station set (identical here, but explicit is safer).
+            domain_bounds=tuple(report["domain_bounds"]), device="cpu", use_ema=True,
         )
         report["heldout_validation"] = _baseline_reports(data, cfg, ff_imputer)
         ff = report["heldout_validation"].get("fieldformer", {})
         ker = report["heldout_validation"].get("kernel", {})
+        cm = report["heldout_validation"].get("city_mean", {})
         if "vector_rmse" in ff and "vector_rmse" in ker:
-            report["fieldformer_beats_kernel"] = bool(ff["vector_rmse"] < ker["vector_rmse"])
-            report["recommended_default"] = "fieldformer" if report["fieldformer_beats_kernel"] else "kernel"
+            ff_r = float(ff["vector_rmse"])
+            ker_r = float(ker["vector_rmse"])
+            cm_r = float(cm.get("vector_rmse", float("inf")))
+            best_baseline_r = min(ker_r, cm_r)
+            report["fieldformer_beats_kernel"] = bool(ff_r < ker_r)
+            # Roadmap Task 9D: adopt FieldFormer as the default ONLY if it improves
+            # held-out error over BOTH the kernel AND the city-mean baseline. A
+            # trivial spatially-constant city mean is a strong baseline for
+            # city-scale wind, so beating the kernel alone is not sufficient.
+            report["fieldformer_beats_all_baselines"] = bool(ff_r < best_baseline_r)
+            report["strongest_baseline"] = "city_mean" if cm_r <= ker_r else "kernel"
+            report["strongest_baseline_vector_rmse"] = best_baseline_r
+            report["recommended_default"] = "fieldformer" if report["fieldformer_beats_all_baselines"] else "kernel"
     except Exception as exc:  # pragma: no cover
         report["heldout_validation"] = {"error": str(exc)}
         report["recommended_default"] = "kernel"
