@@ -1377,7 +1377,9 @@ The end-to-end gate must verify:
   solver on small synthetic matrices.
 - Generated artifacts are small and go to `logs/` or `/tmp`, not tracked source paths.
 
-**Gate S7 (adequacy calibration study), completed before Task 10 begins.** Gate
+**Gate S7 (adequacy calibration study), completed before Task 10 begins.**
+**~~Implemented 2026-07-19~~ — `--gate calibration` (and `--gate all --strict-all`);
+GPU-verified.** Gate
 S4 confirms the adequacy check on single instances; Gate S7 confirms it is
 statistically calibrated so the p-values the experiments report can be trusted.
 Extend the sanity runner with `--gate calibration`. Under a correctly specified,
@@ -2040,7 +2042,7 @@ Task 8 complete -> Gate S4 fitting sanity passes (incl. temporal recovery and
                    residual-visible / span-absorbed adequacy cases)
 Task 9 complete -> Gate S5 merge sanity passes
 Before Task 10 -> Gate S6 minimal end-to-end IASA sanity passes
-Before Task 10 -> Gate S7 adequacy calibration study passes
+Before Task 10 -> Gate S7 adequacy calibration study passes  [implemented 2026-07-19]
 ```
 
 These sanity gates are not replacements for the unit tests below. Unit tests check local contracts; sanity gates check whether the assembled method behaves as intended on toy scientific cases.

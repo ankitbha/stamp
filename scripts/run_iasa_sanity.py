@@ -1682,6 +1682,162 @@ def run_fieldformer_train_gate() -> dict[str, Any]:
     }
 
 
+def _ks_uniform_statistic(pvals: "np.ndarray") -> float:
+    """One-sample Kolmogorov-Smirnov statistic of ``pvals`` against U[0, 1]."""
+    p = np.sort(np.asarray(pvals, dtype=np.float64))
+    n = p.shape[0]
+    if n == 0:
+        return 1.0
+    i = np.arange(1, n + 1, dtype=np.float64)
+    d_plus = float(np.max(i / n - p))
+    d_minus = float(np.max(p - (i - 1) / n))
+    return max(d_plus, d_minus)
+
+
+def run_calibration_gate(
+    *,
+    n_trials: int = 200,
+    n_replicates: int = 100,
+    alpha: float = 0.05,
+    amplitudes: tuple[float, ...] = (0.0, 0.15, 0.3, 0.5, 0.8, 1.2),
+    sigma_e: float = 0.1,
+    uniformity_threshold: float = 0.15,
+    power_target: float = 0.9,
+    seed: int = 0,
+) -> dict[str, Any]:
+    """Gate S7: statistical calibration of the refitted parametric-bootstrap
+    adequacy check. Under a correctly specified, externally calibrated noise
+    model, simulate many independent observation sets, refit each, run the
+    adequacy check, and estimate the empirical rejection rate + p-value
+    distribution; then confirm power rises monotonically with omitted-signal
+    amplitude. Deterministic under ``seed``.
+    """
+    from model.iasa.fit import (
+        AdequacyConfig,
+        FitConfig,
+        NoiseModel,
+        fit_projection,
+        residual_adequacy_check,
+    )
+
+    device = torch.device("cpu")
+    dtype = torch.float64
+    N = 48
+    n_cols = 4  # 3 fitted sources + 1 omitted source (column 3)
+
+    # Deterministic well-conditioned operator with MUTUALLY ORTHOGONAL columns, so
+    # the omitted column's signal lands entirely in the residual (clean power).
+    g0 = torch.Generator(device=device)
+    g0.manual_seed(20260719)
+    A = torch.randn(N, n_cols, dtype=dtype, device=device, generator=g0)
+    Qb, _ = torch.linalg.qr(A)  # [N, n_cols] orthonormal columns
+    scales = torch.tensor([1.0, 0.9, 0.8, 0.7], dtype=dtype, device=device)
+    H = Qb * scales  # orthogonal columns preserved under per-column scaling
+
+    cols = _column_index(["s0", "s1", "s2", "omit"], ["c"])
+    row_index = [{"time_index": i, "sensor_index": 0, "sensor_id": "s"} for i in range(N)]
+    ts = np.datetime64("2026-06-01T00:00") + np.arange(N) * np.timedelta64(1, "h")
+    empty_bg = build_background_basis(row_index, ts, config=BackgroundBasisConfig(include_constant=False))
+
+    c_base = torch.tensor([1.0, 0.8, 0.6, 0.0], dtype=dtype, device=device)
+    noise_model = NoiseModel(
+        covariance=sigma_e ** 2, calibrated=True, source="s7_calibration_study",
+        estimated_from_fit_residual=False,
+    )
+    fit_config = FitConfig(fixed_zero_indices=(3,))  # omit column 3 from the fit
+    omit_visible_norm = float(torch.linalg.vector_norm(H[:, 3]))
+
+    def one_trial(a: float, ai: int, t: int) -> tuple[bool, float]:
+        c_true = c_base.clone()
+        c_true[3] = float(a)
+        mean = H @ c_true
+        g = torch.Generator(device=device)
+        g.manual_seed(seed + 1_000_003 * (ai + 1) + t)
+        Y = mean + sigma_e * torch.randn(N, dtype=dtype, device=device, generator=g)
+        projection = project_response_and_observations(H, Y, empty_bg, row_index, cols)
+        fit = fit_projection(projection, config=fit_config)
+        adq = residual_adequacy_check(
+            fit, projection, noise_model,
+            config=AdequacyConfig(alpha=alpha, n_replicates=n_replicates, seed=seed + 7 * (ai + 1) + t),
+        )
+        return bool(adq.inadequate), float(adq.p_value)
+
+    per_amplitude: list[dict[str, Any]] = []
+    null_pvals: list[float] = []
+    for ai, a in enumerate(amplitudes):
+        rejects = 0
+        pvals: list[float] = []
+        for t in range(n_trials):
+            inad, pv = one_trial(a, ai, t)
+            rejects += int(inad)
+            pvals.append(pv)
+        rate = rejects / n_trials
+        per_amplitude.append({"amplitude": float(a), "rejection_rate": rate, "mean_p_value": float(np.mean(pvals))})
+        if a == 0.0:
+            null_pvals = pvals
+
+    # --- checks ---
+    null_rate = per_amplitude[0]["rejection_rate"]
+    mc_tol = 2.0 * math.sqrt(alpha * (1.0 - alpha) / n_trials)
+    rate_ok = abs(null_rate - alpha) <= mc_tol
+
+    pvals_arr = np.asarray(null_pvals, dtype=np.float64)
+    ks_stat = _ks_uniform_statistic(pvals_arr)
+    ks_ok = ks_stat <= uniformity_threshold
+    p_quantiles = {
+        f"q{int(q*100):02d}": float(np.quantile(pvals_arr, q)) for q in (0.1, 0.25, 0.5, 0.75, 0.9)
+    }
+
+    rates = [d["rejection_rate"] for d in per_amplitude]
+    monotone_slack = mc_tol  # allow Monte-Carlo wobble between adjacent amplitudes
+    monotone = all(rates[k + 1] >= rates[k] - monotone_slack for k in range(len(rates) - 1))
+    power_ok = rates[-1] >= power_target
+    power_increases = bool(monotone and power_ok and rates[-1] > rates[0])
+
+    # determinism: identical seed reproduces the statistic exactly.
+    inad_a, pv_a = one_trial(0.0, 0, 0)
+    inad_b, pv_b = one_trial(0.0, 0, 0)
+    deterministic = bool(inad_a == inad_b and pv_a == pv_b)
+
+    if not rate_ok:
+        raise RuntimeError(
+            f"null rejection rate {null_rate:.4f} not within alpha {alpha} +/- {mc_tol:.4f}"
+        )
+    if not ks_ok:
+        raise RuntimeError(f"null p-value KS statistic {ks_stat:.4f} exceeds threshold {uniformity_threshold}")
+    if not power_increases:
+        raise RuntimeError(f"power did not increase monotonically to >= {power_target}: rates {rates}")
+    if not deterministic:
+        raise RuntimeError("adequacy study is not deterministic under a fixed seed")
+
+    return {
+        "status": "ok",
+        "gate": "calibration",
+        "n_trials": n_trials,
+        "n_replicates": n_replicates,
+        "alpha": alpha,
+        "sigma_e": sigma_e,
+        "omit_column_visible_norm": omit_visible_norm,
+        "null_rejection_rate": null_rate,
+        "rejection_rate_tolerance": mc_tol,
+        "rejection_rate_within_tolerance": bool(rate_ok),
+        "p_value_ks_statistic": ks_stat,
+        "p_value_ks_threshold": uniformity_threshold,
+        "p_value_uniform": bool(ks_ok),
+        "null_p_value_quantiles": p_quantiles,
+        "amplitudes": [float(a) for a in amplitudes],
+        "rejection_rates": rates,
+        "power_increases_monotonically_with_omission_amplitude": power_increases,
+        "max_amplitude_power": rates[-1],
+        "power_target": power_target,
+        "deterministic": deterministic,
+        "noise_model_provenance": {
+            "calibrated": True, "source": "s7_calibration_study", "estimated_from_fit_residual": False,
+            "covariance": "scalar_sigma_e_squared",
+        },
+    }
+
+
 def run_sanity(*, start: str, end: str) -> dict[str, Any]:
     return run_task3a_sanity(start=start, end=end)
 
@@ -1690,7 +1846,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--gate",
-        choices=("task3a", "response", "projection", "parity", "diagnostics", "fit", "merge", "end_to_end", "wind_field", "footprints", "refine", "fieldformer_train", "all"),
+        choices=("task3a", "response", "projection", "parity", "diagnostics", "fit", "merge", "end_to_end", "wind_field", "footprints", "refine", "fieldformer_train", "calibration", "all"),
         default="task3a",
     )
     parser.add_argument("--strict-all", action="store_true")
@@ -1721,6 +1877,8 @@ def main() -> None:
         result = run_refine_gate()
     elif args.gate == "fieldformer_train":
         result = run_fieldformer_train_gate()
+    elif args.gate == "calibration":
+        result = run_calibration_gate()
     elif args.gate == "all":
         result = {
             "status": "ok",
@@ -1740,7 +1898,9 @@ def main() -> None:
             "skipped_gates": ["calibration"],
         }
         if args.strict_all:
-            raise NotImplementedError("Strict all-gate mode requires the Task 10 Gate S7 calibration study.")
+            # Full pre-Task-10 gate: include the heavier Gate S7 calibration study.
+            result["calibration"] = run_calibration_gate()
+            result["skipped_gates"] = []
     else:
         raise NotImplementedError(f"Gate {args.gate!r} is implemented by a later roadmap task.")
     print(json.dumps(result, indent=2, sort_keys=True))
