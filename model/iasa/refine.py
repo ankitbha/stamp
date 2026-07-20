@@ -271,6 +271,9 @@ class _Evaluator:
         self._Y = np.asarray(Y, dtype=np.float64)
 
     def penalties(self, A: np.ndarray, psi: np.ndarray, psi0: np.ndarray) -> dict[str, float]:
+        # The correction is position-independent, so ||w_phi - w_phi0||^2 over the
+        # T x n x 2 grid equals n * sum_t |delta_t|^2. We use the per-node proxy
+        # sum_t |delta_t|^2; the constant grid factor n is absorbed into lambda_w.
         delta = _delta_field(self.phi_corr, A)
         wind_anchor = float(self.cfg.lambda_w) * float((delta * delta).sum())
         psi_anchor = float(self.cfg.lambda_psi) * float(((psi - psi0) ** 2).sum())
@@ -499,7 +502,13 @@ def refine_end_to_end(
     # Acceptance (eqs. refinement_smin_check / refinement_coherence_check).
     sigma_ok = sigma_Jr >= threshold - 1e-12
     rho_ok = (rhor is None) or (rhor <= tau_rho_ref + 1e-12)
-    fit_ok = (not cfg.require_fit_improvement) or (
+    # The paper accepts refinement only if it "improves fit". With lambda_sm == 0
+    # every penalty is >= 0 and zero at the start point, so a strictly-decreasing
+    # total already forces the data term down; but with a smoothness penalty
+    # (lambda_sm > 0) the total could fall while the data term rises. Enforce the
+    # data-fit gate whenever require_fit_improvement is set OR lambda_sm > 0.
+    enforce_fit = bool(cfg.require_fit_improvement) or (float(cfg.lambda_sm) > 0.0)
+    fit_ok = (not enforce_fit) or (
         objective_end["data"] <= objective_start["data"] + 1e-9
     )
     accepted = bool(sigma_ok and rho_ok and fit_ok and eps_w_ok and psi_in_box)
