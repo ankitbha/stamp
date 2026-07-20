@@ -265,6 +265,11 @@ def train_from_supervision(supervision: dict[str, Any], cfg: WindTrainConfig, *,
     val_lins = supervision["val_lins"]
 
     model = FieldFormerCoordinateQuery(cfg.d_model, cfg.nhead, cfg.layers, cfg.d_ff, out_dim=2).to(device)
+    # Initialize the relative-position scales (x, y, t) to the upstream defaults
+    # log([1, 1, 0.5]) so the distance kernel starts sensible instead of uniform
+    # (exp(0)=1 on every axis); the model still learns them after freeze_gamma_epochs.
+    with torch.no_grad():
+        model.log_gammas.copy_(torch.log(torch.tensor([1.0, 1.0, 0.5], device=device)))
     ema_model = FieldFormerCoordinateQuery(cfg.d_model, cfg.nhead, cfg.layers, cfg.d_ff, out_dim=2).to(device)
     ema_model.load_state_dict(model.state_dict())
 
