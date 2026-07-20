@@ -1904,6 +1904,25 @@ def run_experiments_gate() -> dict[str, Any]:
     if not e6["transport_inventory_pooling_rejected"]:
         raise RuntimeError("Experiment 6 must reject pooling inventory scenarios with transport")
 
+    # E10: per-sensor contributions must actually sum to the fitted sensor signal,
+    # and footprints must be nonnegative (roadmap acceptance -- enforced, not just reported).
+    e10 = run_named_experiment("exp10", platform, fast["exp10"], seed=0)["result"]
+    if e10["contribution_sum_error"] > 1e-5:
+        raise RuntimeError(f"E10 per-sensor contributions do not sum to fitted signal: "
+                           f"{e10['contribution_sum_error']:.3e}")
+    if not e10["footprints_nonnegative"]:
+        raise RuntimeError("E10 footprints must be nonnegative")
+
+    # E8: residual-visible omission must be detected far more often than the in-span
+    # aligned omission (a real omission absorbed by the fit) -- the negative control.
+    e8 = run_named_experiment("exp08", platform, fast["exp08"], seed=0)["result"]
+    if not (e8["residual_visible_power"] >= 0.5
+            and e8["aligned_negative_control_rejection_rate"] <= 0.5
+            and e8["residual_visible_power"] - e8["aligned_negative_control_rejection_rate"] >= 0.25):
+        raise RuntimeError(
+            f"E8 adequacy behavior wrong: power={e8['residual_visible_power']} "
+            f"aligned={e8['aligned_negative_control_rejection_rate']} null={e8['null_rejection_rate']}")
+
     # Observed mode carries NO synthetic recovery metric.
     obs = run_named_experiment("observed", platform, fast["observed"], seed=0)["result"]
     if obs["recovery_error"] is not None or obs["has_ground_truth"]:
@@ -1917,6 +1936,10 @@ def run_experiments_gate() -> dict[str, Any]:
         raise RuntimeError("experiments are not reproducible under a fixed seed")
 
     summary["per_experiment"] = per_exp
+    summary["e8_null_rate"] = e8["null_rejection_rate"]
+    summary["e8_residual_visible_power"] = e8["residual_visible_power"]
+    summary["e8_aligned_rate"] = e8["aligned_negative_control_rejection_rate"]
+    summary["e10_contribution_sum_error"] = e10["contribution_sum_error"]
     summary["e5_structural_generator"] = e5["structural"]["generator"]
     summary["e5_operator_mismatch_norm"] = e5["structural"]["operator_mismatch_norm"]
     summary["e6_type_separation_enforced"] = bool(e6["transport_inventory_pooling_rejected"])

@@ -740,39 +740,59 @@ def experiment_8(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[str
     row_index = [{"time_index": i, "sensor_index": 0, "sensor_id": "s"} for i in range(N)]
     ts = np.datetime64("2018-05-01T00:00") + np.arange(N) * np.timedelta64(1, "h")
     empty_bg = build_background_basis(row_index, ts, config=BackgroundBasisConfig(include_constant=False))
-    c_base = torch.tensor([1.0, 0.8, 0.6, 0.0], dtype=dtype, device=device)
+    # The fit always uses columns 0-2 (column 3 is masked). The three cases differ
+    # ONLY in what real source is present in the truth but omitted from the fit:
+    #   null              : no omitted source                      -> residual ~ noise
+    #   residual_visible  : an omitted source == column 3, which is ORTHOGONAL to the
+    #                       fitted columns (out of span) -> its signal lands in the
+    #                       residual -> detectable.
+    #   aligned           : an omitted source whose response column is a genuine
+    #                       nonzero combination of the FITTED columns (in span) ->
+    #                       fully absorbed by free coefficients -> NOT detectable.
+    # The aligned case is a real omission (never a fitted column); the point is that
+    # non-rejection cannot certify inventory completeness.
+    c_fit_true = torch.tensor([1.0, 0.8, 0.6], dtype=dtype, device=device)
+    H_fit = H[:, :3]
+    out_of_span = H[:, 3]  # orthogonal to H_fit columns by QR construction
+    # Nonnegative in-span weights: the omitted source's fingerprint is a positive mix
+    # of the known sources, so adding it only raises the true coefficients and the
+    # nonnegative fit absorbs it exactly (it stays absorbable at any amplitude).
+    w_inspan = torch.tensor([0.6, 0.5, 0.4], dtype=dtype, device=device)
+    v_inspan = H_fit @ w_inspan
+    # Match the injected magnitude of the in-span omission to the out-of-span one so
+    # "amplitude" injects equal signal energy in both cases (a fair power comparison).
+    v_inspan = v_inspan * (float(torch.linalg.vector_norm(out_of_span))
+                           / max(float(torch.linalg.vector_norm(v_inspan)), 1e-12))
     noise_model = NoiseModel(covariance=sigma_e ** 2, calibrated=True,
                              source="task10_exp8", estimated_from_fit_residual=False)
 
-    # Deterministic per-case seed offset (never Python's salted str hash).
-    case_offset = {"residual_visible": 1, "aligned": 2}
+    case_offset = {"null": 0, "residual_visible": 1, "aligned": 2}  # deterministic seeds
 
     def _run(case: str, amplitude: float) -> dict[str, Any]:
         rejects = 0
         for t in range(n_trials):
-            c_true = c_base.clone()
+            mean = H_fit @ c_fit_true
             if case == "residual_visible":
-                c_true[3] = float(amplitude)  # column 3 omitted from fit -> visible residual
-                fixed = (3,)
-            else:  # aligned: signal lies in a FITTED column (index 1) -> absorbed
-                c_true[1] = c_true[1] + float(amplitude)
-                fixed = (3,)
-            mean = H @ c_true
+                mean = mean + float(amplitude) * out_of_span
+            elif case == "aligned":
+                mean = mean + float(amplitude) * v_inspan
             g = torch.Generator(device=device)
-            g.manual_seed(seed + 1_000_003 * case_offset[case] + t)
+            g.manual_seed(seed + 1_000_003 * (case_offset[case] + 1) + t)
             Y = to_numpy(mean + sigma_e * torch.randn(N, dtype=dtype, device=device, generator=g))
             proj = project_response_and_observations(H, Y, empty_bg, row_index, cols)
-            fit = fit_projection(proj, config=FitConfig(fixed_zero_indices=fixed))
+            fit = fit_projection(proj, config=FitConfig(fixed_zero_indices=(3,)))
             adq = residual_adequacy_check(
                 fit, proj, noise_model,
-                config=AdequacyConfig(alpha=alpha, n_replicates=n_replicates, seed=seed + 7_654_321 + t),
+                config=AdequacyConfig(alpha=alpha, n_replicates=n_replicates,
+                                      seed=seed + 7_654_321 * (case_offset[case] + 1) + t),
             )
             rejects += int(bool(adq.inadequate))
         return {"case": case, "amplitude": float(amplitude), "rejection_rate": rejects / max(n_trials, 1)}
 
-    null = _run("residual_visible", 0.0)
-    power = _run("residual_visible", float(cfg.get("omission_amplitude", 1.0)))
-    aligned = _run("aligned", float(cfg.get("omission_amplitude", 1.0)))
+    amp = float(cfg.get("omission_amplitude", 1.0))
+    null = _run("null", 0.0)
+    power = _run("residual_visible", amp)
+    aligned = _run("aligned", amp)
 
     # Identifiability diagnostics of the fitted design (columns 0-2; column 3 omitted).
     svals = torch.linalg.svdvals(H[:, :3]).tolist()
@@ -790,7 +810,16 @@ def experiment_8(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[str
         "aligned_negative_control_rejection_rate": aligned["rejection_rate"],
         "diagnostics": diagnostics,
         "alpha": alpha, "n_trials": n_trials, "n_replicates": n_replicates,
-        "negative_control_note": "aligned omission absorbed in-span; non-rejection cannot certify completeness",
+        "omission_amplitude": amp,
+        "fitted_columns": [0, 1, 2],
+        "omitted_column_out_of_span": 3,
+        "aligned_in_span_weights": w_inspan.tolist(),
+        "operator_note": "controlled well-conditioned orthonormal operator (same rationale as Gate S7): "
+                         "isolates the adequacy test's calibration and power, and lets the aligned "
+                         "omission be exactly in span(fitted columns).",
+        "negative_control_note": "aligned = a REAL omitted source whose response column is a nonzero "
+                                 "combination of the fitted columns -> absorbed -> not detected; "
+                                 "non-rejection cannot certify inventory completeness",
         "arrays": {},
     }
 
@@ -917,7 +946,9 @@ def observed_new_delhi(platform: Platform, cfg: dict[str, Any], seed: int) -> di
     H_lag = to_numpy(response.H_lag).astype(np.float64)
 
     # Build Y from real PM2.5 where available; otherwise a declared proxy signal.
-    Y, mask_fraction = _observed_Y(wind_data, response, observer, H_lag, seed)
+    station_index = platform.metadata.get("regulatory_station_index")
+    Y, mask_fraction = _observed_Y(wind_data, response, observer, H_lag, seed,
+                                   station_index=station_index)
 
     projection = project_response_and_observations(response.H_lag, Y, background,
                                                    response.row_index, response.column_index)
@@ -953,27 +984,32 @@ def observed_new_delhi(platform: Platform, cfg: dict[str, Any], seed: int) -> di
     }
 
 
-def _observed_Y(wind_data, response, observer, H_lag, seed):
+def _observed_Y(wind_data, response, observer, H_lag, seed, *, station_index=None):
     """Assemble the observed Y vector aligned to response rows from real PM2.5.
 
-    Missing observations are filled by the projected-out background later; here we
-    substitute the column mean so the fit sees a complete vector, and report the
-    observed mask fraction as provenance."""
+    ``station_index[si]`` maps the deduped observer sensor index ``si`` back to the
+    ORIGINAL raw-station row in ``raw_pm25`` (which is in original station order), so
+    a station that shared a grid cell with another is joined to its own series rather
+    than a neighbor's. Missing observations are filled with the observed column mean
+    so the fit sees a complete vector; the observed mask fraction is reported as
+    provenance."""
     n_rows = H_lag.shape[0]
     if wind_data is None or not hasattr(wind_data, "raw_pm25"):
         rng = np.random.default_rng(seed)
         return H_lag @ rng.uniform(0.2, 1.0, size=H_lag.shape[1]), 0.0
-    pm = np.asarray(getattr(wind_data, "raw_pm25"), dtype=np.float64)  # [S, T] or similar
+    pm = np.asarray(getattr(wind_data, "raw_pm25"), dtype=np.float64)  # [S, T]
     mask = np.asarray(getattr(wind_data, "raw_pm25_mask"), dtype=bool)
-    # Map station index -> observer sensor by position order (best effort).
     Y = np.zeros(n_rows, dtype=np.float64)
     observed = 0
     col_mean = np.nanmean(np.where(mask, pm, np.nan)) if mask.any() else 0.0
+    if not np.isfinite(col_mean):
+        col_mean = 0.0
     for r, row in enumerate(response.row_index):
         t = int(row["time_index"])
         si = int(row.get("sensor_index", 0))
-        if si < pm.shape[0] and t < pm.shape[1] and mask[si, t]:
-            Y[r] = pm[si, t]
+        orig = int(station_index[si]) if station_index is not None and si < len(station_index) else si
+        if orig < pm.shape[0] and t < pm.shape[1] and mask[orig, t]:
+            Y[r] = pm[orig, t]
             observed += 1
         else:
             Y[r] = col_mean

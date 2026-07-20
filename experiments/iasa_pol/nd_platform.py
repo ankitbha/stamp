@@ -160,6 +160,7 @@ def _regulatory_grid_cells(grid_shape: tuple[int, int]) -> tuple[np.ndarray, lis
     seen: dict[tuple[int, int], int] = {}
     cells: list[tuple[int, int]] = []
     ids: list[str] = []
+    station_index: list[int] = []  # retained ORIGINAL station index per deduped cell
     for s, (cx, cy) in enumerate(zip(ix.tolist(), iy.tolist())):
         key = (cx, cy)
         if key in seen:
@@ -167,8 +168,9 @@ def _regulatory_grid_cells(grid_shape: tuple[int, int]) -> tuple[np.ndarray, lis
         seen[key] = s
         cells.append(key)
         ids.append(f"reg_{cx}_{cy}")
+        station_index.append(s)
     xy = np.asarray(cells, dtype=np.float32)
-    return xy, ids
+    return xy, ids, station_index
 
 
 # --------------------------------------------------------------------------- #
@@ -315,8 +317,9 @@ def synthetic_coefficients(n_sources: int, n_basis: int, *, seed: int = 0,
 def build_platform(cfg: PlatformConfig | None = None) -> Platform:
     cfg = cfg or PlatformConfig()
     source_names, source_maps, inv_meta = load_inventory_maps(cfg.grid_shape)
+    station_index: list[int] = []
     try:
-        xy, ids = _regulatory_grid_cells(cfg.grid_shape)
+        xy, ids, station_index = _regulatory_grid_cells(cfg.grid_shape)
         geometry = "regulatory_new_delhi"
     except Exception as exc:  # pragma: no cover - only if station CSVs are missing
         # Deterministic fallback so the platform is always constructible offline.
@@ -325,6 +328,7 @@ def build_platform(cfg: PlatformConfig | None = None) -> Platform:
         cells = {(int(x), int(y)) for x, y in zip(rng.integers(1, nx - 1, 8), rng.integers(1, ny - 1, 8))}
         xy = np.asarray(sorted(cells), dtype=np.float32)
         ids = [f"fallback_{int(x)}_{int(y)}" for x, y in xy]
+        station_index = list(range(len(ids)))
         geometry = f"synthetic_fallback ({exc})"
     observer = Observer(sensor_ids=ids, sensor_xy=xy)
     timestamps = np.datetime64("2018-05-01T00:00") + np.arange(cfg.T) * np.timedelta64(1, "h")
@@ -341,6 +345,9 @@ def build_platform(cfg: PlatformConfig | None = None) -> Platform:
         "inventory_version": cfg.inventory_version,
         "geometry": geometry,
         "n_regulatory_sensors": len(ids),
+        # Original raw-station index for each (deduped) regulatory sensor, so observed
+        # PM2.5 (in original station order) can be joined to the correct sensor.
+        "regulatory_station_index": list(station_index),
         **inv_meta,
     }
     return Platform(

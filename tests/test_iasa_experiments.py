@@ -89,11 +89,20 @@ class ExperimentSuiteTests(unittest.TestCase):
         self.assertTrue(out["row_count_fixed"])
         self.assertFalse(out["coefficients_used_for_selection"])
 
-    def test_exp08_negative_control_present(self):
+    def test_exp08_negative_control_is_genuine(self):
         out = run_named_experiment("exp08", self.platform, FAST["exp08"], seed=0)["result"]
-        # Power to detect a residual-visible omission should exceed the aligned
-        # (in-span) negative control, which is absorbed and hard to detect.
-        self.assertGreaterEqual(out["residual_visible_power"], out["aligned_negative_control_rejection_rate"])
+        # A residual-visible (out-of-span) omission is detected often; a REAL in-span
+        # omission (absorbed by the fit) is not -- so the test must fail if the aligned
+        # case were secretly detectable or the visible case undetectable.
+        self.assertGreaterEqual(out["residual_visible_power"], 0.5)
+        self.assertLessEqual(out["aligned_negative_control_rejection_rate"], 0.5)
+        self.assertGreaterEqual(
+            out["residual_visible_power"] - out["aligned_negative_control_rejection_rate"], 0.25)
+
+    def test_exp10_contributions_sum_to_fitted_signal(self):
+        out = run_named_experiment("exp10", self.platform, FAST["exp10"], seed=0)["result"]
+        self.assertLess(out["contribution_sum_error"], 1e-5)
+        self.assertTrue(out["footprints_nonnegative"])
 
     def test_runner_roundtrip_and_provenance(self):
         out = run_named_experiment("exp01", self.platform, FAST["exp01"], seed=3)
