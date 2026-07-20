@@ -453,6 +453,34 @@ def _day_index(timestamps: Any) -> list[Any] | None:
     return out
 
 
+def projected_data_objective(
+    H_tilde: torch.Tensor,
+    Y_tilde: torch.Tensor,
+    c_hat: torch.Tensor,
+    *,
+    lam: float = 0.0,
+    prior: torch.Tensor | None = None,
+) -> dict[str, float]:
+    """Projected objective ``||Y_tilde - H_tilde c||^2 + lam ||c - prior||^2``.
+
+    The shared scoring function used by the end-to-end refinement (Task 9C) so a
+    candidate response is scored with exactly the projected FISTA objective. The
+    data term equals ``min_gamma ||Y - H_lag c - Q gamma||^2`` by the background
+    projection identity. Returns the data term, the regularizer, and their sum.
+    """
+
+    device, dtype = H_tilde.device, H_tilde.dtype
+    c = c_hat.to(device=device, dtype=dtype).reshape(-1)
+    r = Y_tilde.to(device=device, dtype=dtype).reshape(-1) - H_tilde @ c
+    data = float((r * r).sum())
+    reg = 0.0
+    if lam > 0:
+        p = torch.zeros_like(c) if prior is None else prior.to(device=device, dtype=dtype).reshape(-1)
+        d = c - p
+        reg = float(lam) * float((d * d).sum())
+    return {"data": data, "regularizer": reg, "total": data + reg}
+
+
 def summarize_report_groups(result: FitResult, groups: Sequence[Sequence[int]]) -> dict[str, Any]:
     """Sum fitted activity trajectories and contributions over merge groups.
 
@@ -971,6 +999,7 @@ __all__ = [
     "aggregate_transport_ensemble",
     "fit_projection",
     "fit_sources",
+    "projected_data_objective",
     "residual_adequacy_check",
     "summarize_report_groups",
 ]

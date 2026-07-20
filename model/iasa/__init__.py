@@ -27,6 +27,7 @@ from model.iasa.fit import (
     aggregate_transport_ensemble,
     fit_projection,
     fit_sources,
+    projected_data_objective,
     residual_adequacy_check,
     summarize_report_groups,
 )
@@ -40,6 +41,11 @@ from model.iasa.footprints import (
     compute_sensor_footprints,
     decompose_per_sensor,
     per_sensor_identifiability,
+)
+from model.iasa.refine import (
+    RefineConfig,
+    RefineResult,
+    refine_end_to_end,
 )
 from model.iasa.projection import (
     BackgroundProjector,
@@ -104,6 +110,7 @@ __all__ = [
     "aggregate_transport_ensemble",
     "fit_projection",
     "fit_sources",
+    "projected_data_objective",
     "residual_adequacy_check",
     "summarize_report_groups",
     "MergeConfig",
@@ -113,6 +120,9 @@ __all__ = [
     "compute_sensor_footprints",
     "decompose_per_sensor",
     "per_sensor_identifiability",
+    "RefineConfig",
+    "RefineResult",
+    "refine_end_to_end",
     "CityWindSampler",
     "DispersionConfig",
     "GriddedWindSampler",

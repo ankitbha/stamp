@@ -1521,6 +1521,103 @@ def run_footprints_gate() -> dict[str, Any]:
     }
 
 
+def run_refine_gate() -> dict[str, Any]:
+    """Constrained end-to-end refinement (Task 9C): local wind/dispersion
+    correction improves fit under a declared-wind mismatch while preserving
+    separability, and an impossibly strict coherence gate forces rejection. The
+    fixed-response solution stays the default report.
+    """
+    from model.iasa.fit import FitConfig, fit_projection
+    from model.iasa.refine import RefineConfig, refine_end_to_end
+
+    # Small grid/time: the refinement optimizer rebuilds the response many times.
+    nx = ny = 10
+    T = 8
+    source_maps = np.stack(
+        [_compact_source(nx, ny, (3.0, 5.0)), _compact_source(nx, ny, (5.0, 5.0))], axis=0
+    )
+    source_names = ["src_west", "src_mid"]
+    basis = TemporalBasis(names=["constant"], values=np.ones((T, 1), dtype=np.float32), metadata={"gate": "refine"})
+    observer = Observer(
+        sensor_ids=["west", "east", "north"],
+        sensor_xy=np.asarray([[1.0, 5.0], [8.0, 5.0], [5.0, 8.0]], dtype=np.float32),
+    )
+    rc = ResponseConfig(dt=1.0, lag_window_steps=6, substep_dt=0.5, kernel_truncation_radius=3.0)
+    dc = DispersionConfig(sigma_parallel=0.7, sigma_perp=0.25, min_dispersion_time=0.25)
+    timestamps = np.datetime64("2026-06-01T00:00") + np.arange(T) * np.timedelta64(1, "h")
+
+    # Data generated with a slightly northward-tilted wind; the declared base wind is eastward.
+    data_wind = constant_direction(length=T, vx=1.0, vy=0.25)
+    truth = build_lagged_response_matrix(source_maps, source_names, basis, observer, data_wind,
+                                         response_config=rc, dispersion_config=dc)
+    background = build_background_basis(
+        truth.row_index, timestamps, observer.sensor_xy,
+        BackgroundBasisConfig(include_constant=True, temporal_polynomial_degree=1, daily_harmonics=0),
+    )
+    c_true = np.asarray([1.0, 0.6], dtype=np.float64)
+    beta = np.full(len(background.column_names), 0.1, dtype=np.float64)
+    Y = to_numpy(truth.H_lag).astype(np.float64) @ c_true + to_numpy(background.Q) @ beta
+
+    base_wind = constant_direction(length=T, vx=1.0, vy=0.0)
+    base = build_lagged_response_matrix(source_maps, source_names, basis, observer, base_wind,
+                                        response_config=rc, dispersion_config=dc)
+    projection = project_response_and_observations(base.H_lag, Y, background, base.row_index, base.column_index)
+    fit = fit_projection(projection, config=FitConfig())
+
+    # 1. Accept path: modest anchors, generous eps_w -> improved fit, preserved separability.
+    cfg_accept = RefineConfig(lambda_w=0.001, lambda_psi=0.001, eps_w=0.6, eta_id=0.1,
+                              refine_dispersion=True, correction_basis="constant_linear", max_outer_iters=10)
+    accepted = refine_end_to_end(
+        source_maps, source_names, basis, observer, base_wind, Y, background,
+        fixed_response_fit=fit, baseline_projection=projection,
+        response_config=rc, dispersion_config=dc, config=cfg_accept,
+    )
+    if accepted.objective_end["data"] > accepted.objective_start["data"] + 1e-9:
+        raise RuntimeError("refinement increased the projected data residual under wind mismatch")
+    if not accepted.constraint_satisfaction["eps_w_satisfied"]:
+        raise RuntimeError("refined wind correction violated eps_w")
+    if not accepted.constraint_satisfaction["psi_in_box"]:
+        raise RuntimeError("refined dispersion left Psi_phys")
+    if not torch.allclose(accepted.fixed_response_fit.c_hat, fit.c_hat):
+        raise RuntimeError("fixed-response default estimate was mutated by refinement")
+    if not accepted.accepted:
+        raise RuntimeError(f"refinement unexpectedly rejected: {accepted.reason}")
+
+    # 2. Reject path: an impossibly strict coherence gate must reject.
+    cfg_reject = RefineConfig(lambda_w=0.001, lambda_psi=0.001, eps_w=0.6, tau_rho_ref=0.0,
+                              refine_dispersion=False, correction_basis="constant", max_outer_iters=4)
+    rejected = refine_end_to_end(
+        source_maps, source_names, basis, observer, base_wind, Y, background,
+        fixed_response_fit=fit, baseline_projection=projection,
+        response_config=rc, dispersion_config=dc, config=cfg_reject,
+    )
+    if rejected.accepted:
+        raise RuntimeError("refinement accepted despite an impossibly strict coherence gate")
+
+    return {
+        "status": "ok",
+        "gate": "refine",
+        "accepted": bool(accepted.accepted),
+        "objective_data_start": accepted.objective_start["data"],
+        "objective_data_end": accepted.objective_end["data"],
+        "objective_total_start": accepted.objective_start["total"],
+        "objective_total_end": accepted.objective_end["total"],
+        "wind_correction_inf_norm": accepted.constraint_satisfaction["wind_correction_inf_norm"],
+        "eps_w": accepted.constraint_satisfaction["eps_w"],
+        "refined_psi": accepted.refined_psi,
+        "baseline_psi": accepted.baseline_psi,
+        "sigma_J_baseline_eff": accepted.sigma_J_baseline_eff,
+        "sigma_J_refined_eff": accepted.sigma_J_refined_eff,
+        "sigma_J_threshold": accepted.sigma_J_threshold,
+        "rho_baseline": accepted.rho_baseline,
+        "rho_refined": accepted.rho_refined,
+        "default_report_preserved": bool(torch.allclose(accepted.fixed_response_fit.c_hat, fit.c_hat)),
+        "reject_case_accepted": bool(rejected.accepted),
+        "reject_reason": rejected.reason,
+        "optimizer_evaluations": accepted.optimizer_trace["n_evaluations"],
+    }
+
+
 def run_sanity(*, start: str, end: str) -> dict[str, Any]:
     return run_task3a_sanity(start=start, end=end)
 
@@ -1529,7 +1626,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--gate",
-        choices=("task3a", "response", "projection", "parity", "diagnostics", "fit", "merge", "end_to_end", "wind_field", "footprints", "all"),
+        choices=("task3a", "response", "projection", "parity", "diagnostics", "fit", "merge", "end_to_end", "wind_field", "footprints", "refine", "all"),
         default="task3a",
     )
     parser.add_argument("--strict-all", action="store_true")
@@ -1556,6 +1653,8 @@ def main() -> None:
         result = run_wind_field_gate()
     elif args.gate == "footprints":
         result = run_footprints_gate()
+    elif args.gate == "refine":
+        result = run_refine_gate()
     elif args.gate == "all":
         result = {
             "status": "ok",
@@ -1570,6 +1669,7 @@ def main() -> None:
             "end_to_end": run_end_to_end_gate(),
             "wind_field": run_wind_field_gate(),
             "footprints": run_footprints_gate(),
+            "refine": run_refine_gate(),
             "skipped_gates": ["calibration"],
         }
         if args.strict_all:

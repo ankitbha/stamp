@@ -1544,7 +1544,7 @@ F_s(i) = sum_t F_{s,t}(i)
 - Per-sensor shares aggregate to report groups and never exceed the pooled
   identifiable resolution.
 
-### Task 9C: Constrained end-to-end refinement (optional)
+### ~~Task 9C: Constrained end-to-end refinement (optional)~~
 
 **Objective**
 
