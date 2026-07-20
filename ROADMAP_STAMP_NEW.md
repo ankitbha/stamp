@@ -1602,16 +1602,38 @@ max_{i!=j, i,j not in W} rho_ij^ref <= tau_rho^ref   (default tau_rho^ref = tau_
   eligible coherence above `tau_rho^ref` is rejected.
 - The fixed-response estimate remains available and is the default report.
 
-### Task 9D: Train the FieldFormer 2-vector wind checkpoint
+### ~~Task 9D: Train the FieldFormer 2-vector wind checkpoint~~
 
-**Status (2026-07-19):** training pipeline landed and smoke-verified
-(`scripts/train_fieldformer_wind.py`, `tests/test_fieldformer_wind_training.py`,
-`--gate fieldformer_train`); the real ~300-epoch run (early stopping, persistent
-resumable checkpoints in `checkpoints/`) has been launched on a GPU node. The
-FieldFormer default-imputer switch remains gated on that run completing and
-beating the kernel + city-mean baselines on the held-out split
-(`checkpoints/<run>.report.json`); until then the kernel imputer stays the
-default. Not struck through pending that validation decision.
+**Status (2026-07-19): COMPLETE — trained, validated; kernel retained as the
+default (learned imputer not adopted).** The training pipeline is landed and
+GPU-verified (`scripts/train_fieldformer_wind.py`,
+`tests/test_fieldformer_wind_training.py`, `--gate fieldformer_train`,
+`--gate all` = 12 sub-gates). A 2-vector `(Ux, Vy)` checkpoint was trained on the
+real New Delhi record (32 stations x 21,960 hourly steps) with early stopping and
+resumable checkpoints, then validated on held-out stations.
+
+Result (held-out vector RMSE, 6 held-out stations): FieldFormer **1.12** beats the
+kernel **1.55** but does NOT beat a trivial city-mean baseline **1.06**. The model
+overfits station-holdout in BOTH neighbor configurations tried: (i) the upstream
+lowest-index sparse neighbors (Task 9A caveat: for every query the indexer
+returned the same 5 lowest-index sensors, overlap 0.23 with nearest), and
+(ii) all-station neighbors (`k_neighbors = S*(2*time_radius+1) = 224`) with
+stronger weight decay (1e-3) and upstream `log_gammas` init — which overfit even
+faster (held-out RMSE rose to ~2.5 by epoch 4). A diagnostic confirmed the field
+DOES have spatial structure (spatial/temporal variability ratio 1.86), so the
+failure is generalization, not a uniform field: ~26 training stations is too few
+to learn spatial extrapolation to unseen station locations.
+
+Per this task's acceptance rule (adopt FieldFormer only if it improves held-out
+error over the kernel AND city-mean baselines), the FieldFormer is **not adopted**;
+`KernelCoordinateQueryImputer` remains the IASA default and
+`gridded_new_delhi_wind_field` is unchanged. The trained checkpoint and its
+held-out validation report are retained under `checkpoints/` (git-ignored) as a
+recorded-but-not-adopted artifact. The recommendation logic
+(`recommended_default`) requires beating both baselines and correctly returns
+`kernel`. Future work if a learned wind imputer is desired: more stations/data,
+a distance-aware neighbor indexer, capacity reduction + spatial-smoothness
+regularization, or a different validation protocol (e.g. time-holdout).
 
 **Objective**
 
