@@ -1,0 +1,21 @@
+{
+  "experiment": "exp07",
+  "params": {
+    "lag_grid": [
+      4,
+      6,
+      8,
+      10,
+      12
+    ],
+    "tau_L": 0.001
+  },
+  "platform": {
+    "T": 24,
+    "grid_shape": [
+      20,
+      20
+    ],
+    "lag_window_steps": 10
+  }
+}

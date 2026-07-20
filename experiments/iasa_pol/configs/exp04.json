@@ -1,0 +1,28 @@
+{
+  "experiment": "exp04",
+  "params": {
+    "ensemble_members": 8,
+    "include_real_wind": false,
+    "layouts": [
+      "regulatory",
+      "random",
+      "downwind"
+    ],
+    "n_sensors": 6,
+    "wind_kinds": [
+      "constant",
+      "single",
+      "diurnal",
+      "ar1",
+      "multi"
+    ]
+  },
+  "platform": {
+    "T": 24,
+    "grid_shape": [
+      20,
+      20
+    ],
+    "lag_window_steps": 10
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "experiment": "exp06",
+  "params": {},
+  "platform": {
+    "T": 24,
+    "grid_shape": [
+      20,
+      20
+    ],
+    "lag_window_steps": 10
+  }
+}

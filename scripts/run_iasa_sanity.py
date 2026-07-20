@@ -1848,6 +1848,84 @@ def run_calibration_gate(
     }
 
 
+def run_experiments_gate() -> dict[str, Any]:
+    """Task 10 controlled-experiment-suite gate: a fast reduced-scale sweep of all
+    ten experiments plus the observed New Delhi mode, asserting each is runnable and
+    reports BOTH attribution accuracy and identifiability diagnostics, that runs are
+    reproducible under a fixed seed, and that the E5 structural generator is labeled
+    ``edge_hold_pde`` and never silently substituted for the puff response.
+    """
+    from experiments.iasa_pol.experiments import run_named_experiment
+    from experiments.iasa_pol.nd_platform import PlatformConfig, build_platform
+
+    # Reduced platform so the full sweep stays fast on a CPU/GPU node.
+    platform = build_platform(PlatformConfig(grid_shape=(12, 12), T=12, lag_window_steps=6))
+    fast = {
+        "exp01": {"noise_fracs": [0.0, 0.1]},
+        "exp02": {"offsets": [4.0, 1.0]},
+        "exp03": {"background_modes": ["none", "primary", "stress"], "noise_frac": 0.05},
+        "exp04": {"wind_kinds": ["constant", "multi"], "layouts": ["regulatory", "downwind"],
+                  "ensemble_members": 3, "n_sensors": 5},
+        "exp05": {"wind_direction_perturbations_deg": [0.0, 10.0],
+                  "structural_adequacy_trials": 2, "structural_n_replicates": 40},
+        "exp06": {},
+        "exp07": {"tau_L": 1e-3, "lag_grid": [4, 6, 8]},
+        "exp08": {"N": 32, "n_trials": 8, "n_replicates": 40, "omission_amplitude": 1.2},
+        "exp09": {"noise_fracs": [0.0, 0.05]},
+        "exp10": {},
+        "observed": {"wind_kind": "constant", "use_real_pm25": True, "T": 12},
+    }
+    summary: dict[str, Any] = {"status": "ok", "gate": "experiments"}
+    per_exp: dict[str, Any] = {}
+    for name, params in fast.items():
+        out = run_named_experiment(name, platform, params, seed=0)
+        result = out["result"]
+        # Every controlled experiment must carry accuracy AND diagnostics somewhere.
+        text = json.dumps(result)
+        has_accuracy = any(tok in text for tok in ("coefficient_relative_error", "rejection_rate",
+                                                    "contribution_sum_error", "activity_relative_error",
+                                                    "grouped_relative_error"))
+        has_diag = any(tok in text for tok in ("sigma_J", "numerical_rank", "diagnostics",
+                                                "max_eligible_coherence", "condition_number"))
+        if name != "observed" and not (has_accuracy and has_diag):
+            raise RuntimeError(f"{name}: missing accuracy/diagnostics ({has_accuracy=}, {has_diag=})")
+        per_exp[name] = {"has_accuracy": has_accuracy, "has_diagnostics": has_diag,
+                         "n_array_keys": len(out["arrays"])}
+
+    # E5 structural generator label present and honest.
+    e5 = run_named_experiment("exp05", platform, fast["exp05"], seed=0)["result"]
+    if e5["structural"]["generator"] != "edge_hold_pde":
+        raise RuntimeError("Experiment 5 structural generator must be labeled edge_hold_pde")
+    if not e5["structural"]["edge_hold_config"]["boundary"] == "edge_hold":
+        raise RuntimeError("Experiment 5 structural generator must use edge-hold boundaries")
+
+    # E6 type separation: inventory scenarios must reject pooling with transport.
+    e6 = run_named_experiment("exp06", platform, fast["exp06"], seed=0)["result"]
+    if not e6["transport_inventory_pooling_rejected"]:
+        raise RuntimeError("Experiment 6 must reject pooling inventory scenarios with transport")
+
+    # Observed mode carries NO synthetic recovery metric.
+    obs = run_named_experiment("observed", platform, fast["observed"], seed=0)["result"]
+    if obs["recovery_error"] is not None or obs["has_ground_truth"]:
+        raise RuntimeError("observed mode must not report a recovery error or claim ground truth")
+
+    # Reproducibility under a fixed seed (exp01 coefficient errors reproduce exactly).
+    r1 = run_named_experiment("exp01", platform, fast["exp01"], seed=0)["result"]
+    r2 = run_named_experiment("exp01", platform, fast["exp01"], seed=0)["result"]
+    reproducible = json.dumps(r1["rows"], sort_keys=True) == json.dumps(r2["rows"], sort_keys=True)
+    if not reproducible:
+        raise RuntimeError("experiments are not reproducible under a fixed seed")
+
+    summary["per_experiment"] = per_exp
+    summary["e5_structural_generator"] = e5["structural"]["generator"]
+    summary["e5_operator_mismatch_norm"] = e5["structural"]["operator_mismatch_norm"]
+    summary["e6_type_separation_enforced"] = bool(e6["transport_inventory_pooling_rejected"])
+    summary["observed_has_recovery_error"] = obs["recovery_error"] is not None
+    summary["reproducible_fixed_seed"] = bool(reproducible)
+    summary["n_experiments"] = len(fast)
+    return summary
+
+
 def run_sanity(*, start: str, end: str) -> dict[str, Any]:
     return run_task3a_sanity(start=start, end=end)
 
@@ -1856,7 +1934,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--gate",
-        choices=("task3a", "response", "projection", "parity", "diagnostics", "fit", "merge", "end_to_end", "wind_field", "footprints", "refine", "fieldformer_train", "calibration", "all"),
+        choices=("task3a", "response", "projection", "parity", "diagnostics", "fit", "merge", "end_to_end", "wind_field", "footprints", "refine", "fieldformer_train", "calibration", "experiments", "all"),
         default="task3a",
     )
     parser.add_argument("--strict-all", action="store_true")
@@ -1889,6 +1967,8 @@ def main() -> None:
         result = run_fieldformer_train_gate()
     elif args.gate == "calibration":
         result = run_calibration_gate()
+    elif args.gate == "experiments":
+        result = run_experiments_gate()
     elif args.gate == "all":
         result = {
             "status": "ok",
@@ -1905,11 +1985,13 @@ def main() -> None:
             "footprints": run_footprints_gate(),
             "refine": run_refine_gate(),
             "fieldformer_train": run_fieldformer_train_gate(),
-            "skipped_gates": ["calibration"],
+            "skipped_gates": ["calibration", "experiments"],
         }
         if args.strict_all:
-            # Full pre-Task-10 gate: include the heavier Gate S7 calibration study.
+            # Full gate: include the heavier Gate S7 calibration study and the
+            # Task 10 controlled-experiment-suite sweep.
             result["calibration"] = run_calibration_gate()
+            result["experiments"] = run_experiments_gate()
             result["skipped_gates"] = []
     else:
         raise NotImplementedError(f"Gate {args.gate!r} is implemented by a later roadmap task.")

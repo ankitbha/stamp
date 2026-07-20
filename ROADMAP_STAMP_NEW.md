@@ -1718,7 +1718,19 @@ interpolator.
   paper-facing observed-New-Delhi wind, though Task 10 may run on the kernel
   fallback and be upgraded once the checkpoint validates.
 
-### Task 10: Controlled experiment suite
+### ~~Task 10: Controlled experiment suite~~  [implemented 2026-07-20]
+
+Implemented in `experiments/iasa_pol/` (shared New Delhi base platform
+`nd_platform.py`; ten one-factor experiments + observed mode `experiments.py`;
+Experiment 5b structural generator `edge_hold_pde.py`; provenance-stamped runner
+`run_experiment.py`; `summarize_results.py`; committed `configs/` + `summaries/`,
+git-ignored `runs/`). Verified on an L40S node: `--gate experiments`,
+`--gate all --strict-all` (all 14 sub-gates, `skipped_gates=[]`),
+`tests/test_iasa_experiments.py`, and the runner/summarizer CLIs all pass;
+138-test suite green. Each experiment reports both attribution accuracy and
+identifiability diagnostics; runs are reproducible from saved config+seed; the E5
+structural generator is labeled `edge_hold_pde` and transport/inventory ensembles
+stay type-separated. Task 11 will turn `summaries/` into the paper result tables.
 
 **Objective**
 

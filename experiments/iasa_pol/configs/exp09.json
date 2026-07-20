@@ -1,0 +1,19 @@
+{
+  "experiment": "exp09",
+  "params": {
+    "noise_fracs": [
+      0.0,
+      0.02,
+      0.05,
+      0.1
+    ]
+  },
+  "platform": {
+    "T": 24,
+    "grid_shape": [
+      20,
+      20
+    ],
+    "lag_window_steps": 10
+  }
+}

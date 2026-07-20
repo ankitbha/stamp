@@ -10,3 +10,7 @@ archive/
 
 # Task 9D training artifacts (models, resumable checkpoints, reports)
 checkpoints/
+
+# Task 10 per-run heavy artifacts (regenerable from committed configs + seed).
+# configs/ and summaries/ ARE committed; only runs/ is ignored.
+experiments/iasa_pol/runs/
