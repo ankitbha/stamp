@@ -292,3 +292,40 @@ Code matches its plans essentially everywhere in `model/iasa/*` (APIs, shapes, c
 | checkpoints/fieldformer_wind_new_delhi.report.json | read (corroborates Task 9D numbers) |
 
 No code was executed; the review is fully static. No temporary files were created; the only path added to the repository by this review is this report. (Pre-existing uncommitted state at review time, not introduced here: a `.gitignore` edit un-ignoring `evaluation/iasa_pol/**`, and the in-progress `evaluation/` result-generation tree.)
+
+---
+
+## Post-fix verification (implementor response, verified against `da02c8b` + `d4e7899`)
+
+Every claimed fix was re-verified by reading the actual diff `a333d1f..d4e7899`, not the response text.
+
+**Verified fixed (code matches the claim):**
+- **F2** — M_O implemented correctly: `_observed_pm25_rows` returns (Y_full, observed_flags) with **no imputation**; unobserved rows carry a placeholder that is dropped; the same ordered `keep` rows are selected from Y, H_lag, Q, and row metadata; crucially the projector is fit on the **masked** Q (`_dc_replace(background, Q=Q_m, row_index=row_m)` → `project_response_and_observations` on masked arrays), so masking precedes projection as the paper requires (they do not commute). Insufficient-rows guard present; `pm25_imputed=False` asserted in the experiments gate and tests.
+- **F3** — observed mode rebuilt: 4 groups (`four_group_inventory`), per-group declared bases + F₀ (`paper_temporal_bases`, source-major k·B+b indexing verified), gridded real wind (`make_wind(..., grid_shape=gs)` → `GriddedWindSampler`), 40×40/T=72 config, and a declared zero-source transported IC baseline subtracted **before** masking via the same open-boundary builder (t₀ impulse of the interpolated first-observed-hour field; finite lag-window truncation is consistent with the operator's own horizon). Residuals noted below.
+- **F4** — shares now `‖H̃[:,cols_k]ĉ[cols_k]‖₁ / Σ_k(·)` in sensor-signal space with an explicit denominator string; the coefficient-magnitude path is deleted. Correct.
+- **F6** — `_historical_wind_windows` returns genuine contiguous slices of the real record (provider `historical_real_new_delhi_window`, record_start_index recorded); AR(1) stays the simulated family; E4 rows carry `wind_provider`. Fixed.
+- **F8** — E5 parametric now sweeps `wind_direction_deg`, `wind_speed_factor`, `dispersion_factor`; the experiments gate asserts all three kinds are present. Fixed.
+- **F9** — E2 shifts a copy of the real brick-kiln map (`_shift_map`, zero-fill non-periodic — correct); E6 perturbs real brick_kilns/industries maps. Remaining blob usage (E1/E3/E4/E7/E9/E10) is an owner-approved scope decision, recorded. Acceptable.
+- **F10** — E10 computes footprint centroid distance to true source centers + mass-fraction-within-radius; gate asserts presence. Fixed.
+- **F11** — `sigma_J = 0.0` when `numerical_rank < J`, raw value kept as `sigma_min_positive`. Exactly the suggested fix; downstream `inverse_sigma_J` now correctly reports `infinite`.
+- **F12** — `prior_reduced` stored in the fit config and used by the bootstrap refits. Fixed.
+- **F16** — traffic collapsed to one road map (mean of the four slot maps, in p99 units) with slot-indicator temporal components owned by traffic; F₀ frees each group only on its own components; observed mode fits K=4 (gate-asserted). Fixed.
+- **F17** — `_block_downsample` no longer renormalizes; native 40×40 is a pass-through preserving own-p99 units. Fixed.
+- **F5** — paper-facing configs pinned at 40×40/T=72/full regulatory set. **T=72 vs the full record remains an openly-declared gap** (implementor flagged it rather than hiding it) — any table claiming the paper's record must be regenerated.
+- **F1/F15** — owner decision: paper text will be reconciled to the honestly-labeled kernel imputer. The substantive code fix implied by F15 **was** made and verified: observed + E4-real route through `gridded_new_delhi_wind_field`/`GriddedWindSampler`; the zero-fill city-mean fallback no longer feeds paper-facing runs (an hour with zero observed stations now raises in the kernel imputer rather than silently going calm). Acceptable resolution.
+
+**Discrepancy — F7 response text does not match the code.** The response says "E8 rebuilt as a genuine in-span negative control **on the platform**". The diff `a333d1f..d4e7899` contains **no hunk touching `experiment_8`**; it is byte-identical to review time (abstract seeded random-orthonormal design, N=48, empty background). What is real: the committed eval config's `n_replicates: 1000` (which the eval tree already had at review time) and the diagnostics block (which predates the response, from a333d1f). The negative control was already genuine — that was never the issue — but the F7 drift (adequacy exercised off-platform, `span([H_lag,Q])` tested with empty Q) **stands unresolved**. This should be either implemented or explicitly re-classified as an owner-scoped acceptance like F9 — not reported as fixed.
+
+**Partially addressed:**
+- **F14** — default flipped from `"inventory"` to `"transport"`. This inverts rather than neutralizes the dilution: a plain non-ensemble fit is now nominally a transport-ensemble member (the kind that *can* form probabilistic intervals). Harmless today (nothing aggregates plain fits), but the real fix is a neutral/none kind in `ENSEMBLE_KINDS`. Info-level; not blocking.
+- **F13** — literals left as-is by explicit choice; E7 gained a factual `selection_criterion` string. Acceptable at Info severity.
+
+**New minor observations from the fix review (none blocking):**
+1. `krige_initial_condition` is a normalized Gaussian-kernel smoother, not kriging; provenance labels it honestly (`gaussian_kernel_kriging_surrogate`) but the paper says "spatial kriging" and pykrige is a declared dependency. Add this to the same paper-text reconciliation list as F1 (or swap in pykrige over the Pusa-averaged stations — the legacy helper's Pusa-drop bug was correctly avoided).
+2. Observed mode still emits no residual `calibration_status` field (paper's observed reporting includes it; should be `uncalibrated` absent an external noise model).
+3. E6's paper axis "spatial scales" is no longer represented (the old blob-widening row was replaced by a map-version substitution); location/category/map-version remain.
+4. `real_gridded_wind_sampler` docstring claims a `(sampler, provider_label)` tuple; it returns only the sampler.
+5. `_dc_replace`'d masked background keeps the unmasked `metadata` (rank/singular values) — the projector itself is recomputed on the masked Q so results are correct; the stale metadata is cosmetic.
+6. Fixes were verified statically here; the implementor reports tests + `--gate all --strict-all` green on GPU, which this review did not independently re-run.
+
+**Post-fix verdict:** 12 of 17 findings verified resolved in code; F1/F15 acceptably resolved by owner decision plus the verified gridded-path fix; F5's T=72 gap and F13 are openly declared. **The single unsatisfactory item is F7, whose response text claims a platform rebuild that did not happen.** Once F7 is either implemented or re-scoped honestly (and the paper-text list — FieldFormer naming, kriging-surrogate naming — is reconciled), this review is satisfied.

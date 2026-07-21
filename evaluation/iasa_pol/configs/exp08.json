@@ -1,12 +1,12 @@
 {
   "experiment": "exp08",
   "params": {
-    "N": 48,
     "alpha": 0.05,
     "n_replicates": 1000,
     "n_trials": 100,
-    "omission_amplitude": 1.0,
-    "sigma_e": 0.1
+    "omission_amplitude": 1.2,
+    "noise_frac": 0.05,
+    "source_cell_threshold": 0.02
   },
   "platform": {
     "T": 72,

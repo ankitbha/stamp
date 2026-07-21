@@ -22,7 +22,10 @@ DEFAULT_DEVICE = "cpu"
 INVERSE_DTYPE = torch.float64
 RESPONSE_DTYPE = torch.float32
 
-ENSEMBLE_KINDS = ("transport", "inventory")
+# "single" is the neutral kind for a plain (non-ensemble) fit: it can never be pooled
+# into a transport or inventory ensemble (the aggregators require a homogeneous kind),
+# so a lone fit does not dilute either ensemble's provenance tag.
+ENSEMBLE_KINDS = ("transport", "inventory", "single")
 
 _DTYPE_ALIASES: dict[Any, torch.dtype] = {
     "float32": torch.float32,

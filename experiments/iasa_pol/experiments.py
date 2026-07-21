@@ -144,9 +144,10 @@ def forward(
     beta_scale: float = 0.1,
     with_temporal: bool = False,
     Y_override: np.ndarray | None = None,
-    # Plain (non-ensemble) controlled fits use the library default kind; only the
-    # ensemble experiments (E5 transport, E6 inventory scenarios) set it explicitly.
-    ensemble_kind: str = "transport",
+    # Plain (non-ensemble) controlled fits use the NEUTRAL "single" kind so a lone fit
+    # is never pooled into (and never dilutes) either ensemble; only the ensemble
+    # experiments (E5 transport, E6 inventory scenarios) set a poolable kind explicitly.
+    ensemble_kind: str = "single",
     run_adequacy: bool = False,
     adequacy_sigma: float | None = None,
     n_replicates: int = 200,
@@ -285,6 +286,29 @@ def _shift_map(m: np.ndarray, dx: int, dy: int = 0) -> np.ndarray:
     xd0, xd1 = max(0, -dx), min(nx, nx - dx)
     yd0, yd1 = max(0, -dy), min(ny, ny - dy)
     out[xs0:xs1, ys0:ys1] = m[xd0:xd1, yd0:yd1]
+    return out.astype(np.float32)
+
+
+def _scale_map(m: np.ndarray, factor: float) -> np.ndarray:
+    """Rescale a source map's SPATIAL EXTENT about its intensity centroid by `factor`
+    (>1 broadens the footprint, <1 sharpens it) via nearest-neighbour resampling. A
+    genuine spatial-scale perturbation of the same source (not a map substitution),
+    used by E6's inventory-error scenarios."""
+    m = np.asarray(m, dtype=np.float64)
+    nx, ny = m.shape
+    total = float(m.sum())
+    if total <= 0 or factor == 1.0:
+        return m.astype(np.float32)
+    xs, ys = np.arange(nx), np.arange(ny)
+    cx = float((m.sum(axis=1) * xs).sum() / total)
+    cy = float((m.sum(axis=0) * ys).sum() / total)
+    gx, gy = np.meshgrid(xs, ys, indexing="ij")
+    # sample input at (centroid + (out - centroid)/factor): factor>1 magnifies features.
+    sx = np.rint(cx + (gx - cx) / factor).astype(int)
+    sy = np.rint(cy + (gy - cy) / factor).astype(int)
+    valid = (sx >= 0) & (sx < nx) & (sy >= 0) & (sy < ny)
+    out = np.zeros_like(m)
+    out[valid] = m[sx[valid], sy[valid]]
     return out.astype(np.float32)
 
 
@@ -702,15 +726,17 @@ def experiment_6(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[str
     c_true = np.asarray([1.0, 0.6], dtype=np.float64)
     thr = float(cfg.get("source_cell_threshold", 0.02))
     # F9: perturb the REAL New Delhi inventory maps (paper E6 is literally inventory
-    # error). Base pair = brick_kilns + industries; scenarios perturb location,
-    # spatial scale (map version), and category assignment while transport is fixed.
+    # error). Base pair = brick_kilns + industries; scenarios perturb location, spatial
+    # scale (a genuine extent rescale about the centroid), the map version, and category
+    # assignment while transport is held fixed.
     names_bi, maps_bi = _real_group_maps(platform, [0, 1])  # brick_kilns, industries
     m0, m1 = maps_bi[0], maps_bi[1]
     _, maps_traffic = _real_group_maps(platform, [3])  # traffic (alternate map version)
     scenarios = {
         "baseline": np.stack([m0, m1], axis=0),
         "location_shift": np.stack([_shift_map(m0, 3), m1], axis=0),
-        "spatial_scale_map_version": np.stack([maps_traffic[0], m1], axis=0),
+        "spatial_scale": np.stack([_scale_map(m0, 1.5), m1], axis=0),  # genuine extent rescale
+        "alt_map_version": np.stack([maps_traffic[0], m1], axis=0),    # wrong map version
         "category_swap": np.stack([m1, m0], axis=0),
     }
     inventory_fits = []
@@ -816,108 +842,135 @@ def experiment_7(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[str
 # Experiment 8 -- missing-source model adequacy
 # --------------------------------------------------------------------------- #
 def experiment_8(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[str, Any]:
-    """Refitted parametric-bootstrap adequacy under (a) a residual-visible omission
-    (outside span([H_lag, Q])) and (b) an aligned omission (inside the span) --
-    a required negative control: non-rejection cannot certify completeness."""
-    device = torch.device("cpu")
-    dtype = torch.float64
-    N = int(cfg.get("N", 48))
+    """Refitted parametric-bootstrap adequacy on the NEW DELHI PLATFORM under an
+    omitted source, with a NON-EMPTY primary background Q (F7):
+
+      * null             : no omitted source -> residual ~ noise (rejection ~ alpha).
+      * residual_visible : an omitted REAL inventory group (brick_kilns) whose
+                           transported signature lies largely OUTSIDE span([H_lag, Q])
+                           -> lands in the residual -> detectable.
+      * aligned          : an omitted source whose signature lies INSIDE span([H_lag, Q])
+                           -- a nonnegative mix of the fitted response columns AND the
+                           background directions -> absorbed by the free coefficients and
+                           the background -> NOT detectable. A required negative control:
+                           non-rejection cannot certify inventory completeness.
+
+    Unlike the earlier abstract orthonormal design, H_lag here is the real platform
+    transport operator over real inventory maps and Q is the rank-4 primary background,
+    so both the platform geometry and the span([H_lag, Q]) background-absorption case
+    are genuinely exercised."""
+    T = platform.config.T
     n_replicates = int(cfg.get("n_replicates", 200))
     n_trials = int(cfg.get("n_trials", 40))
     alpha = float(cfg.get("alpha", 0.05))
-    sigma_e = float(cfg.get("sigma_e", 0.1))
+    noise_frac = float(cfg.get("noise_frac", 0.05))
+    amp = float(cfg.get("omission_amplitude", 1.2))
+    thr = float(cfg.get("source_cell_threshold", 0.02))
+    basis = default_basis("constant", T)
+    observer = platform.observer
+    wind = make_wind("constant", T)  # transport held fixed on the platform
 
-    # Deterministic operator with mutually orthogonal columns (clean residual power).
-    g0 = torch.Generator(device=device)
-    g0.manual_seed(20260720)
-    A = torch.randn(N, 4, dtype=dtype, device=device, generator=g0)
-    Qb, _ = torch.linalg.qr(A)
-    H = Qb * torch.tensor([1.0, 0.9, 0.8, 0.7], dtype=dtype, device=device)
+    # Fitted design: three REAL inventory groups transported through the platform.
+    names_fit, maps_fit = _real_group_maps(platform, [1, 2, 3])  # industries, population, traffic
+    resp_fit = _build_response(platform, maps_fit, names_fit, basis, observer, wind,
+                               source_cell_threshold=thr)
+    H = to_numpy(resp_fit.H_lag).astype(np.float64)  # N x 3, real transport operator
+    N = H.shape[0]
+    timestamps = np.datetime64("2018-05-01T00:00") + np.arange(T) * np.timedelta64(1, "h")
+    background = _background_for(platform, resp_fit, timestamps, observer, "primary")
+    Q = to_numpy(background.Q).astype(np.float64)  # NON-empty rank-4 primary background
 
-    cols = [{"source_index": k, "source_name": f"s{k}", "basis_index": 0, "basis_name": "c"} for k in range(4)]
-    row_index = [{"time_index": i, "sensor_index": 0, "sensor_id": "s"} for i in range(N)]
-    ts = np.datetime64("2018-05-01T00:00") + np.arange(N) * np.timedelta64(1, "h")
-    empty_bg = build_background_basis(row_index, ts, config=BackgroundBasisConfig(include_constant=False))
-    # The fit always uses columns 0-2 (column 3 is masked). The three cases differ
-    # ONLY in what real source is present in the truth but omitted from the fit:
-    #   null              : no omitted source                      -> residual ~ noise
-    #   residual_visible  : an omitted source == column 3, which is ORTHOGONAL to the
-    #                       fitted columns (out of span) -> its signal lands in the
-    #                       residual -> detectable.
-    #   aligned           : an omitted source whose response column is a genuine
-    #                       nonzero combination of the FITTED columns (in span) ->
-    #                       fully absorbed by free coefficients -> NOT detectable.
-    # The aligned case is a real omission (never a fitted column); the point is that
-    # non-rejection cannot certify inventory completeness.
-    c_fit_true = torch.tensor([1.0, 0.8, 0.6], dtype=dtype, device=device)
-    H_fit = H[:, :3]
-    out_of_span = H[:, 3]  # orthogonal to H_fit columns by QR construction
-    # Nonnegative in-span weights: the omitted source's fingerprint is a positive mix
-    # of the known sources, so adding it only raises the true coefficients and the
-    # nonnegative fit absorbs it exactly (it stays absorbable at any amplitude).
-    w_inspan = torch.tensor([0.6, 0.5, 0.4], dtype=dtype, device=device)
-    v_inspan = H_fit @ w_inspan
-    # Match the injected magnitude of the in-span omission to the out-of-span one so
-    # "amplitude" injects equal signal energy in both cases (a fair power comparison).
-    v_inspan = v_inspan * (float(torch.linalg.vector_norm(out_of_span))
-                           / max(float(torch.linalg.vector_norm(v_inspan)), 1e-12))
-    noise_model = NoiseModel(covariance=sigma_e ** 2, calibrated=True,
-                             source="task10_exp8", estimated_from_fit_residual=False)
+    c_fit_true = np.array([1.0, 0.8, 0.6], dtype=np.float64)
+    clean = H @ c_fit_true
+    sig_norm = float(np.linalg.norm(clean))
+    sigma_e = noise_frac * max(float(np.max(np.abs(clean))), 1e-12)
 
+    # Residual-visible omission: a REAL omitted group (brick_kilns -- peripheral, so its
+    # transported signature is largely unreachable by the fitted columns + Q).
+    names_om, maps_om = _real_group_maps(platform, [0])  # brick_kilns
+    resp_om = _build_response(platform, maps_om, names_om, basis, observer, wind,
+                              source_cell_threshold=thr)
+    h_out = to_numpy(resp_om.H_lag).astype(np.float64)[:, 0]
+    # Fraction of the omitted signature that lies OUTSIDE span([H, Q]) (its visible part).
+    B = np.column_stack([H, Q]) if Q.shape[1] else H
+    Ub, _ = np.linalg.qr(B)
+    h_perp = h_out - Ub @ (Ub.T @ h_out)
+    out_of_span_fraction = float(np.linalg.norm(h_perp) / max(np.linalg.norm(h_out), 1e-12))
+    # Energy-match the omitted signature to the fitted signal (fair power comparison).
+    h_out = h_out * (sig_norm / max(float(np.linalg.norm(h_out)), 1e-12))
+
+    # Aligned (in-span) omission: nonnegative mix of fitted response columns AND
+    # background directions -> in span([H, Q]) -> absorbed at any amplitude. Matched to
+    # the same energy as the residual-visible omission.
+    w_in = np.array([0.6, 0.5, 0.4], dtype=np.float64)          # >= 0 over fitted columns
+    b_in = np.full(Q.shape[1], 0.3, dtype=np.float64) if Q.shape[1] else np.zeros(0)
+    v_in = H @ w_in + (Q @ b_in if Q.shape[1] else 0.0)
+    v_in = v_in * (sig_norm / max(float(np.linalg.norm(v_in)), 1e-12))
+
+    noise_model = NoiseModel(covariance=max(sigma_e, 1e-9) ** 2, calibrated=True,
+                             source="task10_exp8_platform", estimated_from_fit_residual=False)
+    cols = resp_fit.column_index
+    row_index = resp_fit.row_index
     case_offset = {"null": 0, "residual_visible": 1, "aligned": 2}  # deterministic seeds
 
-    def _run(case: str, amplitude: float) -> dict[str, Any]:
+    def _run(case: str, amplitude: float) -> float:
         rejects = 0
         for t in range(n_trials):
-            mean = H_fit @ c_fit_true
+            mean = clean.copy()
             if case == "residual_visible":
-                mean = mean + float(amplitude) * out_of_span
+                mean = mean + float(amplitude) * h_out
             elif case == "aligned":
-                mean = mean + float(amplitude) * v_inspan
-            g = torch.Generator(device=device)
-            g.manual_seed(seed + 1_000_003 * (case_offset[case] + 1) + t)
-            Y = to_numpy(mean + sigma_e * torch.randn(N, dtype=dtype, device=device, generator=g))
-            proj = project_response_and_observations(H, Y, empty_bg, row_index, cols)
-            fit = fit_projection(proj, config=FitConfig(fixed_zero_indices=(3,)))
+                mean = mean + float(amplitude) * v_in
+            g = np.random.default_rng(seed + 1_000_003 * (case_offset[case] + 1) + t)
+            Y = mean + g.normal(0.0, sigma_e, size=N)
+            proj = project_response_and_observations(resp_fit.H_lag, Y, background, row_index, cols)
+            fit = fit_projection(proj, config=FitConfig())
             adq = residual_adequacy_check(
                 fit, proj, noise_model,
                 config=AdequacyConfig(alpha=alpha, n_replicates=n_replicates,
                                       seed=seed + 7_654_321 * (case_offset[case] + 1) + t),
             )
             rejects += int(bool(adq.inadequate))
-        return {"case": case, "amplitude": float(amplitude), "rejection_rate": rejects / max(n_trials, 1)}
+        return rejects / max(n_trials, 1)
 
-    amp = float(cfg.get("omission_amplitude", 1.0))
-    null = _run("null", 0.0)
+    null_rate = _run("null", 0.0)
     power = _run("residual_visible", amp)
-    aligned = _run("aligned", amp)
+    aligned_rate = _run("aligned", amp)
 
-    # Identifiability diagnostics of the fitted design (columns 0-2; column 3 omitted).
-    svals = torch.linalg.svdvals(H[:, :3]).tolist()
-    tol = 1e-10 * max(svals)
+    # Identifiability diagnostics of the fitted PROJECTED design (F11 zeroing rule).
+    svals = np.linalg.svd(to_numpy(project_response_and_observations(
+        resp_fit.H_lag, clean, background, row_index, cols).H_tilde).astype(np.float64),
+        compute_uv=False)
+    J = int(svals.shape[0])
+    tol = max(N, J) * float(np.finfo(np.float64).eps) * float(svals[0])
+    num_rank = int(np.count_nonzero(svals > tol))
     diagnostics = {
-        "sigma_J": float(min(svals)),
-        "numerical_rank": int(sum(1 for s in svals if s > tol)),
+        "sigma_J": 0.0 if num_rank < J else float(svals[-1]),
+        "sigma_min_positive": float(svals[-1]),
+        "numerical_rank": num_rank,
         "singular_values": [float(s) for s in svals],
-        "omitted_column_visible_norm": float(torch.linalg.vector_norm(H[:, 3])),
+        "background_rank": int(Q.shape[1]),
+        "omitted_source_out_of_span_fraction": out_of_span_fraction,
     }
     return {
         "experiment": "exp08_missing_source_adequacy",
-        "null_rejection_rate": null["rejection_rate"],
-        "residual_visible_power": power["rejection_rate"],
-        "aligned_negative_control_rejection_rate": aligned["rejection_rate"],
+        "null_rejection_rate": null_rate,
+        "residual_visible_power": power,
+        "aligned_negative_control_rejection_rate": aligned_rate,
         "diagnostics": diagnostics,
         "alpha": alpha, "n_trials": n_trials, "n_replicates": n_replicates,
         "omission_amplitude": amp,
-        "fitted_columns": [0, 1, 2],
-        "omitted_column_out_of_span": 3,
-        "aligned_in_span_weights": w_inspan.tolist(),
-        "operator_note": "controlled well-conditioned orthonormal operator (same rationale as Gate S7): "
-                         "isolates the adequacy test's calibration and power, and lets the aligned "
-                         "omission be exactly in span(fitted columns).",
-        "negative_control_note": "aligned = a REAL omitted source whose response column is a nonzero "
-                                 "combination of the fitted columns -> absorbed -> not detected; "
-                                 "non-rejection cannot certify inventory completeness",
+        "platform_grid_shape": list(platform.grid_shape),
+        "fitted_groups": list(names_fit),
+        "omitted_residual_visible_group": names_om[0],
+        "aligned_in_span_weights": w_in.tolist(),
+        "aligned_background_weights": b_in.tolist(),
+        "operator_note": "real New Delhi platform transport operator over real inventory maps "
+                         f"with a NON-empty rank-{int(Q.shape[1])} primary background Q; both the "
+                         "platform geometry and span([H_lag, Q]) background absorption are exercised.",
+        "negative_control_note": "aligned = a REAL omitted source whose signature is a nonnegative mix "
+                                 "of the fitted response columns AND the background -> absorbed -> not "
+                                 "detected; non-rejection cannot certify inventory completeness",
         "arrays": {},
     }
 
@@ -1108,6 +1161,8 @@ def observed_new_delhi(platform: Platform, cfg: dict[str, Any], seed: int) -> di
         return {
             "experiment": "observed_new_delhi", "has_ground_truth": False,
             "recovery_error": None, "status": "insufficient_observed_rows",
+            "adequacy": None,
+            "calibration_status": "uncalibrated: no external calibrated noise model for observed PM2.5",
             "n_observed_rows": len(keep), "n_total_rows": len(observed_flags),
             "wind_provider": wind_provider, "source_names": list(group_names),
             "arrays": {},
@@ -1159,6 +1214,10 @@ def observed_new_delhi(platform: Platform, cfg: dict[str, Any], seed: int) -> di
         "n_source_groups": len(group_names),
         "source_names": list(group_names),
         "wind_provider": wind_provider,
+        "adequacy": None,
+        "calibration_status": "uncalibrated: no external calibrated noise model exists for "
+                              "observed PM2.5, so per the paper's adequacy contract the residual "
+                              "adequacy test emits no pass/fail verdict",
         "observed_mask_fraction": len(keep) / max(len(observed_flags), 1),
         "n_observed_rows": len(keep),
         "n_total_rows": len(observed_flags),

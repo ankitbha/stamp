@@ -240,7 +240,7 @@ def real_gridded_wind_sampler(grid_shape: tuple[int, int], T: int, *,
     Uses observed station transport vectors interpolated to every grid cell by the
     adopted kernel coordinate-query imputer (the field the response operator was
     designed to consume). The sampler clamps t_index/position, so a short/masked
-    window is handled gracefully. Returns (sampler, provider_label)."""
+    window is handled gracefully. Returns the GriddedWindSampler."""
     import pandas as pd
 
     from model.iasa.response import GriddedWindSampler
