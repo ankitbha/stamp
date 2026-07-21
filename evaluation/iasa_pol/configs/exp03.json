@@ -1,0 +1,20 @@
+{
+  "experiment": "exp03",
+  "params": {
+    "background_modes": [
+      "none",
+      "primary",
+      "redundant",
+      "stress"
+    ],
+    "noise_frac": 0.05
+  },
+  "platform": {
+    "T": 72,
+    "grid_shape": [
+      40,
+      40
+    ],
+    "lag_window_steps": 12
+  }
+}

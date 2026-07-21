@@ -20,7 +20,12 @@ from typing import Any, Sequence
 
 import numpy as np
 
-from model.iasa.activity import TemporalBasis, build_default_activity_profile
+from model.iasa.activity import (
+    POPULATION_COOKING_HOURS,
+    TRAFFIC_SLOT_HOURS,
+    TemporalBasis,
+    build_default_activity_profile,
+)
 from model.iasa.background import BackgroundBasisConfig, build_background_basis
 from model.iasa.response import DispersionConfig, Observer, ResponseConfig
 from model.iasa.wind import (
@@ -107,22 +112,25 @@ class Platform:
 # Inventory + geometry loading
 # --------------------------------------------------------------------------- #
 def _block_downsample(maps: np.ndarray, grid_shape: tuple[int, int]) -> np.ndarray:
-    """Downsample [K, H, W] maps to [K, nx, ny] by block-mean (exact divisor) or
-    nearest-index sampling otherwise. Renormalize each map to a unit maximum."""
+    """Reduce [K, H, W] maps to [K, nx, ny] preserving the DECLARED own-p99
+    normalization applied upstream in ``pol_sources.load_pol_source_inventory``.
+
+    At native resolution (nx==H) the maps pass through unchanged. When a smaller
+    grid is requested we block-mean (exact divisor) or nearest-index sample; a
+    local average of p99-normalized cells stays in the same p99 units. We do NOT
+    re-normalize to unit maximum -- doing so would silently override the paper's
+    per-source cropped-p99 normalization (would change relative source scales,
+    hence sigma_J / visibility / coefficients)."""
     k, h, w = maps.shape
     nx, ny = int(grid_shape[0]), int(grid_shape[1])
     if nx == h and ny == w:
-        out = maps.astype(np.float32, copy=True)
-    elif h % nx == 0 and w % ny == 0:
+        return maps.astype(np.float32, copy=True)
+    if h % nx == 0 and w % ny == 0:
         fx, fy = h // nx, w // ny
-        out = maps.reshape(k, nx, fx, ny, fy).mean(axis=(2, 4)).astype(np.float32)
-    else:
-        ix = np.clip(np.round(np.linspace(0, h - 1, nx)).astype(np.int64), 0, h - 1)
-        iy = np.clip(np.round(np.linspace(0, w - 1, ny)).astype(np.int64), 0, w - 1)
-        out = maps[:, ix][:, :, iy].astype(np.float32)
-    peaks = out.reshape(k, -1).max(axis=1)
-    peaks = np.where(peaks > 1e-12, peaks, 1.0)
-    return (out / peaks[:, None, None]).astype(np.float32)
+        return maps.reshape(k, nx, fx, ny, fy).mean(axis=(2, 4)).astype(np.float32)
+    ix = np.clip(np.round(np.linspace(0, h - 1, nx)).astype(np.int64), 0, h - 1)
+    iy = np.clip(np.round(np.linspace(0, w - 1, ny)).astype(np.int64), 0, w - 1)
+    return maps[:, ix][:, :, iy].astype(np.float32)
 
 
 def load_inventory_maps(grid_shape: tuple[int, int]) -> tuple[list[str], np.ndarray, dict[str, Any]]:
@@ -187,11 +195,16 @@ def compact_source(grid_shape: tuple[int, int], center: tuple[float, float], sig
     return (src / max(float(src.max()), 1e-12)).astype(np.float32)
 
 
-def make_wind(kind: str, T: int, *, seed: int = 0, speed: float = 1.0, **kwargs: Any):
+def make_wind(kind: str, T: int, *, seed: int = 0, speed: float = 1.0,
+              grid_shape: tuple[int, int] | None = None, **kwargs: Any):
     """Wind regime factory covering the Experiment 4 axis.
 
-    ``real`` requires the imputed New Delhi wind product (or observed fallback)
-    and is resolved lazily so the synthetic regimes never touch disk.
+    ``real`` returns the real New Delhi GRIDDED wind field (a spatially varying
+    ``GriddedWindSampler`` built from observed station vectors via the adopted
+    kernel coordinate-query imputer) when ``grid_shape`` is given -- this is the
+    "imputed grid wind field" the response operator consumes and avoids the
+    city-level zero-fill fallback. Without ``grid_shape`` it degrades to the
+    city-level real sequence. Synthetic regimes never touch disk.
     """
     start = kwargs.pop("start", PLATFORM_START)
     if kind == "constant":
@@ -207,6 +220,8 @@ def make_wind(kind: str, T: int, *, seed: int = 0, speed: float = 1.0, **kwargs:
     if kind == "multi":
         return multi_direction_synthetic(length=T, speed=speed, seed=seed, start=start, **kwargs)
     if kind == "real":
+        if grid_shape is not None:
+            return real_gridded_wind_sampler(grid_shape, T, start=start, seed=seed)
         from model.iasa.wind import real_new_delhi_wind_sequence
 
         seq = real_new_delhi_wind_sequence(
@@ -216,6 +231,31 @@ def make_wind(kind: str, T: int, *, seed: int = 0, speed: float = 1.0, **kwargs:
         )
         return _truncate_wind(seq, T)
     raise ValueError(f"unknown wind kind {kind!r}")
+
+
+def real_gridded_wind_sampler(grid_shape: tuple[int, int], T: int, *,
+                              start: str = PLATFORM_START, seed: int = 0):
+    """Real New Delhi gridded wind field over a T-hour window as a GriddedWindSampler.
+
+    Uses observed station transport vectors interpolated to every grid cell by the
+    adopted kernel coordinate-query imputer (the field the response operator was
+    designed to consume). The sampler clamps t_index/position, so a short/masked
+    window is handled gracefully. Returns (sampler, provider_label)."""
+    import pandas as pd
+
+    from model.iasa.response import GriddedWindSampler
+    from model.iasa.wind import gridded_new_delhi_wind_field
+
+    start_ts = pd.Timestamp(start)
+    end_ts = start_ts + pd.Timedelta(hours=int(T) - 1)
+    field = gridded_new_delhi_wind_field(
+        SIM_DIR / "govdata_1H_current.csv",
+        SIM_DIR / "govdata_locations.csv",
+        grid_shape=(int(grid_shape[0]), int(grid_shape[1])),
+        start=str(start_ts), end=str(end_ts), seed=seed,
+    )
+    sampler = GriddedWindSampler.from_gridded_wind_field(field)
+    return sampler
 
 
 def _truncate_wind(seq, T: int):
@@ -298,6 +338,85 @@ def default_basis(kind: str, T: int) -> TemporalBasis:
         return TemporalBasis(names=["diurnal", "block", "day_night"], values=values,
                              metadata={"kind": kind})
     raise ValueError(f"unknown basis kind {kind!r}")
+
+
+def four_group_inventory(platform: "Platform") -> tuple[list[str], np.ndarray]:
+    """The paper's FOUR source groups. The inventory ships traffic as four
+    time-slot spatial maps (traffic_00/06/12/18); the paper models traffic as a
+    SINGLE road-network source with a time-invariant congestion pattern and slot
+    temporal bases, so we collapse the four slot maps into one road map (their
+    mean). Returns (group_names[4], group_maps[4, Nx, Ny]) in p99 units."""
+    names = list(platform.source_names)
+    maps = np.asarray(platform.source_maps, dtype=np.float32)
+    traffic_idx = [i for i, n in enumerate(names) if n.startswith("traffic_")]
+    other_idx = [i for i, n in enumerate(names) if not n.startswith("traffic_")]
+    group_names = [names[i] for i in other_idx] + (["traffic"] if traffic_idx else [])
+    group_maps = [maps[i] for i in other_idx]
+    if traffic_idx:
+        group_maps.append(maps[traffic_idx].mean(axis=0))
+    return group_names, np.stack(group_maps, axis=0).astype(np.float32)
+
+
+def paper_temporal_bases(timestamps: Any, group_names: Sequence[str]) -> tuple[TemporalBasis, list[list[int]], tuple[int, ...]]:
+    """Per-group declared temporal bases and the fixed-zero mask F0.
+
+    Builds a combined basis whose components are: the four traffic nearest-slot
+    indicators (00/06/12/18), a brick-kiln alternating-12h-block component, an
+    industries day/night component, and a population cooking-peaks component. Each
+    group is admissible ONLY on its own component(s); F0 fixes every non-admissible
+    (group, component) coefficient to zero (paper 7.evaluation Inventories).
+
+    Returns (TemporalBasis[T, B], admissible_components_per_group,
+    fixed_zero_indices) with columns ordered source-major/basis-minor (J = K*B).
+    """
+    hours = _hours_of_day(timestamps)
+    T = len(hours)
+    comps: list[np.ndarray] = []
+    comp_names: list[str] = []
+    comp_owner: list[str] = []  # group name that owns each component
+
+    slots = np.asarray(TRAFFIC_SLOT_HOURS, dtype=np.int64)
+    nearest = slots[np.argmin(np.abs(((hours[:, None] - slots[None, :] + 12) % 24) - 12), axis=1)]
+    for h0 in TRAFFIC_SLOT_HOURS:
+        comps.append((nearest == h0).astype(np.float32))
+        comp_names.append(f"traffic_slot_{h0:02d}")
+        comp_owner.append("traffic")
+
+    block = (((np.arange(T)) // 12) % 2 == 0).astype(np.float32)
+    comps.append(0.25 + 0.35 * block); comp_names.append("kiln_block_12h"); comp_owner.append("brick_kilns")
+
+    day_night = np.where((hours >= 7) & (hours <= 19), 1.0, 0.35).astype(np.float32)
+    comps.append(day_night); comp_names.append("industry_day_night"); comp_owner.append("industries")
+
+    cooking = np.full(T, 0.2, dtype=np.float32)
+    for peak in POPULATION_COOKING_HOURS:
+        d = np.abs(((hours - peak + 12) % 24) - 12)
+        cooking += 0.8 * np.exp(-0.5 * (d / 1.25) ** 2)
+    comps.append(np.clip(cooking, 0.0, 1.0)); comp_names.append("population_cooking"); comp_owner.append("population_density")
+
+    values = np.stack(comps, axis=1).astype(np.float32)  # [T, B]
+    B = values.shape[1]
+    basis = TemporalBasis(names=comp_names, values=values,
+                          metadata={"kind": "paper_per_group_bases", "component_owner": comp_owner})
+
+    admissible: list[list[int]] = []
+    fixed_zero: list[int] = []
+    for k, gname in enumerate(group_names):
+        own = [b for b in range(B) if comp_owner[b] == gname]
+        if not own:  # a group with no declared component keeps a flat fallback (its slot-0)
+            own = [0]
+        admissible.append(own)
+        for b in range(B):
+            if b not in own:
+                fixed_zero.append(k * B + b)  # source-major/basis-minor column index
+    return basis, admissible, tuple(sorted(fixed_zero))
+
+
+def _hours_of_day(timestamps: Any) -> np.ndarray:
+    ts = np.asarray(timestamps)
+    if np.issubdtype(ts.dtype, np.datetime64):
+        return ((ts.astype("datetime64[h]").astype(np.int64)) % 24).astype(np.int64)
+    return (np.arange(len(ts)) % 24).astype(np.int64)
 
 
 def synthetic_coefficients(n_sources: int, n_basis: int, *, seed: int = 0,

@@ -14,3 +14,8 @@ checkpoints/
 # Task 10 per-run heavy artifacts (regenerable from committed configs + seed).
 # configs/ and summaries/ ARE committed; only runs/ is ignored.
 experiments/iasa_pol/runs/
+
+# Task 10 committed paper-resolution results (raw) live under evaluation/ and ARE
+# tracked, including the arrays.npz that the global *.npz rule would otherwise skip.
+!evaluation/iasa_pol/**
+!evaluation/iasa_pol/**/*.npz

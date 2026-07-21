@@ -1,0 +1,19 @@
+{
+  "experiment": "exp08",
+  "params": {
+    "N": 48,
+    "alpha": 0.05,
+    "n_replicates": 1000,
+    "n_trials": 100,
+    "omission_amplitude": 1.0,
+    "sigma_e": 0.1
+  },
+  "platform": {
+    "T": 72,
+    "grid_shape": [
+      40,
+      40
+    ],
+    "lag_window_steps": 12
+  }
+}

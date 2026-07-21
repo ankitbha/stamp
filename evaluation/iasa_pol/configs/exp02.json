@@ -1,0 +1,20 @@
+{
+  "experiment": "exp02",
+  "params": {
+    "offsets": [
+      8.0,
+      6.0,
+      4.0,
+      2.0,
+      1.0
+    ]
+  },
+  "platform": {
+    "T": 72,
+    "grid_shape": [
+      40,
+      40
+    ],
+    "lag_window_steps": 12
+  }
+}

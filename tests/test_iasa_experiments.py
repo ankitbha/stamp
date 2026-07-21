@@ -37,7 +37,7 @@ FAST = {
     "exp08": {"N": 32, "n_trials": 6, "n_replicates": 40, "omission_amplitude": 1.2},
     "exp09": {"noise_fracs": [0.0, 0.05]},
     "exp10": {},
-    "observed": {"wind_kind": "constant", "use_real_pm25": True, "T": 12},
+    "observed": {"wind_kind": "real", "use_real_pm25": True, "T": 12},
 }
 
 
@@ -77,7 +77,12 @@ class ExperimentSuiteTests(unittest.TestCase):
         out = run_named_experiment("observed", self.platform, FAST["observed"], seed=0)["result"]
         self.assertIsNone(out["recovery_error"])
         self.assertFalse(out["has_ground_truth"])
-        self.assertIn("normalized_proxy_contributions", out)
+        # Observed mode reports sensor-signal-space contribution shares (not raw
+        # coefficient-magnitude ratios) and never imputes PM2.5.
+        if out.get("status") != "insufficient_observed_rows":
+            self.assertIn("sensor_signal_contribution_shares", out)
+            self.assertFalse(out["pm25_imputed"])
+            self.assertEqual(out["n_source_groups"], 4)
 
     def test_reproducible_under_fixed_seed(self):
         r1 = run_named_experiment("exp01", self.platform, FAST["exp01"], seed=0)["result"]

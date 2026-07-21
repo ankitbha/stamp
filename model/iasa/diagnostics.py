@@ -208,6 +208,15 @@ def diagnose_identifiability(
     positive = singular_values[singular_values > 0] if J else singular_values
     sigma_min_positive = float(positive.min()) if positive.numel() else None
 
+    # Paper 5.theory eq. identifiability_score: the spectrum is padded with zeros
+    # whenever J>N OR H_tilde is rank deficient, so a rank-deficient response scores
+    # sigma_J=0 and is never reported as stable. The J>N pad above handles the first
+    # case; this handles a numerically rank-deficient J<=N response (e.g. duplicate
+    # columns), where svdvals returns a tiny-but-positive smallest value. The raw
+    # value remains available as sigma_min_positive (the paper allows reporting it).
+    if J and numerical_rank < J:
+        sigma_J = 0.0
+
     if J and numerical_rank == J and sigma_J > 0:
         condition_number: float | None = sigma_1 / sigma_J
         condition_status = "finite"

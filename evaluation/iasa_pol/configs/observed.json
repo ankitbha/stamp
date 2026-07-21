@@ -1,0 +1,16 @@
+{
+  "experiment": "observed",
+  "params": {
+    "T": 72,
+    "use_real_pm25": true,
+    "wind_kind": "real"
+  },
+  "platform": {
+    "T": 72,
+    "grid_shape": [
+      40,
+      40
+    ],
+    "lag_window_steps": 12
+  }
+}

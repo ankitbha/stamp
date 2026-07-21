@@ -1873,7 +1873,7 @@ def run_experiments_gate() -> dict[str, Any]:
         "exp08": {"N": 32, "n_trials": 8, "n_replicates": 40, "omission_amplitude": 1.2},
         "exp09": {"noise_fracs": [0.0, 0.05]},
         "exp10": {},
-        "observed": {"wind_kind": "constant", "use_real_pm25": True, "T": 12},
+        "observed": {"wind_kind": "real", "use_real_pm25": True, "T": 12},
     }
     summary: dict[str, Any] = {"status": "ok", "gate": "experiments"}
     per_exp: dict[str, Any] = {}
@@ -1904,14 +1904,21 @@ def run_experiments_gate() -> dict[str, Any]:
     if not e6["transport_inventory_pooling_rejected"]:
         raise RuntimeError("Experiment 6 must reject pooling inventory scenarios with transport")
 
-    # E10: per-sensor contributions must actually sum to the fitted sensor signal,
-    # and footprints must be nonnegative (roadmap acceptance -- enforced, not just reported).
+    # E5 parametric family must vary wind direction, speed, AND dispersion (F8).
+    e5_kinds = {r["perturbation_kind"] for r in e5["parametric"]["rows"]}
+    if not {"wind_direction_deg", "wind_speed_factor", "dispersion_factor"} <= e5_kinds:
+        raise RuntimeError(f"E5 parametric axis incomplete: {sorted(e5_kinds)}")
+
+    # E10: per-sensor contributions must sum to the fitted sensor signal, footprints
+    # nonnegative, and the footprint must LOCALIZE to the known origins (F10).
     e10 = run_named_experiment("exp10", platform, fast["exp10"], seed=0)["result"]
     if e10["contribution_sum_error"] > 1e-5:
         raise RuntimeError(f"E10 per-sensor contributions do not sum to fitted signal: "
                            f"{e10['contribution_sum_error']:.3e}")
     if not e10["footprints_nonnegative"]:
         raise RuntimeError("E10 footprints must be nonnegative")
+    if e10.get("footprint_localization_error_cells") is None:
+        raise RuntimeError("E10 must report a footprint localization error")
 
     # E8: residual-visible omission must be detected far more often than the in-span
     # aligned omission (a real omission absorbed by the fit) -- the negative control.
@@ -1923,10 +1930,18 @@ def run_experiments_gate() -> dict[str, Any]:
             f"E8 adequacy behavior wrong: power={e8['residual_visible_power']} "
             f"aligned={e8['aligned_negative_control_rejection_rate']} null={e8['null_rejection_rate']}")
 
-    # Observed mode carries NO synthetic recovery metric.
+    # Observed mode: NO synthetic recovery metric, PM2.5 never imputed, four source
+    # groups, real gridded wind (F2/F15/F16).
     obs = run_named_experiment("observed", platform, fast["observed"], seed=0)["result"]
     if obs["recovery_error"] is not None or obs["has_ground_truth"]:
         raise RuntimeError("observed mode must not report a recovery error or claim ground truth")
+    if obs.get("status") != "insufficient_observed_rows":
+        if obs.get("pm25_imputed", True):
+            raise RuntimeError("observed mode must NOT impute PM2.5 (M_O row selection)")
+        if obs.get("n_source_groups") != 4:
+            raise RuntimeError("observed mode must use the paper's four source groups")
+        if "sensor_signal_contribution_shares" not in obs:
+            raise RuntimeError("observed mode must report sensor-signal-space contribution shares")
 
     # Reproducibility under a fixed seed (exp01 coefficient errors reproduce exactly).
     r1 = run_named_experiment("exp01", platform, fast["exp01"], seed=0)["result"]

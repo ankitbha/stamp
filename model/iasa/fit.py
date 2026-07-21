@@ -680,6 +680,9 @@ def fit_sources(
         "tau_sigma": cfg.tau_sigma,
         "ensemble_kind": cfg.ensemble_kind,
         "prior_mean_provided": cfg.prior_mean is not None,
+        # Reduced (kept-column) prior mean, so the adequacy bootstrap can refit each
+        # replicate with the SAME estimator including a nonzero prior/ridge.
+        "prior_reduced": [float(v) for v in to_numpy(prior).reshape(-1)] if kept else [],
     }
     metadata = {
         **runtime_provenance(device, dtype),
@@ -889,7 +892,13 @@ def residual_adequacy_check(
     index = torch.tensor(kept, dtype=torch.long, device=device)
     H_red = H_tilde.index_select(1, index) if kept else H_tilde[:, :0]
     lam = float(fit_result.config.get("lambda_reg", 0.0))
-    prior = torch.zeros(H_red.shape[1], dtype=dtype, device=device)
+    # Refit replicates with the SAME estimator, including any nonzero prior mean the
+    # observed-data fit used (stored reduced over kept columns). Defaults to zeros.
+    prior_stored = fit_result.config.get("prior_reduced")
+    if prior_stored and len(prior_stored) == H_red.shape[1]:
+        prior = torch.as_tensor(prior_stored, dtype=dtype, device=device)
+    else:
+        prior = torch.zeros(H_red.shape[1], dtype=dtype, device=device)
     sigma1 = float(fit_result.solver.get("sigma_1", 0.0)) or (float(torch.linalg.svdvals(H_red)[0]) if min(H_red.shape) else 0.0)
     solve_b = _projected_fista(
         H_red, Y_tilde_b, prior, lam,

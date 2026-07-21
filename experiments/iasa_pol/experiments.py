@@ -76,10 +76,15 @@ def _diag_summary(diag) -> dict[str, Any]:
 
 
 def _build_response(platform: Platform, source_maps, source_names, basis, observer, wind,
-                    *, lag_window_steps: int | None = None, dispersion=None):
+                    *, lag_window_steps: int | None = None, dispersion=None,
+                    source_cell_threshold: float | None = None):
     rc = platform.response_config
     if lag_window_steps is not None:
         rc = replace(rc, lag_window_steps=int(lag_window_steps))
+    if source_cell_threshold is not None:
+        # Prune negligible emission cells for dense real-inventory builds (keeps the
+        # response tractable at 40x40; cells below threshold contribute negligibly).
+        rc = replace(rc, source_cell_threshold=float(source_cell_threshold))
     dc = dispersion if dispersion is not None else platform.dispersion_config
     return build_lagged_response_matrix(
         source_maps, source_names, basis, observer, wind,
@@ -139,17 +144,21 @@ def forward(
     beta_scale: float = 0.1,
     with_temporal: bool = False,
     Y_override: np.ndarray | None = None,
-    ensemble_kind: str = "inventory",
+    # Plain (non-ensemble) controlled fits use the library default kind; only the
+    # ensemble experiments (E5 transport, E6 inventory scenarios) set it explicitly.
+    ensemble_kind: str = "transport",
     run_adequacy: bool = False,
     adequacy_sigma: float | None = None,
     n_replicates: int = 200,
     alpha: float = 0.05,
     lag_window_steps: int | None = None,
     dispersion=None,
+    source_cell_threshold: float | None = None,
 ) -> dict[str, Any]:
     """Run response -> background -> project -> diagnose -> fit -> merge and score."""
     response = _build_response(platform, source_maps, source_names, basis, observer, wind,
-                               lag_window_steps=lag_window_steps, dispersion=dispersion)
+                               lag_window_steps=lag_window_steps, dispersion=dispersion,
+                               source_cell_threshold=source_cell_threshold)
     T = basis.values.shape[0]
     timestamps = np.datetime64("2018-05-01T00:00") + np.arange(T) * np.timedelta64(1, "h")
     background = _background_for(platform, response, timestamps, observer, background_mode)
@@ -266,6 +275,30 @@ def _diverse_wind(T: int) -> WindSequence:
     )
 
 
+def _shift_map(m: np.ndarray, dx: int, dy: int = 0) -> np.ndarray:
+    """Translate a source map by (dx, dy) integer cells, zero-filling vacated cells
+    (a non-periodic shift; used to make a coherent copy of a real inventory map)."""
+    out = np.zeros_like(m)
+    nx, ny = m.shape
+    xs0, xs1 = max(0, dx), min(nx, nx + dx)
+    ys0, ys1 = max(0, dy), min(ny, ny + dy)
+    xd0, xd1 = max(0, -dx), min(nx, nx - dx)
+    yd0, yd1 = max(0, -dy), min(ny, ny - dy)
+    out[xs0:xs1, ys0:ys1] = m[xd0:xd1, yd0:yd1]
+    return out.astype(np.float32)
+
+
+def _real_group_maps(platform: Platform, indices):
+    """Selected real proxy GROUP maps + names (F9: controlled mode preserves the
+    New Delhi inventories where the paper names them)."""
+    from experiments.iasa_pol.nd_platform import four_group_inventory
+
+    names, maps = four_group_inventory(platform)
+    sel_names = [names[i] for i in indices]
+    sel_maps = np.stack([maps[i] for i in indices], axis=0)
+    return sel_names, sel_maps
+
+
 def _arrays_from_bundle(bundle: dict[str, Any]) -> dict[str, np.ndarray]:
     proj = bundle["_projection"]
     diag = bundle["_diagnostics"]
@@ -330,16 +363,19 @@ def experiment_2(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[str
     observer = platform.observer
     wind = make_wind("constant", T)  # aligned transport -> shifted copies stay coherent
     offsets = cfg.get("offsets", [6.0, 4.0, 2.0, 1.0])
-    base_center = (gs[0] * 0.35, gs[1] * 0.5)
     c_true = np.asarray([1.0, 0.7], dtype=np.float64)
+    # F9: shift a copy of a REAL inventory map (paper E2). Use a peaked group
+    # (brick kilns) so the pair is well-localized and the coherence-vs-offset trend
+    # is clean; prune negligible cells for tractability at 40x40.
+    base_names, base_maps = _real_group_maps(platform, [0])  # brick_kilns
+    base_map = base_maps[0]
+    thr = float(cfg.get("source_cell_threshold", 0.02))
     rows = []
     last_bundle = None
     for off in offsets:
-        maps = np.stack([
-            compact_source(gs, base_center),
-            compact_source(gs, (base_center[0] + float(off), base_center[1])),
-        ], axis=0)
-        b = forward(platform, maps, ["src_a", "src_b"], basis, observer, wind, c_true=c_true, seed=seed)
+        maps = np.stack([base_map, _shift_map(base_map, int(round(float(off))))], axis=0)
+        b = forward(platform, maps, [f"{base_names[0]}_a", f"{base_names[0]}_b"], basis, observer,
+                    wind, c_true=c_true, seed=seed, source_cell_threshold=thr)
         last_bundle = b
         comps = b["report_components"]
         merged = any(set(c) == {0, 1} for c in comps)
@@ -426,10 +462,13 @@ def experiment_4(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[str
     last_bundle = None
     for wk in wind_kinds:
         try:
-            wind = make_wind(wk, T, seed=seed)
+            # Pass grid_shape so "real" resolves to the gridded imputed field (F15),
+            # not a city-level scalar fallback.
+            wind = make_wind(wk, T, seed=seed, grid_shape=gs)
         except Exception as exc:  # real wind product may be unavailable
             rows.append({"wind": wk, "layout": None, "error": str(exc)})
             continue
+        wind_provider = getattr(wind, "provider", wk)
         for lay in layouts:
             observer = sensor_layout(lay, gs, n=cfg.get("n_sensors", 6), seed=seed,
                                      regulatory=platform.observer)
@@ -437,7 +476,7 @@ def experiment_4(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[str
                         c_true=c_true, seed=seed)
             last_bundle = b
             rows.append({
-                "wind": wk, "layout": lay,
+                "wind": wk, "wind_provider": wind_provider, "layout": lay,
                 "sigma_J": b["diagnostics"]["sigma_J"],
                 "max_eligible_coherence": b["diagnostics"]["max_eligible_coherence"],
                 "numerical_rank": b["diagnostics"]["numerical_rank"],
@@ -454,6 +493,38 @@ def experiment_4(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[str
     }
 
 
+def _historical_wind_windows(T: int, n_members: int):
+    """Contiguous windows of the REAL observed New Delhi wind record (city-level),
+    each a genuine historical window (not a synthetic proxy). Returns a list of
+    WindSequence windows; empty if the record is unavailable."""
+    from experiments.iasa_pol.nd_platform import SIM_DIR
+    from model.iasa.wind import WindSequence, real_new_delhi_wind_sequence
+
+    try:
+        seq = real_new_delhi_wind_sequence(
+            SIM_DIR / "govdata_1H_current.csv", SIM_DIR / "govdata_locations.csv",
+            allow_observed_fallback=True,
+        )
+    except Exception:
+        return []
+    total = int(seq.vx.shape[0])
+    if total < T:
+        return []
+    windows = []
+    # Evenly spaced, non-identical contiguous starts across the record.
+    max_start = total - T
+    starts = np.linspace(0, max_start, n_members).round().astype(int) if n_members > 1 else [0]
+    for s in starts:
+        windows.append(WindSequence(
+            timestamps=seq.timestamps[s:s + T],
+            vx=np.asarray(seq.vx[s:s + T], dtype=np.float32),
+            vy=np.asarray(seq.vy[s:s + T], dtype=np.float32),
+            provider="historical_real_new_delhi_window",
+            metadata={"record_start_index": int(s), "window_length": int(T)},
+        ))
+    return windows
+
+
 def _wind_window_ensemble(platform, maps, basis, c_true, seed, cfg) -> dict[str, Any]:
     from model.iasa.diagnostics import summarize_wind_ensemble
 
@@ -461,20 +532,29 @@ def _wind_window_ensemble(platform, maps, basis, c_true, seed, cfg) -> dict[str,
     observer = platform.observer
     n_members = int(cfg.get("ensemble_members", 8))
     out: dict[str, Any] = {}
-    for family in ("simulated", "historical"):
+
+    # Simulated ensemble: AR(1) synthetic windows (declared synthetic).
+    # Historical ensemble: contiguous slices of the REAL observed wind record (F6).
+    historical = _historical_wind_windows(T, n_members)
+    families = {
+        "simulated": [make_wind("ar1", T, seed=seed + 100 + m) for m in range(n_members)],
+        "historical": historical,
+    }
+    for family, winds in families.items():
+        if not winds:
+            out[family] = {"error": "real wind record unavailable for historical windows"
+                           if family == "historical" else "no members"}
+            continue
         diags = []
-        for m in range(n_members):
-            if family == "simulated":
-                wind = make_wind("ar1", T, seed=seed + 100 + m)
-            else:
-                # "historical" windows: shifted diurnal phases as proxy real windows.
-                wind = make_wind("multi", T, seed=seed + 200 + m)
+        for wind in winds:
             b = forward(platform, maps, ["src_a", "src_b"], basis, observer, wind,
                         c_true=c_true, seed=seed)
             diags.append(b["_diagnostics"])
         try:
             summary = summarize_wind_ensemble(diags, quantiles=(0.05, 0.5, 0.95))
             out[family] = {k: v for k, v in summary.items() if k != "column_index"}
+            out[family]["provider"] = winds[0].provider
+            out[family]["n_members"] = len(winds)
         except Exception as exc:
             out[family] = {"error": str(exc)}
     return out
@@ -503,9 +583,9 @@ def experiment_5(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[str
     Y = H_true @ c_true + to_numpy(bg.Q) @ np.full(len(bg.column_names), 0.1)
     parametric_rows = []
     transport_fits = []
-    for dtheta in cfg.get("wind_direction_perturbations_deg", [0.0, 5.0, 10.0, 20.0]):
-        pert_wind = make_wind("single", T, seed=seed, direction_degrees=float(dtheta))
-        pert = _build_response(platform, maps, source_names, basis, observer, pert_wind)
+
+    def _parametric(kind: str, value: float, pert_wind, disp):
+        pert = _build_response(platform, maps, source_names, basis, observer, pert_wind, dispersion=disp)
         H_pert = to_numpy(pert.H_lag).astype(np.float64)
         op_err = float(np.linalg.norm(H_pert - H_true) / max(np.linalg.norm(H_true), 1e-12))
         proj = project_response_and_observations(pert.H_lag, Y, bg, pert.row_index, pert.column_index)
@@ -513,15 +593,27 @@ def experiment_5(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[str
         fit = fit_projection(proj, config=FitConfig(ensemble_kind="transport"))
         transport_fits.append(fit)
         parametric_rows.append({
-            "wind_direction_perturbation_deg": float(dtheta),
+            "perturbation_kind": kind, "perturbation_value": float(value),
             "operator_error_norm": op_err,
             "coefficient_relative_error": float(
-                np.linalg.norm(to_numpy(fit.c_hat) - c_true) / np.linalg.norm(c_true)
-            ),
+                np.linalg.norm(to_numpy(fit.c_hat) - c_true) / np.linalg.norm(c_true)),
             "residual_norm": fit.residual_norm,
             "sigma_J": diag.sigma_J,
             "singular_values": to_numpy(diag.singular_values).tolist(),
         })
+
+    # E5 parametric transport family varies wind DIRECTION, wind SPEED, and DISPERSION
+    # (paper E5: "vary wind speed, wind direction, and dispersion within the puff family").
+    for dtheta in cfg.get("wind_direction_perturbations_deg", [0.0, 5.0, 10.0, 20.0]):
+        _parametric("wind_direction_deg", dtheta,
+                    make_wind("single", T, seed=seed, direction_degrees=float(dtheta)), None)
+    for spd in cfg.get("wind_speed_factors", [1.0, 1.25, 1.5]):
+        _parametric("wind_speed_factor", spd, make_wind("constant", T, speed=float(spd)), None)
+    for dfac in cfg.get("dispersion_factors", [1.0, 1.5, 2.0]):
+        disp = replace(platform.dispersion_config,
+                       sigma_parallel=platform.dispersion_config.sigma_parallel * float(dfac),
+                       sigma_perp=platform.dispersion_config.sigma_perp * float(dfac))
+        _parametric("dispersion_factor", dfac, true_wind, disp)
     transport_ensemble = aggregate_transport_ensemble(transport_fits)
 
     # --- (b) structural mismatch: edge-hold PDE generates Y; puff response fits ---
@@ -608,16 +700,18 @@ def experiment_6(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[str
     observer = platform.observer
     wind = make_wind("constant", T)  # transport held fixed
     c_true = np.asarray([1.0, 0.6], dtype=np.float64)
-    base_center = (gs[0] * 0.35, gs[1] * 0.5)
-    second = (gs[0] * 0.65, gs[1] * 0.5)
-
+    thr = float(cfg.get("source_cell_threshold", 0.02))
+    # F9: perturb the REAL New Delhi inventory maps (paper E6 is literally inventory
+    # error). Base pair = brick_kilns + industries; scenarios perturb location,
+    # spatial scale (map version), and category assignment while transport is fixed.
+    names_bi, maps_bi = _real_group_maps(platform, [0, 1])  # brick_kilns, industries
+    m0, m1 = maps_bi[0], maps_bi[1]
+    _, maps_traffic = _real_group_maps(platform, [3])  # traffic (alternate map version)
     scenarios = {
-        "baseline": np.stack([compact_source(gs, base_center), compact_source(gs, second)], axis=0),
-        "location_shift": np.stack([compact_source(gs, (base_center[0] + 2, base_center[1])),
-                                    compact_source(gs, second)], axis=0),
-        "scale_change": np.stack([compact_source(gs, base_center, sigma=2.0),
-                                  compact_source(gs, second)], axis=0),
-        "category_swap": np.stack([compact_source(gs, second), compact_source(gs, base_center)], axis=0),
+        "baseline": np.stack([m0, m1], axis=0),
+        "location_shift": np.stack([_shift_map(m0, 3), m1], axis=0),
+        "spatial_scale_map_version": np.stack([maps_traffic[0], m1], axis=0),
+        "category_swap": np.stack([m1, m0], axis=0),
     }
     inventory_fits = []
     names = []
@@ -625,7 +719,7 @@ def experiment_6(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[str
     last_bundle = None
     for name, maps in scenarios.items():
         b = forward(platform, maps, ["src_a", "src_b"], basis, observer, wind,
-                    c_true=c_true, ensemble_kind="inventory", seed=seed)
+                    c_true=c_true, ensemble_kind="inventory", seed=seed, source_cell_threshold=thr)
         last_bundle = b
         inventory_fits.append(b["_fit"])
         names.append(name)
@@ -639,7 +733,8 @@ def experiment_6(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[str
 
     # Type-separation guard: inventory scenarios must never pool with transport fits.
     transport_fit = forward(platform, scenarios["baseline"], ["src_a", "src_b"], basis, observer,
-                            wind, c_true=c_true, ensemble_kind="transport", seed=seed)["_fit"]
+                            wind, c_true=c_true, ensemble_kind="transport", seed=seed,
+                            source_cell_threshold=thr)["_fit"]
     pooling_rejected = False
     try:
         aggregate_inventory_scenarios(inventory_fits + [transport_fit])
@@ -710,6 +805,9 @@ def experiment_7(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[str
         "adjacent_deltas": deltas,
         "grid_rows": grid_rows,
         "coefficients_used_for_selection": False,
+        # Factual provenance: selection consumed only Frobenius deltas of H(L); the
+        # code path (above) has no access to any fit result.
+        "selection_criterion": "smallest_L_with_relative_frobenius_delta_le_tau_L",
         "arrays": {},
     }
 
@@ -901,10 +999,36 @@ def experiment_10(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[st
         contrib_sum_error = max(contrib_sum_error, abs(proj_total - fitted_total))
     nonneg = all(np.asarray(f).min() >= -1e-9 for f in footprints.geometric_footprint.values())
 
+    # F10: footprint LOCALIZATION to the known upwind source origins. For each
+    # sensor, the mass-weighted centroid of its geometric footprint should sit near
+    # a true source cell (upwind of the sensor). Report the mean centroid distance
+    # and the fraction of footprint mass within `radius` cells of a source origin.
+    source_centers = np.asarray([(gs[0] * 0.3, gs[1] * 0.5), (gs[0] * 0.5, gs[1] * 0.5)], dtype=np.float64)
+    radius = float(cfg.get("localization_radius_cells", 4.0))
+    xs, ys = np.meshgrid(np.arange(gs[0]), np.arange(gs[1]), indexing="ij")
+    cen_dists, mass_fracs = [], []
+    for field in footprints.geometric_footprint.values():
+        f = np.asarray(field, dtype=np.float64)
+        total = float(f.sum())
+        if total <= 0:
+            continue
+        cx = float((f * xs).sum() / total)
+        cy = float((f * ys).sum() / total)
+        cen_dists.append(float(np.min(np.hypot(source_centers[:, 0] - cx, source_centers[:, 1] - cy))))
+        within = 0.0
+        for sc in source_centers:
+            within += float(f[np.hypot(xs - sc[0], ys - sc[1]) <= radius].sum())
+        mass_fracs.append(min(within / total, 1.0))
+    localization_error = float(np.mean(cen_dists)) if cen_dists else None
+    mass_within_radius = float(np.mean(mass_fracs)) if mass_fracs else None
+
     return {
         "experiment": "exp10_footprints_spatial_attribution",
         "contribution_sum_error": float(contrib_sum_error),
         "footprints_nonnegative": bool(nonneg),
+        "footprint_localization_error_cells": localization_error,
+        "footprint_mass_fraction_within_radius": mass_within_radius,
+        "localization_radius_cells": radius,
         "n_active_cells": footprints.metadata.get("n_active_cells"),
         "report_components": groups,
         "coefficient_relative_error": b["accuracy"]["coefficient_relative_error"],
@@ -917,103 +1041,161 @@ def experiment_10(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[st
 # Observed New Delhi study mode (NO synthetic recovery metrics)
 # --------------------------------------------------------------------------- #
 def observed_new_delhi(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[str, Any]:
-    """Real PM2.5 + mask + real inventory + real/synthetic wind. Reports residuals,
-    geometry, uncertainty, weak/ambiguous coefficients, normalized proxy
-    contributions, and recommended report groups -- NEVER a recovery error."""
+    """Observed New Delhi study mode, per 7.evaluation.tex: real PM2.5 with its
+    observation mask M_O (PM2.5 is NEVER imputed), the four normalized proxy source
+    GROUPS (traffic collapsed to one road map), the declared per-group temporal
+    bases with the fixed-zero mask F0, the real gridded imputed wind field, the
+    rank-4 primary background, and NO synthetic recovery metric. Reports residuals,
+    geometry, uncertainty, weak/ambiguous coefficients, sensor-signal-space
+    contribution shares, per-monitor group contributions, and report groups.
+
+    Deferred (flagged, not silently omitted): the declared zero-source transported
+    kriged initial-condition baseline subtraction (needs an IC-transport pipeline;
+    see report). The rank-4 primary Q still absorbs smooth offsets.
+    """
+    from dataclasses import replace as _dc_replace
+
     from data.pol_weather import load_new_delhi_wind_data
+    from model.iasa.footprints import decompose_per_sensor
+    from experiments.iasa_pol.nd_platform import four_group_inventory, paper_temporal_bases
 
     gs = platform.grid_shape
     T = min(platform.config.T, int(cfg.get("T", platform.config.T)))
-    basis = default_basis("constant", T)
     observer = platform.observer
-    source_names = platform.source_names
-    maps = platform.source_maps
 
-    wind = make_wind(cfg.get("wind_kind", "constant"), T, seed=seed)
-    response = _build_response(platform, maps, source_names, basis, observer, wind)
+    # F16: four source GROUPS (traffic = single road map + slot bases).
+    group_names, group_maps = four_group_inventory(platform)
+    timestamps = np.datetime64("2018-05-01T00:00") + np.arange(T) * np.timedelta64(1, "h")
+    # F3: declared per-group temporal bases + fixed-zero mask F0 (each group free
+    # only on its own admissible components).
+    basis, admissible, fixed_zero = paper_temporal_bases(timestamps, group_names)
 
-    # Real PM2.5 observations aligned to the response rows.
+    # F15: real gridded imputed wind field (kernel coordinate-query imputer).
+    wind = make_wind(cfg.get("wind_kind", "real"), T, seed=seed, grid_shape=gs)
+    wind_provider = getattr(wind, "provider", str(cfg.get("wind_kind", "real")))
+
+    response = _build_response(
+        platform, group_maps, group_names, basis, observer, wind,
+        source_cell_threshold=float(cfg.get("source_cell_threshold", 0.02)),
+    )
+    background = build_background_basis(response.row_index, timestamps, observer.sensor_xy,
+                                        platform.background_config("primary"))
+
+    # F2: assemble the FULL Y from real PM2.5 (no imputation) and the observation
+    # mask M_O; then select the SAME observed rows from Y, H_lag, Q, and metadata.
     wind_data = load_new_delhi_wind_data(
-        str(platform.metadata.get("source_data_csv", "sim/govdata_1H_current.csv")),
-        "sim/govdata_locations.csv",
+        "sim/govdata_1H_current.csv", "sim/govdata_locations.csv",
         start="2018-05-01 00:00:00+05:30",
         end=f"2018-05-{1 + (T - 1) // 24:02d} {(T - 1) % 24:02d}:00:00+05:30",
     ) if cfg.get("use_real_pm25", True) else None
-
-    timestamps = np.datetime64("2018-05-01T00:00") + np.arange(T) * np.timedelta64(1, "h")
-    background = build_background_basis(response.row_index, timestamps, observer.sensor_xy,
-                                        platform.background_config("primary"))
-    H_lag = to_numpy(response.H_lag).astype(np.float64)
-
-    # Build Y from real PM2.5 where available; otherwise a declared proxy signal.
     station_index = platform.metadata.get("regulatory_station_index")
-    Y, mask_fraction = _observed_Y(wind_data, response, observer, H_lag, seed,
-                                   station_index=station_index)
+    Y_full, observed_flags = _observed_pm25_rows(wind_data, response, seed, station_index=station_index)
+    keep = [r for r, ok in enumerate(observed_flags) if ok]
+    if len(keep) < response.H_lag.shape[1] + 1:
+        # Too few observed rows to identify the design; report honestly and stop.
+        return {
+            "experiment": "observed_new_delhi", "has_ground_truth": False,
+            "recovery_error": None, "status": "insufficient_observed_rows",
+            "n_observed_rows": len(keep), "n_total_rows": len(observed_flags),
+            "wind_provider": wind_provider, "source_names": list(group_names),
+            "arrays": {},
+        }
 
-    projection = project_response_and_observations(response.H_lag, Y, background,
-                                                   response.row_index, response.column_index)
-    diagnostics = diagnose_projection(projection, DiagnosticsConfig())
-    fit = fit_projection(projection, config=FitConfig(ensemble_kind="inventory"))
+    idx = torch.as_tensor(keep, dtype=torch.long)
+    H_m = response.H_lag.index_select(0, idx)
+    Y_m = np.asarray(Y_full, dtype=np.float64)[keep]
+    Q_m = background.Q.index_select(0, idx)
+    row_m = [response.row_index[r] for r in keep]
+    masked_bg = _dc_replace(background, Q=Q_m, row_index=row_m)
+
+    projection = project_response_and_observations(H_m, Y_m, masked_bg, row_m, response.column_index)
+    diagnostics = diagnose_projection(projection, DiagnosticsConfig(fixed_zero_indices=fixed_zero))
+    fit = fit_projection(projection,
+                         config=FitConfig(fixed_zero_indices=fixed_zero, ensemble_kind="inventory"))
     merge = recommend_merges(diagnostics, fit=fit, H_tilde=projection.H_tilde)
 
+    # F4: contribution shares in SENSOR-SIGNAL space (comparable across groups),
+    # NOT raw coefficient magnitudes (which live in incomparable per-proxy units).
+    H_tilde = to_numpy(projection.H_tilde)
     c_hat = to_numpy(fit.c_hat)
-    total = float(np.sum(np.abs(c_hat))) or 1.0
-    normalized_contributions = {
-        col["source_name"]: float(abs(c_hat[i])) / total
-        for i, col in enumerate(projection.column_index)
+    col_index = projection.column_index
+    contrib_l1: dict[str, float] = {}
+    for k, gname in enumerate(group_names):
+        cols = [j for j, col in enumerate(col_index) if int(col["source_index"]) == k]
+        contrib_vec = H_tilde[:, cols] @ c_hat[cols] if cols else np.zeros(H_tilde.shape[0])
+        contrib_l1[gname] = float(np.sum(np.abs(contrib_vec)))
+    denom = sum(contrib_l1.values()) or 1.0
+    sensor_signal_shares = {g: v / denom for g, v in contrib_l1.items()}
+
+    # F10: per-monitor fitted group contributions (spatial-origin footprint FIELDS
+    # are available via compute_sensor_footprints but skipped by default at 40x40
+    # for cost; enable with cfg["with_footprints"]).
+    groups = [c["members"] for c in merge.report_components]
+    decomposition = decompose_per_sensor(
+        projection.H_tilde, projection.H_tilde + projection.H_removed, fit.c_hat,
+        projection.row_index, projection.column_index, groups=groups,
+    )
+    per_monitor = {
+        str(sid): {str(k): float(v) for k, v in vals.items()}
+        for sid, vals in decomposition["per_sensor_group_contribution_projected"].items()
     }
+
     return {
         "experiment": "observed_new_delhi",
         "has_ground_truth": False,
         "recovery_error": None,  # explicitly never computed for observed data
-        "observed_mask_fraction": mask_fraction,
+        "n_source_groups": len(group_names),
+        "source_names": list(group_names),
+        "wind_provider": wind_provider,
+        "observed_mask_fraction": len(keep) / max(len(observed_flags), 1),
+        "n_observed_rows": len(keep),
+        "n_total_rows": len(observed_flags),
+        "pm25_imputed": False,
+        "kriged_baseline_subtracted": False,
+        "kriged_baseline_note": "deferred: zero-source transported kriged IC baseline not yet "
+                                "implemented (needs IC-transport pipeline); rank-4 Q absorbs smooth offsets",
+        "fixed_zero_indices": list(fixed_zero),
+        "admissible_components_per_group": admissible,
         "residual_norm": fit.residual_norm,
         "projected_residual_norm": getattr(fit, "projected_residual_norm", None),
         "diagnostics": _diag_summary(diagnostics),
         "weak_set": list(diagnostics.weak_set),
         "ambiguous_pairs": diagnostics.ambiguous_pairs,
-        "report_components": [c["members"] for c in merge.report_components],
-        "normalized_proxy_contributions": normalized_contributions,
-        "source_names": list(source_names),
+        "report_components": groups,
+        "sensor_signal_contribution_shares": sensor_signal_shares,
+        "sensor_signal_shares_denominator": "sum over groups of L1 fitted per-group sensor-signal magnitude",
+        "per_monitor_group_contributions": per_monitor,
         "arrays": {
-            "H_lag": H_lag.astype(np.float32),
-            "H_tilde": to_numpy(projection.H_tilde).astype(np.float32),
-            "Y": np.asarray(Y, dtype=np.float32),
+            "H_tilde": H_tilde.astype(np.float32),
+            "Y": Y_m.astype(np.float32),
             "c_hat": c_hat.astype(np.float32),
         },
     }
 
 
-def _observed_Y(wind_data, response, observer, H_lag, seed, *, station_index=None):
-    """Assemble the observed Y vector aligned to response rows from real PM2.5.
-
-    ``station_index[si]`` maps the deduped observer sensor index ``si`` back to the
-    ORIGINAL raw-station row in ``raw_pm25`` (which is in original station order), so
-    a station that shared a grid cell with another is joined to its own series rather
-    than a neighbor's. Missing observations are filled with the observed column mean
-    so the fit sees a complete vector; the observed mask fraction is reported as
-    provenance."""
-    n_rows = H_lag.shape[0]
+def _observed_pm25_rows(wind_data, response, seed, *, station_index=None):
+    """Return (Y_full aligned to response rows, observed_flags per row). PM2.5 is
+    NEVER imputed: rows without a valid observation are flagged unobserved (their
+    Y value is a placeholder and is dropped by M_O selection). ``station_index[si]``
+    maps the deduped observer sensor back to its original raw-station row."""
+    n_rows = len(response.row_index)
     if wind_data is None or not hasattr(wind_data, "raw_pm25"):
+        # Declared-proxy fallback (no real PM2.5 requested): all rows "observed".
         rng = np.random.default_rng(seed)
-        return H_lag @ rng.uniform(0.2, 1.0, size=H_lag.shape[1]), 0.0
+        H_lag = to_numpy(response.H_lag)
+        return H_lag @ rng.uniform(0.2, 1.0, size=H_lag.shape[1]), [True] * n_rows
     pm = np.asarray(getattr(wind_data, "raw_pm25"), dtype=np.float64)  # [S, T]
     mask = np.asarray(getattr(wind_data, "raw_pm25_mask"), dtype=bool)
     Y = np.zeros(n_rows, dtype=np.float64)
-    observed = 0
-    col_mean = np.nanmean(np.where(mask, pm, np.nan)) if mask.any() else 0.0
-    if not np.isfinite(col_mean):
-        col_mean = 0.0
+    flags = [False] * n_rows
     for r, row in enumerate(response.row_index):
         t = int(row["time_index"])
         si = int(row.get("sensor_index", 0))
         orig = int(station_index[si]) if station_index is not None and si < len(station_index) else si
         if orig < pm.shape[0] and t < pm.shape[1] and mask[orig, t]:
             Y[r] = pm[orig, t]
-            observed += 1
-        else:
-            Y[r] = col_mean
-    return Y, observed / max(n_rows, 1)
+            flags[r] = True
+    return Y, flags
 
 
 # --------------------------------------------------------------------------- #
