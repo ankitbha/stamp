@@ -412,6 +412,33 @@ def paper_temporal_bases(timestamps: Any, group_names: Sequence[str]) -> tuple[T
     return basis, admissible, tuple(sorted(fixed_zero))
 
 
+def krige_initial_condition(grid_shape: tuple[int, int], station_xy: np.ndarray,
+                            station_values: np.ndarray, *, length_scale: float | None = None) -> np.ndarray:
+    """Spatially interpolate first-hour station PM2.5 onto the response grid to form
+    the initial concentration field U0 (a Gaussian-kernel ordinary-kriging surrogate,
+    dependency-free and consistent with the repo's kernel wind imputer).
+
+    The station values come from the loader's Pusa-AVERAGED 32-sensor layout (the two
+    Pusa monitors are already merged upstream in ``load_new_delhi_wind_data``), so the
+    field is Pusa-averaged by construction -- not the drop-one behavior of the legacy
+    ``polsim.build_U0_from_govdata_kriging``. Nonnegative in, nonnegative out."""
+    nx, ny = int(grid_shape[0]), int(grid_shape[1])
+    xy = np.asarray(station_xy, dtype=np.float64).reshape(-1, 2)
+    vals = np.asarray(station_values, dtype=np.float64).reshape(-1)
+    if xy.shape[0] == 0:
+        return np.zeros((nx, ny), dtype=np.float32)
+    ell = float(length_scale) if length_scale is not None else max(2.0, min(nx, ny) / 6.0)
+    xs, ys = np.meshgrid(np.arange(nx), np.arange(ny), indexing="ij")
+    acc = np.zeros((nx, ny), dtype=np.float64)
+    wsum = np.zeros((nx, ny), dtype=np.float64)
+    for (sx, sy), v in zip(xy, vals):
+        w = np.exp(-0.5 * ((xs - sx) ** 2 + (ys - sy) ** 2) / (ell * ell))
+        acc += w * v
+        wsum += w
+    U0 = acc / np.maximum(wsum, 1e-12)
+    return np.clip(U0, 0.0, None).astype(np.float32)
+
+
 def _hours_of_day(timestamps: Any) -> np.ndarray:
     ts = np.asarray(timestamps)
     if np.issubdtype(ts.dtype, np.datetime64):

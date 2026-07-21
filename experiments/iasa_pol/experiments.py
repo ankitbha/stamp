@@ -1049,9 +1049,12 @@ def observed_new_delhi(platform: Platform, cfg: dict[str, Any], seed: int) -> di
     geometry, uncertainty, weak/ambiguous coefficients, sensor-signal-space
     contribution shares, per-monitor group contributions, and report groups.
 
-    Deferred (flagged, not silently omitted): the declared zero-source transported
-    kriged initial-condition baseline subtraction (needs an IC-transport pipeline;
-    see report). The rank-4 primary Q still absorbs smooth offsets.
+    A declared zero-source transported kriged initial-condition baseline is
+    subtracted from the observations before source fitting: first-hour PM2.5 (Pusa
+    monitors averaged upstream) is kriged onto the grid and transported forward as a
+    single t0 impulse through the SAME open-boundary puff propagator (the Green's
+    function of the advection-diffusion model, so units stay in PM2.5 space). The
+    rank-4 primary Q additionally absorbs smooth offsets.
     """
     from dataclasses import replace as _dc_replace
 
@@ -1090,6 +1093,15 @@ def observed_new_delhi(platform: Platform, cfg: dict[str, Any], seed: int) -> di
     ) if cfg.get("use_real_pm25", True) else None
     station_index = platform.metadata.get("regulatory_station_index")
     Y_full, observed_flags = _observed_pm25_rows(wind_data, response, seed, station_index=station_index)
+
+    # Declared zero-source transported kriged IC baseline: subtract before fitting.
+    baseline_vec, baseline_meta = _ic_transport_baseline(
+        platform, observer, wind, response, wind_data, station_index, cfg,
+        source_cell_threshold=float(cfg.get("source_cell_threshold", 0.02)),
+    )
+    if baseline_vec is not None:
+        Y_full = np.asarray(Y_full, dtype=np.float64) - baseline_vec
+
     keep = [r for r, ok in enumerate(observed_flags) if ok]
     if len(keep) < response.H_lag.shape[1] + 1:
         # Too few observed rows to identify the design; report honestly and stop.
@@ -1151,9 +1163,8 @@ def observed_new_delhi(platform: Platform, cfg: dict[str, Any], seed: int) -> di
         "n_observed_rows": len(keep),
         "n_total_rows": len(observed_flags),
         "pm25_imputed": False,
-        "kriged_baseline_subtracted": False,
-        "kriged_baseline_note": "deferred: zero-source transported kriged IC baseline not yet "
-                                "implemented (needs IC-transport pipeline); rank-4 Q absorbs smooth offsets",
+        "kriged_baseline_subtracted": bool(baseline_vec is not None),
+        "kriged_baseline": baseline_meta,
         "fixed_zero_indices": list(fixed_zero),
         "admissible_components_per_group": admissible,
         "residual_norm": fit.residual_norm,
@@ -1171,6 +1182,61 @@ def observed_new_delhi(platform: Platform, cfg: dict[str, Any], seed: int) -> di
             "c_hat": c_hat.astype(np.float32),
         },
     }
+
+
+def _ic_transport_baseline(platform, observer, wind, response, wind_data, station_index, cfg,
+                           *, source_cell_threshold=0.02):
+    """Zero-source transported kriged initial-condition baseline aligned to response
+    rows. Krige the first observed hour's PM2.5 (Pusa-averaged loader stations) onto
+    the grid, then transport it as a single t0 impulse through the SAME open-boundary
+    puff builder (its Gaussian kernel is the advection-diffusion Green's function, so
+    the propagated field stays in PM2.5 units). Returns (baseline_vec[N], meta) or
+    (None, meta) when no real PM2.5 is available."""
+    from model.iasa.activity import TemporalBasis
+    from experiments.iasa_pol.nd_platform import krige_initial_condition
+
+    if wind_data is None or not hasattr(wind_data, "raw_pm25"):
+        return None, {"subtracted": False, "reason": "no real PM2.5"}
+    pm = np.asarray(wind_data.raw_pm25, dtype=np.float64)
+    mask = np.asarray(wind_data.raw_pm25_mask, dtype=bool)
+    T = max(int(r["time_index"]) for r in response.row_index) + 1
+    sensor_xy = np.asarray(observer.sensor_xy, dtype=np.float64)
+
+    def _orig(si):
+        return int(station_index[si]) if station_index is not None and si < len(station_index) else si
+
+    # First hour with >= 3 observed stations -> the initial-condition estimate.
+    t0, cells, vals = None, [], []
+    for t in range(T):
+        c, v = [], []
+        for si in range(sensor_xy.shape[0]):
+            o = _orig(si)
+            if o < pm.shape[0] and t < pm.shape[1] and mask[o, t]:
+                c.append(sensor_xy[si]); v.append(pm[o, t])
+        if len(c) >= 3:
+            t0, cells, vals = t, c, v
+            break
+    if t0 is None:
+        return None, {"subtracted": False, "reason": "no hour with >=3 observed stations"}
+
+    U0 = krige_initial_condition(platform.grid_shape, np.asarray(cells), np.asarray(vals))
+    impulse = np.zeros((T, 1), dtype=np.float32)
+    impulse[t0, 0] = 1.0
+    ic_basis = TemporalBasis(names=["ic_impulse"], values=impulse,
+                             metadata={"kind": "initial_condition_impulse", "release_index": int(t0)})
+    ic_resp = _build_response(platform, U0[None], ["ic_baseline"], ic_basis, observer, wind,
+                              source_cell_threshold=source_cell_threshold)
+    baseline_vec = to_numpy(ic_resp.H_lag).astype(np.float64).reshape(-1)
+    meta = {
+        "subtracted": True,
+        "method": "gaussian_kernel_kriging_surrogate + open_boundary_puff_green_function",
+        "pusa_handling": "averaged_upstream_in_loader",
+        "ic_release_index": int(t0),
+        "n_stations_kriged": len(cells),
+        "U0_max": float(U0.max()),
+        "baseline_l2_norm": float(np.linalg.norm(baseline_vec)),
+    }
+    return baseline_vec, meta
 
 
 def _observed_pm25_rows(wind_data, response, seed, *, station_index=None):
