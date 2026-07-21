@@ -1111,23 +1111,38 @@ def observed_new_delhi(platform: Platform, cfg: dict[str, Any], seed: int) -> di
     """
     from dataclasses import replace as _dc_replace
 
+    import pandas as pd
+
     from data.pol_weather import load_new_delhi_wind_data
     from model.iasa.footprints import decompose_per_sensor
-    from experiments.iasa_pol.nd_platform import four_group_inventory, paper_temporal_bases
+    from experiments.iasa_pol.nd_platform import (
+        PLATFORM_START, four_group_inventory, paper_temporal_bases,
+    )
 
     gs = platform.grid_shape
     T = min(platform.config.T, int(cfg.get("T", platform.config.T)))
     observer = platform.observer
 
+    # Windowed observed study: each window is a self-contained study over [window_start,
+    # window_start + T-1 h] of the real record (Tier 0). Consecutive windows are produced
+    # by offsetting window_start; nothing is aggregated across windows here.
+    window_start = str(cfg.get("window_start", PLATFORM_START))
+    window_index = cfg.get("window_index")
+    start_ts = pd.Timestamp(window_start)
+    end_ts = start_ts + pd.Timedelta(hours=int(T) - 1)
+
     # F16: four source GROUPS (traffic = single road map + slot bases).
     group_names, group_maps = four_group_inventory(platform)
-    timestamps = np.datetime64("2018-05-01T00:00") + np.arange(T) * np.timedelta64(1, "h")
+    # Local (tz-naive) hourly stamps so the diurnal temporal bases align to New Delhi
+    # wall-clock hours of the actual window, not a synthetic epoch.
+    local0 = start_ts.tz_localize(None) if start_ts.tzinfo is not None else start_ts
+    timestamps = np.datetime64(local0.to_datetime64()) + np.arange(T) * np.timedelta64(1, "h")
     # F3: declared per-group temporal bases + fixed-zero mask F0 (each group free
     # only on its own admissible components).
     basis, admissible, fixed_zero = paper_temporal_bases(timestamps, group_names)
 
-    # F15: real gridded imputed wind field (kernel coordinate-query imputer).
-    wind = make_wind(cfg.get("wind_kind", "real"), T, seed=seed, grid_shape=gs)
+    # F15: real gridded imputed wind field (kernel coordinate-query imputer) over the window.
+    wind = make_wind(cfg.get("wind_kind", "real"), T, seed=seed, grid_shape=gs, start=window_start)
     wind_provider = getattr(wind, "provider", str(cfg.get("wind_kind", "real")))
 
     response = _build_response(
@@ -1141,8 +1156,7 @@ def observed_new_delhi(platform: Platform, cfg: dict[str, Any], seed: int) -> di
     # mask M_O; then select the SAME observed rows from Y, H_lag, Q, and metadata.
     wind_data = load_new_delhi_wind_data(
         "sim/govdata_1H_current.csv", "sim/govdata_locations.csv",
-        start="2018-05-01 00:00:00+05:30",
-        end=f"2018-05-{1 + (T - 1) // 24:02d} {(T - 1) % 24:02d}:00:00+05:30",
+        start=str(start_ts), end=str(end_ts),
     ) if cfg.get("use_real_pm25", True) else None
     station_index = platform.metadata.get("regulatory_station_index")
     Y_full, observed_flags = _observed_pm25_rows(wind_data, response, seed, station_index=station_index)
@@ -1163,6 +1177,8 @@ def observed_new_delhi(platform: Platform, cfg: dict[str, Any], seed: int) -> di
             "recovery_error": None, "status": "insufficient_observed_rows",
             "adequacy": None,
             "calibration_status": "uncalibrated: no external calibrated noise model for observed PM2.5",
+            "window_start": str(start_ts), "window_end": str(end_ts),
+            "window_index": window_index, "window_hours": int(T),
             "n_observed_rows": len(keep), "n_total_rows": len(observed_flags),
             "wind_provider": wind_provider, "source_names": list(group_names),
             "arrays": {},
@@ -1211,6 +1227,10 @@ def observed_new_delhi(platform: Platform, cfg: dict[str, Any], seed: int) -> di
         "experiment": "observed_new_delhi",
         "has_ground_truth": False,
         "recovery_error": None,  # explicitly never computed for observed data
+        "window_start": str(start_ts),
+        "window_end": str(end_ts),
+        "window_index": window_index,
+        "window_hours": int(T),
         "n_source_groups": len(group_names),
         "source_names": list(group_names),
         "wind_provider": wind_provider,
