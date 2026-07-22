@@ -34,7 +34,7 @@ we query the imputer on every response-grid cell \(\mathbf x_g\) and hour
 =
 \widehat f_{\omega}\!\left(\mathbf x_g,t;
 \{(\mathbf z_i,t',\mathbf u_{i,t'},m_{i,t'})\}\right),
-\quad g=1,\ldots,n.
+\; g=1,\ldots,n.
 \label{eq:fieldformer_wind_field}
 \end{equation}
 This yields a gridded wind field
@@ -56,13 +56,14 @@ Meteorological speed must be converted to grid displacement before puff
 advection.  For response timestep \(\Delta t_{\mathrm{s}}\) seconds and cell
 dimensions \(\Delta x_{\mathrm{m}},\Delta y_{\mathrm{m}}\), we use
 \begin{equation}
+\begin{aligned}
 v_x^{\mathrm{grid}}(\mathbf x_g,t)
-=
-\frac{\widehat U_x(\mathbf x_g,t)\Delta t_{\mathrm{s}}}{\Delta x_{\mathrm{m}}},
-\quad
+&=
+\frac{\widehat U_x(\mathbf x_g,t)\Delta t_{\mathrm{s}}}{\Delta x_{\mathrm{m}}},\\
 v_y^{\mathrm{grid}}(\mathbf x_g,t)
-=
+&=
 \frac{\widehat V_y(\mathbf x_g,t)\Delta t_{\mathrm{s}}}{\Delta y_{\mathrm{m}}}.
+\end{aligned}
 \label{eq:wind_unit_conversion}
 \end{equation}
 Every response artifact records these scales, the coordinate convention, the

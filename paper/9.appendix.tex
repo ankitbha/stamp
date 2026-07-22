@@ -6,7 +6,7 @@
 \small
 \caption{Indices and objects in the temporal-basis apportionment model.}
 \label{tab:temporal_basis_notation}
-\begin{tabular}{lll}
+\begin{tabularx}{\columnwidth}{llX}
 \toprule
 Symbol & Shape or range & Meaning \\
 \midrule
@@ -20,7 +20,7 @@ Symbol & Shape or range & Meaning \\
 \(\widetilde H_\Phi\) & \(N\times J\) & background-projected fingerprints \\
 \(\widetilde{\mathbf h}_{kb}\) & \(N\) & fingerprint for coefficient \(c_{kb}\) \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
 The constant-activity model uses \(B=1\), \(\phi_1(t)=1\), and
@@ -127,12 +127,14 @@ Let \(\Delta=\widehat{\mathbf c}-\mathbf c\).  Using
 \]
 Thus
 \[
+\begin{aligned}
 \|A\Delta\|_2
-=\|\widetilde E-(\widetilde E-A\Delta)\|_2
-\le
+&=\|\widetilde E-(\widetilde E-A\Delta)\|_2\\
+&\le
 \|\widetilde E\|_2+\|\widetilde E-A\Delta\|_2
 \le
 2\|\widetilde E\|_2.
+\end{aligned}
 \]
 Full column rank gives the lower singular-value inequality
 \[

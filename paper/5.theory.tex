@@ -414,11 +414,12 @@ contribution before background removal.
 The spatial origin of a sensor's signal is the pullback of its response row onto
 the source grid.  For sensor \(s\) at time \(t\),
 \begin{equation}
-F_{s,t}(i)=\sum_{\ell\in\mathcal L_t}
+\begin{aligned}
+F_{s,t}(i)&=\sum_{\ell\in\mathcal L_t}
 \bigl[O G_{t,t-\ell}^{\partial}(\widehat{\mathbf w}_{t-\ell:t})\bigr]_{s,i}
-\ \ge 0,
-\qquad
-F_s(i)=\sum_t F_{s,t}(i),
+\ \ge 0,\\
+F_s(i)&=\sum_t F_{s,t}(i),
+\end{aligned}
 \label{eq:sensor_footprint}
 \end{equation}
 a nonnegative field over source cells \(i\) recording which upwind cells

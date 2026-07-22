@@ -1,48 +1,48 @@
-This is BibTeX, Version 0.99d (TeX Live 2022/dev/Debian)
+This is BibTeX, Version 0.99e (TeX Live 2026)
 Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: main.aux
-The style file: icml2026/icml2026.bst
+The style file: aaai2027.bst
 Database file #1: refs.bib
 Warning--empty journal in mircea2020european
 You've used 35 entries,
-            2773 wiz_defined-function locations,
-            803 strings with 12111 characters,
-and the built_in function-call counts, 17429 in all, are:
-= -- 1440
-> -- 1348
-< -- 17
-+ -- 456
-- -- 420
-* -- 1525
-:= -- 2805
-add.period$ -- 109
+            2840 wiz_defined-function locations,
+            788 strings with 11600 characters,
+and the built_in function-call counts, 22602 in all, are:
+= -- 1692
+> -- 1427
+< -- 3
++ -- 527
+- -- 489
+* -- 1703
+:= -- 3890
+add.period$ -- 139
 call.type$ -- 35
-change.case$ -- 235
-chr.to.int$ -- 34
-cite$ -- 71
-duplicate$ -- 693
-empty$ -- 1233
-format.name$ -- 470
-if$ -- 3531
-int.to.chr$ -- 2
+change.case$ -- 282
+chr.to.int$ -- 36
+cite$ -- 36
+duplicate$ -- 1462
+empty$ -- 1374
+format.name$ -- 575
+if$ -- 4206
+int.to.chr$ -- 1
 int.to.str$ -- 1
-missing$ -- 37
-newline$ -- 187
+missing$ -- 361
+newline$ -- 178
 num.names$ -- 140
-pop$ -- 470
+pop$ -- 734
 preamble$ -- 1
-purify$ -- 205
+purify$ -- 280
 quote$ -- 0
-skip$ -- 569
+skip$ -- 614
 stack$ -- 0
-substring$ -- 406
-swap$ -- 40
+substring$ -- 727
+swap$ -- 777
 text.length$ -- 3
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 355
+type$ -- 297
 warning$ -- 1
-while$ -- 134
+while$ -- 169
 width$ -- 0
-write$ -- 456
+write$ -- 442
 (There was 1 warning)
