@@ -1,0 +1,17 @@
+{
+  "coefficient_relative_error": 0.7875087909526811,
+  "contribution_sum_error": 3.552713678800501e-15,
+  "experiment": "exp10_footprints_spatial_attribution",
+  "footprint_localization_error_cells": 0.7424077271348679,
+  "footprint_mass_fraction_within_radius": 1.0,
+  "footprints_nonnegative": true,
+  "localization_radius_cells": 4.0,
+  "n_active_cells": 50,
+  "report_components": [
+    [
+      0,
+      1
+    ]
+  ],
+  "sigma_J": 0.000503654618566931
+}

@@ -1,0 +1,106 @@
+{
+  "config": {
+    "experiment": "exp02",
+    "params": {
+      "offsets": [
+        8.0,
+        6.0,
+        4.0,
+        2.0,
+        1.0
+      ]
+    },
+    "platform": {
+      "T": 72,
+      "grid_shape": [
+        40,
+        40
+      ],
+      "lag_window_steps": 12
+    }
+  },
+  "device": "cuda",
+  "git_sha": "b4eef95b47d6b22db0bd1677d4d10ec83533947d",
+  "inventory_version": "new_delhi_proxy_v1",
+  "lag_rule": "declared_in_platform_config.lag_window_steps (not tuned to fit)",
+  "platform_config": {
+    "T": 72,
+    "background_daily_harmonics": 1,
+    "background_polynomial_degree": 1,
+    "device": "cuda",
+    "grid_shape": [
+      40,
+      40
+    ],
+    "inventory_version": "new_delhi_proxy_v1",
+    "kernel_truncation_radius": 3.0,
+    "lag_window_steps": 12,
+    "min_dispersion_time": 0.25,
+    "response_dtype": "float32",
+    "sigma_parallel": 0.7,
+    "sigma_perp": 0.25,
+    "substep_dt": 0.25
+  },
+  "platform_metadata": {
+    "all_zero_sources": [
+      "traffic_06"
+    ],
+    "downsampled_shape": [
+      7,
+      40,
+      40
+    ],
+    "geometry": "regulatory_new_delhi",
+    "inventory_normalization": "per_source_cropped_p99",
+    "inventory_version": "new_delhi_proxy_v1",
+    "n_regulatory_sensors": 32,
+    "native_shape": [
+      7,
+      40,
+      40
+    ],
+    "regulatory_station_index": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31
+    ]
+  },
+  "primary_background": "constant+linear+daily_sin1+daily_cos1 (declared)",
+  "runtime": {
+    "cuda_available": true,
+    "cuda_version": "11.8",
+    "device": "cuda",
+    "dtype": "float64",
+    "torch_version": "2.6.0+cu118"
+  },
+  "seed": 0
+}

@@ -1,0 +1,42 @@
+{
+  "experiment": "exp03_background_help_or_hurt",
+  "hypothesis": "H3",
+  "rows": [
+    {
+      "background_mode": "none",
+      "coefficient_relative_error": 2.3625131544750606,
+      "declared_before_fit": true,
+      "max_absorption": 0.0,
+      "min_visibility": 1.0,
+      "residual_norm": 6.859066199111761,
+      "sigma_J": 0.08039003787838914
+    },
+    {
+      "background_mode": "primary",
+      "coefficient_relative_error": 2.6063386704764553,
+      "declared_before_fit": true,
+      "max_absorption": 0.2347036928361387,
+      "min_visibility": 0.9720669609492366,
+      "residual_norm": 6.851814904661851,
+      "sigma_J": 0.07996875181896315
+    },
+    {
+      "background_mode": "redundant",
+      "coefficient_relative_error": 2.6063386704763998,
+      "declared_before_fit": true,
+      "max_absorption": 0.2347036928361387,
+      "min_visibility": 0.9720669609492366,
+      "residual_norm": 6.851814904661852,
+      "sigma_J": 0.07996875181896315
+    },
+    {
+      "background_mode": "stress",
+      "coefficient_relative_error": 0.7753805490744617,
+      "declared_before_fit": true,
+      "max_absorption": 1.0000000000000009,
+      "min_visibility": 8.701459324963949e-16,
+      "residual_norm": 6.851814904659001,
+      "sigma_J": 0.0
+    }
+  ]
+}

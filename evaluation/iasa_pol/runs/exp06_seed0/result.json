@@ -1,0 +1,54 @@
+{
+  "experiment": "exp06_inventory_error",
+  "hypothesis": "H5b",
+  "n_scenarios": 5,
+  "rows": [
+    {
+      "c_hat": [
+        0.9999999999999998,
+        0.6
+      ],
+      "coefficient_relative_error": 1.9040167791585112e-16,
+      "scenario": "baseline",
+      "sigma_J": 21.56322485889794
+    },
+    {
+      "c_hat": [
+        0.9999999999999997,
+        0.6
+      ],
+      "coefficient_relative_error": 2.8560251687377666e-16,
+      "scenario": "location_shift",
+      "sigma_J": 28.846703528505667
+    },
+    {
+      "c_hat": [
+        1.0,
+        0.6
+      ],
+      "coefficient_relative_error": 0.0,
+      "scenario": "spatial_scale",
+      "sigma_J": 47.001535103810276
+    },
+    {
+      "c_hat": [
+        1.0,
+        0.6
+      ],
+      "coefficient_relative_error": 0.0,
+      "scenario": "alt_map_version",
+      "sigma_J": 46.00736564537984
+    },
+    {
+      "c_hat": [
+        1.0,
+        0.5999999999999998
+      ],
+      "coefficient_relative_error": 1.9040167791585112e-16,
+      "scenario": "category_swap",
+      "sigma_J": 21.56322485889795
+    }
+  ],
+  "scenario_aggregate_kind": "inventory",
+  "transport_inventory_pooling_rejected": true
+}

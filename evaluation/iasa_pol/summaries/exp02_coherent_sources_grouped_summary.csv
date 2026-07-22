@@ -1,0 +1,6 @@
+experiment,hypothesis,grouped_relative_error,individual_relative_error,max_eligible_coherence,merged,numerical_rank,offset,sigma_J,triggering_pair
+exp02_coherent_sources_grouped,H2,0.0,0.0,0.04769674694723237,False,2,8.0,21.767118792746228,
+exp02_coherent_sources_grouped,H2,3.918434204559376e-16,6.621479371676717e-16,0.8618036886028285,False,2,6.0,10.476535416460395,
+exp02_coherent_sources_grouped,H2,5.224578939412502e-16,1.6270169776950988e-15,0.9052738133260714,False,2,4.0,8.396899247654938,
+exp02_coherent_sources_grouped,H2,1.3061447348531254e-16,5.823834488387779e-16,0.9453560426932588,False,2,2.0,5.425126174114002,
+exp02_coherent_sources_grouped,H2,0.0,0.0,0.9583536950856447,False,2,1.0,4.641599638289034,

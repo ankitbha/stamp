@@ -1,0 +1,7 @@
+coefficients_used_for_selection,experiment,row_count_fixed,selected_lag_window_steps,selection_criterion,tau_L,coefficient_relative_error,condition_number,lag_window_steps,n_report_components,numerical_rank,sigma_J
+False,exp07_lag_window_sensitivity,True,16,smallest_L_with_relative_frobenius_delta_le_tau_L,0.001,2.9614124974641904e-12,569.1649801637597,4,2,2,0.07811215355675925
+False,exp07_lag_window_sensitivity,True,16,smallest_L_with_relative_frobenius_delta_le_tau_L,0.001,1.4280125843688833e-15,63.78833681170781,6,2,2,0.7097897100427146
+False,exp07_lag_window_sensitivity,True,16,smallest_L_with_relative_frobenius_delta_le_tau_L,0.001,1.4470527521604685e-14,18.605219026351616,8,2,2,2.457870442209822
+False,exp07_lag_window_sensitivity,True,16,smallest_L_with_relative_frobenius_delta_le_tau_L,0.001,3.8080335583170225e-16,10.101366473293632,10,2,2,4.572273948126977
+False,exp07_lag_window_sensitivity,True,16,smallest_L_with_relative_frobenius_delta_le_tau_L,0.001,9.520083895792556e-17,7.539568310939899,12,2,2,6.157359569532131
+False,exp07_lag_window_sensitivity,True,16,smallest_L_with_relative_frobenius_delta_le_tau_L,0.001,1.9040167791585112e-16,5.14090757945864,16,2,2,9.074496935955452

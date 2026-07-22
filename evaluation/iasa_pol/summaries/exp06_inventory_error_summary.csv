@@ -1,0 +1,6 @@
+experiment,hypothesis,n_scenarios,scenario_aggregate_kind,transport_inventory_pooling_rejected,c_hat,coefficient_relative_error,scenario,sigma_J
+exp06_inventory_error,H5b,5,inventory,True,"[0.9999999999999998, 0.6]",1.9040167791585112e-16,baseline,21.56322485889794
+exp06_inventory_error,H5b,5,inventory,True,"[0.9999999999999997, 0.6]",2.8560251687377666e-16,location_shift,28.846703528505667
+exp06_inventory_error,H5b,5,inventory,True,"[1.0, 0.6]",0.0,spatial_scale,47.001535103810276
+exp06_inventory_error,H5b,5,inventory,True,"[1.0, 0.6]",0.0,alt_map_version,46.00736564537984
+exp06_inventory_error,H5b,5,inventory,True,"[1.0, 0.5999999999999998]",1.9040167791585112e-16,category_swap,21.56322485889795

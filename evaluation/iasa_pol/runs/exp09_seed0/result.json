@@ -1,0 +1,40 @@
+{
+  "basis_names": [
+    "diurnal",
+    "block",
+    "day_night"
+  ],
+  "experiment": "exp09_temporal_basis_recovery",
+  "rows": [
+    {
+      "activity_relative_error": 4.791691019029896e-14,
+      "coefficient_relative_error": 8.757810361405987e-14,
+      "noise_frac": 0.0,
+      "sigma_J": 0.14124464831991446
+    },
+    {
+      "activity_relative_error": 0.07500417647233498,
+      "coefficient_relative_error": 0.13171409554652522,
+      "noise_frac": 0.02,
+      "sigma_J": 0.14124464831991446
+    },
+    {
+      "activity_relative_error": 0.1875149132321631,
+      "coefficient_relative_error": 0.32929627924874066,
+      "noise_frac": 0.05,
+      "sigma_J": 0.14124464831991446
+    },
+    {
+      "activity_relative_error": 0.37503959511042373,
+      "coefficient_relative_error": 0.6586238443754278,
+      "noise_frac": 0.1,
+      "sigma_J": 0.14124464831991446
+    },
+    {
+      "activity_relative_error": 0.5821249175442198,
+      "coefficient_relative_error": 0.9004808112062124,
+      "noise_frac": 0.2,
+      "sigma_J": 0.14124464831991446
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "adjacent_deltas": [
+    {
+      "L": 4,
+      "L_plus": 6,
+      "relative_frobenius_delta": 0.06287812514107237
+    },
+    {
+      "L": 6,
+      "L_plus": 8,
+      "relative_frobenius_delta": 0.09569895674748112
+    },
+    {
+      "L": 8,
+      "L_plus": 10,
+      "relative_frobenius_delta": 0.08229823601168215
+    },
+    {
+      "L": 10,
+      "L_plus": 12,
+      "relative_frobenius_delta": 0.05745855597066392
+    },
+    {
+      "L": 12,
+      "L_plus": 16,
+      "relative_frobenius_delta": 0.1388414700579479
+    }
+  ],
+  "coefficients_used_for_selection": false,
+  "experiment": "exp07_lag_window_sensitivity",
+  "grid_rows": [
+    {
+      "coefficient_relative_error": 2.9614124974641904e-12,
+      "condition_number": 569.1649801637597,
+      "lag_window_steps": 4,
+      "n_report_components": 2,
+      "numerical_rank": 2,
+      "sigma_J": 0.07811215355675925
+    },
+    {
+      "coefficient_relative_error": 1.4280125843688833e-15,
+      "condition_number": 63.78833681170781,
+      "lag_window_steps": 6,
+      "n_report_components": 2,
+      "numerical_rank": 2,
+      "sigma_J": 0.7097897100427146
+    },
+    {
+      "coefficient_relative_error": 1.4470527521604685e-14,
+      "condition_number": 18.605219026351616,
+      "lag_window_steps": 8,
+      "n_report_components": 2,
+      "numerical_rank": 2,
+      "sigma_J": 2.457870442209822
+    },
+    {
+      "coefficient_relative_error": 3.8080335583170225e-16,
+      "condition_number": 10.101366473293632,
+      "lag_window_steps": 10,
+      "n_report_components": 2,
+      "numerical_rank": 2,
+      "sigma_J": 4.572273948126977
+    },
+    {
+      "coefficient_relative_error": 9.520083895792556e-17,
+      "condition_number": 7.539568310939899,
+      "lag_window_steps": 12,
+      "n_report_components": 2,
+      "numerical_rank": 2,
+      "sigma_J": 6.157359569532131
+    },
+    {
+      "coefficient_relative_error": 1.9040167791585112e-16,
+      "condition_number": 5.14090757945864,
+      "lag_window_steps": 16,
+      "n_report_components": 2,
+      "numerical_rank": 2,
+      "sigma_J": 9.074496935955452
+    }
+  ],
+  "row_count_fixed": true,
+  "selected_lag_window_steps": 16,
+  "selection_criterion": "smallest_L_with_relative_frobenius_delta_le_tau_L",
+  "tau_L": 0.001
+}

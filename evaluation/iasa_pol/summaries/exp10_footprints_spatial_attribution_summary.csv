@@ -1,0 +1,2 @@
+coefficient_relative_error,contribution_sum_error,experiment,footprint_localization_error_cells,footprint_mass_fraction_within_radius,footprints_nonnegative,localization_radius_cells,n_active_cells,sigma_J
+0.7875087909526811,3.552713678800501e-15,exp10_footprints_spatial_attribution,0.7424077271348679,1.0,True,4.0,50,0.000503654618566931

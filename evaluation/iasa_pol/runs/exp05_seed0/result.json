@@ -1,0 +1,147 @@
+{
+  "experiment": "exp05_transport_error",
+  "hypothesis": "H5a",
+  "parametric": {
+    "rows": [
+      {
+        "coefficient_relative_error": 9.520083895792556e-17,
+        "operator_error_norm": 0.0,
+        "perturbation_kind": "wind_direction_deg",
+        "perturbation_value": 0.0,
+        "residual_norm": 3.289639936404351e-14,
+        "sigma_J": 0.8653048223065589,
+        "singular_values": [
+          21.138254444441866,
+          0.8653048223065589
+        ]
+      },
+      {
+        "coefficient_relative_error": 0.6228291244037114,
+        "operator_error_norm": 0.2879897011156917,
+        "perturbation_kind": "wind_direction_deg",
+        "perturbation_value": 5.0,
+        "residual_norm": 3.6279493665800713,
+        "sigma_J": 3.3691678377242544,
+        "singular_values": [
+          21.56981450818195,
+          3.3691678377242544
+        ]
+      },
+      {
+        "coefficient_relative_error": 0.7971503291575326,
+        "operator_error_norm": 0.5972303168052534,
+        "perturbation_kind": "wind_direction_deg",
+        "perturbation_value": 10.0,
+        "residual_norm": 6.95108661481864,
+        "sigma_J": 7.068079259205466,
+        "singular_values": [
+          21.414989214018085,
+          7.068079259205466
+        ]
+      },
+      {
+        "coefficient_relative_error": 0.8612705285788533,
+        "operator_error_norm": 0.8675803972437764,
+        "perturbation_kind": "wind_direction_deg",
+        "perturbation_value": 20.0,
+        "residual_norm": 10.750981509884324,
+        "sigma_J": 7.978129605888433,
+        "singular_values": [
+          15.362632877230059,
+          7.978129605888433
+        ]
+      },
+      {
+        "coefficient_relative_error": 9.520083895792556e-17,
+        "operator_error_norm": 0.0,
+        "perturbation_kind": "wind_speed_factor",
+        "perturbation_value": 1.0,
+        "residual_norm": 3.289639936404351e-14,
+        "sigma_J": 0.8653048223065589,
+        "singular_values": [
+          21.138254444441866,
+          0.8653048223065589
+        ]
+      },
+      {
+        "coefficient_relative_error": 0.4508835595460142,
+        "operator_error_norm": 0.28818717066544647,
+        "perturbation_kind": "wind_speed_factor",
+        "perturbation_value": 1.25,
+        "residual_norm": 1.7823540559876525,
+        "sigma_J": 2.0888647848322024,
+        "singular_values": [
+          19.601894206630583,
+          2.0888647848322024
+        ]
+      },
+      {
+        "coefficient_relative_error": 0.27377731292056556,
+        "operator_error_norm": 0.5289297640668748,
+        "perturbation_kind": "wind_speed_factor",
+        "perturbation_value": 1.5,
+        "residual_norm": 1.551430458215268,
+        "sigma_J": 4.566836119128706,
+        "singular_values": [
+          19.23500556241857,
+          4.566836119128706
+        ]
+      },
+      {
+        "coefficient_relative_error": 9.520083895792556e-17,
+        "operator_error_norm": 0.0,
+        "perturbation_kind": "dispersion_factor",
+        "perturbation_value": 1.0,
+        "residual_norm": 3.289639936404351e-14,
+        "sigma_J": 0.8653048223065589,
+        "singular_values": [
+          21.138254444441866,
+          0.8653048223065589
+        ]
+      },
+      {
+        "coefficient_relative_error": 0.49688852193762123,
+        "operator_error_norm": 0.1890486936933431,
+        "perturbation_kind": "dispersion_factor",
+        "perturbation_value": 1.5,
+        "residual_norm": 1.2588959332242375,
+        "sigma_J": 1.4171452220048875,
+        "singular_values": [
+          17.677013919693735,
+          1.4171452220048875
+        ]
+      },
+      {
+        "coefficient_relative_error": 0.8933098694534333,
+        "operator_error_norm": 0.3518062300192461,
+        "perturbation_kind": "dispersion_factor",
+        "perturbation_value": 2.0,
+        "residual_norm": 2.5164227202027036,
+        "sigma_J": 1.759433945542581,
+        "singular_values": [
+          14.722802725653093,
+          1.759433945542581
+        ]
+      }
+    ],
+    "transport_ensemble_kind": "transport"
+  },
+  "structural": {
+    "adequacy_rejection_rate": 1.0,
+    "coefficient_relative_error_mean": 0.8616778422623922,
+    "edge_hold_config": {
+      "advection": "first_order_upwind",
+      "boundary": "edge_hold",
+      "diffusivity": 0.0003,
+      "dt": 1.0,
+      "dx": 1.0,
+      "dy": 1.0,
+      "integrator": "two_stage_heun",
+      "laplacian": "five_point",
+      "substeps_per_step": 4
+    },
+    "generator": "edge_hold_pde",
+    "n_trials": 10,
+    "operator_mismatch_norm": 0.444317456783678
+  }
+}

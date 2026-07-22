@@ -1,0 +1,45 @@
+{
+  "aligned_background_weights": [
+    0.3,
+    0.3,
+    0.3,
+    0.3
+  ],
+  "aligned_in_span_weights": [
+    0.6,
+    0.5,
+    0.4
+  ],
+  "aligned_negative_control_rejection_rate": 0.05,
+  "alpha": 0.05,
+  "diagnostics": {
+    "background_rank": 4,
+    "numerical_rank": 3,
+    "omitted_source_out_of_span_fraction": 0.9136223721498558,
+    "sigma_J": 45.8455157812634,
+    "sigma_min_positive": 45.8455157812634,
+    "singular_values": [
+      120.55560614309307,
+      69.20521762571566,
+      45.8455157812634
+    ]
+  },
+  "experiment": "exp08_missing_source_adequacy",
+  "fitted_groups": [
+    "industries",
+    "population_density",
+    "traffic"
+  ],
+  "n_replicates": 1000,
+  "n_trials": 100,
+  "negative_control_note": "aligned = a REAL omitted source whose signature is a nonnegative mix of the fitted response columns AND the background -> absorbed -> not detected; non-rejection cannot certify inventory completeness",
+  "null_rejection_rate": 0.05,
+  "omission_amplitude": 1.2,
+  "omitted_residual_visible_group": "brick_kilns",
+  "operator_note": "real New Delhi platform transport operator over real inventory maps with a NON-empty rank-4 primary background Q; both the platform geometry and span([H_lag, Q]) background absorption are exercised.",
+  "platform_grid_shape": [
+    40,
+    40
+  ],
+  "residual_visible_power": 1.0
+}

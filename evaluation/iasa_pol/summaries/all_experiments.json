@@ -1,0 +1,62 @@
+{
+  "exp01_conditioning_predicts_recovery": {
+    "n_rows": 10,
+    "runs": [
+      "exp01_seed0"
+    ]
+  },
+  "exp02_coherent_sources_grouped": {
+    "n_rows": 5,
+    "runs": [
+      "exp02_seed0"
+    ]
+  },
+  "exp03_background_help_or_hurt": {
+    "n_rows": 4,
+    "runs": [
+      "exp03_seed0"
+    ]
+  },
+  "exp04_wind_diversity_geometry": {
+    "n_rows": 18,
+    "runs": [
+      "exp04_seed0"
+    ]
+  },
+  "exp05_transport_error": {
+    "n_rows": 1,
+    "runs": [
+      "exp05_seed0"
+    ]
+  },
+  "exp06_inventory_error": {
+    "n_rows": 5,
+    "runs": [
+      "exp06_seed0"
+    ]
+  },
+  "exp07_lag_window_sensitivity": {
+    "n_rows": 6,
+    "runs": [
+      "exp07_seed0"
+    ]
+  },
+  "exp08_missing_source_adequacy": {
+    "n_rows": 1,
+    "runs": [
+      "exp08_seed0"
+    ]
+  },
+  "exp09_temporal_basis_recovery": {
+    "n_rows": 5,
+    "runs": [
+      "exp09_seed0"
+    ]
+  },
+  "exp10_footprints_spatial_attribution": {
+    "n_rows": 1,
+    "runs": [
+      "exp10_seed0"
+    ]
+  }
+}
