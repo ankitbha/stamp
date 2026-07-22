@@ -1856,7 +1856,7 @@ recommended report groups rather than recovery error.
 - The Experiment 5 structural generator is labeled `edge_hold_pde` and is never
   silently substituted for the open-boundary puff response.
 
-### Task 11: Evaluation and reporting
+### ~~Task 11: Evaluation and reporting~~  [implemented 2026-07-22]
 
 **Objective**
 
@@ -1954,6 +1954,76 @@ Produce tables matching the paper's evaluation result subsections
 - An `A-B-C` chain retains both trigger edges in the aggregate report.
 - Omitted-source results state that rejection diagnoses model inadequacy without
   identifying its cause and that non-rejection cannot certify completeness.
+
+### Task 11A: Update the paper with results and reconcile implementation drifts
+
+**Objective**
+
+Edit `paper/` to (1) replace the "Results pending" placeholders with the actual
+Task 11 result tables/numbers, and (2) reconcile every narrative point where the
+shipped implementation deviated from the paper's text during Tasks 1–11, so code
+and paper agree. The `paper/` folder is now editable (previously read-only).
+
+**Likely files**
+
+- `paper/8.evaluation.tex` (all result subsections + Metrics/Reporting)
+- `paper/7.evaluation.tex` (platform, wind preparation, study modes, forward models)
+- `paper/4.method.tex` (masked wind preparation)
+- `paper/9.appendix.tex` (sanity gates, adequacy contracts)
+- `paper/main.tex` / rebuild `paper/main.pdf`
+
+**Results to insert** (source: `evaluation/iasa_pol/reports/` from Task 11)
+
+- Controlled Experiment 1–10 result tables (per §results_h1 … §results_footprints).
+- Observed New Delhi tables, presented as **weeks 1–4** (Tier 0): identifiability and
+  report groups; proxy apportionment (fraction-of-fitted-sensor-signal, per week);
+  sensor fit and residual diagnostics (labeled `uncalibrated`); per-monitor group
+  contributions; wind-imputation validation.
+
+**Narrative drifts to reconcile** (documented over Tasks 9–11)
+
+1. **Observed study is windowed** — the paper describes a single observed run; we ran
+   4 consecutive one-week windows reported per-week with NO cross-window aggregation
+   (Tier 0). Rewrite §Study Modes / observed-results narrative; note the large
+   week-to-week attribution swing (wk1 population-dominated → wk4 brick-kiln-dominated)
+   as the reason per-week reporting is the honest framing.
+2. **Record length / T=72** — controlled experiments run at T=72 and observed at weekly
+   windows, not the full ~21,960-hour record; adjust any "full record" wording.
+3. **Wind imputer (F1/F15)** — paper says FieldFormer-imputed gridded wind; the
+   paper-facing wind is the kernel coordinate-query imputer (FieldFormer trained but
+   NOT adopted: held-out vector RMSE FF 1.12 vs kernel 1.55 vs city-mean 1.06).
+   Rewrite §Masked Wind Preparation / §Wind Preparation to describe the kernel imputer
+   as adopted, with FieldFormer as an evaluated-but-not-adopted alternative + numbers.
+4. **Kriging vs Gaussian-kernel surrogate (F3)** — the observed zero-source IC baseline
+   uses a normalized Gaussian-kernel surrogate (Pusa monitors averaged) transported via
+   the open-boundary puff Green's function, not literal spatial kriging. Reconcile the
+   naming (either rename in text or state the surrogate explicitly + why pykrige avoided).
+5. **Controlled sources (F9)** — paper says controlled mode preserves the New Delhi
+   inventories; we use real maps for E2/E6 and compact synthetic sources for the other
+   controlled experiments (tractability, owner-approved). State this scope.
+6. **Traffic parameterization / traffic_06 (F16)** — traffic is one road map with diurnal
+   slot temporal bases and an F₀ admissibility mask, not per-slot spatial inventories;
+   reconcile the "traffic_06 unsupported" apportionment sentence with the single-road-map
+   design (unsupported now = groups with no admissible temporal component).
+7. **Platform-based Experiment 8** — missing-source adequacy runs on the real platform
+   with non-empty background Q; ensure the missing-source results text matches (in-span
+   aligned control absorbed, residual-visible detected).
+8. **Additions not in the paper** — decide whether to document Gate S7 (adequacy
+   calibration study) and the reporting layer; they are strengthenings consistent with
+   §model_adequacy, so mention briefly in the appendix if desired.
+
+**Outputs and artifacts**
+
+- Updated `paper/*.tex` with all placeholders filled and drifts reconciled.
+- Rebuilt `paper/main.pdf` (compiles without missing-reference/citation errors).
+
+**Acceptance checks**
+
+- No "Results pending" text remains in `paper/8.evaluation.tex`.
+- Every result table traces to a committed `evaluation/iasa_pol/reports/` artifact.
+- Each reconciled drift is reflected in the paper text; no claim in the paper
+  contradicts the shipped code.
+- `paper/main.pdf` builds.
 
 ### Task 12: Documentation and cleanup
 

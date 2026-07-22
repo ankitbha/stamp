@@ -1,0 +1,6 @@
+scenario,sigma_J,coefficient_relative_error,c_hat
+baseline,21.563225,0.0,"[0.9999999999999998,0.6]"
+location_shift,28.846704,0.0,"[0.9999999999999997,0.6]"
+spatial_scale,47.001535,0.0,"[1.0,0.6]"
+alt_map_version,46.007366,0.0,"[1.0,0.6]"
+category_swap,21.563225,0.0,"[1.0,0.5999999999999998]"

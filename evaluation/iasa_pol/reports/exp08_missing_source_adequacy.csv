@@ -1,0 +1,4 @@
+case,rejection_rate
+null,0.05
+residual_visible,1.0
+aligned (in-span),0.05

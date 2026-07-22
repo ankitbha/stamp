@@ -1964,6 +1964,82 @@ def run_experiments_gate() -> dict[str, Any]:
     return summary
 
 
+def run_reporting_gate() -> dict[str, Any]:
+    """Task 11 reporting gate: exercise model/iasa/reporting.py on freshly produced
+    reduced results and assert the paper-facing reporting rules -- single-run tables,
+    weak-pair nulls preserved, A-B-C chain retains both trigger edges, grouped metrics
+    on non-singleton components, observed apportionment without ground truth and
+    labeled uncalibrated, and the omitted-source interpretation text."""
+    from experiments.iasa_pol.experiments import run_named_experiment
+    from experiments.iasa_pol.nd_platform import PlatformConfig, build_platform
+    from model.iasa import reporting
+
+    platform = build_platform(PlatformConfig(grid_shape=(12, 12), T=12, lag_window_steps=6))
+    checks: dict[str, Any] = {}
+
+    # Single-run controlled tables.
+    e02 = run_named_experiment("exp02", platform, {"offsets": [4.0, 1.0]}, seed=0)["result"]
+    t02 = reporting.report_result(e02)
+    if not t02 or not t02[0]["rows"]:
+        raise RuntimeError("exp02 produced no report rows")
+    checks["single_run_tables"] = True
+
+    # Weak-pair undefined metrics stay JSON null (never NaN).
+    synth = {"experiment": "exp01_conditioning_predicts_recovery",
+             "rows": [{"noise_frac": 0.0, "geometry": "g", "sigma_J": float("nan"),
+                       "numerical_rank": 4, "effective_rank": 4, "condition_number": 1.0,
+                       "coefficient_relative_error": 0.0, "residual_norm": 0.0, "min_visibility": 1.0}]}
+    if reporting.report_result(synth)[0]["rows"][0]["sigma_J"] is not None:
+        raise RuntimeError("NaN diagnostic must serialize as null, not a number/NaN")
+    checks["weak_pair_nulls_preserved"] = True
+
+    # A-B-C chain retains both trigger edges (no dedup).
+    chain = {"source_edges": [{"sources": ["A", "B"], "max_coherence": 0.9},
+                              {"sources": ["B", "C"], "max_coherence": 0.85}],
+             "report_components": [["A", "B", "C"]]}
+    edge_pairs = [tuple(r["sources"]) for r in reporting.report_merge_edges(chain)["rows"]]
+    if ("A", "B") not in edge_pairs or ("B", "C") not in edge_pairs or len(edge_pairs) != 2:
+        raise RuntimeError(f"A-B-C chain must retain both edges; got {edge_pairs}")
+    checks["abc_chain_edges_retained"] = True
+
+    # Grouped metrics note on a non-singleton report component.
+    grp = {"experiment": "exp10_footprints_spatial_attribution", "report_components": [[0, 1], [2]],
+           "footprint_localization_error_cells": 0.5, "footprint_mass_fraction_within_radius": 0.9,
+           "localization_radius_cells": 2, "n_active_cells": 5, "contribution_sum_error": 1e-9,
+           "footprints_nonnegative": True, "coefficient_relative_error": 0.1}
+    if "group" not in " ".join(reporting.report_result(grp)[0]["notes"]).lower():
+        raise RuntimeError("non-singleton report component must trigger a grouped-metrics note")
+    checks["grouped_metrics_on_nonsingleton"] = True
+
+    # Omitted-source interpretation text.
+    e08 = run_named_experiment("exp08", platform,
+                               {"N": 32, "n_trials": 4, "n_replicates": 20,
+                                "omission_amplitude": 1.2}, seed=0)["result"]
+    notes08 = " ".join(reporting.report_result(e08)[0]["notes"]).lower()
+    if "non-rejection cannot certify" not in notes08:
+        raise RuntimeError("exp08 report must state non-rejection cannot certify completeness")
+    checks["omitted_source_interpretation"] = True
+
+    # Observed apportionment without ground truth, labeled uncalibrated.
+    obs = run_named_experiment("observed", platform,
+                               {"wind_kind": "real", "use_real_pm25": True, "T": 12}, seed=0)["result"]
+    otabs = reporting.report_observed([obs])
+    labels = {t["label"] for t in otabs}
+    if not {"observed_identifiability", "observed_apportionment", "observed_residuals",
+            "observed_per_monitor"} <= labels:
+        raise RuntimeError(f"observed report missing tables; got {labels}")
+    appt = next(t for t in otabs if t["label"] == "observed_apportionment")
+    if "not physical" not in " ".join(appt["notes"]).lower():
+        raise RuntimeError("apportionment must be labeled a fraction of fitted signal, not physical")
+    resid = next(t for t in otabs if t["label"] == "observed_residuals")
+    if resid["rows"] and "uncalibrated" not in (resid["rows"][0].get("calibration_status") or "").lower():
+        raise RuntimeError("observed residual table must be labeled uncalibrated")
+    checks["observed_apportionment_no_ground_truth"] = True
+    checks["observed_uncalibrated_no_adequacy_pass"] = True
+
+    return {"status": "ok", "gate": "reporting", "checks": checks}
+
+
 def run_sanity(*, start: str, end: str) -> dict[str, Any]:
     return run_task3a_sanity(start=start, end=end)
 
@@ -1972,7 +2048,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--gate",
-        choices=("task3a", "response", "projection", "parity", "diagnostics", "fit", "merge", "end_to_end", "wind_field", "footprints", "refine", "fieldformer_train", "calibration", "experiments", "all"),
+        choices=("task3a", "response", "projection", "parity", "diagnostics", "fit", "merge", "end_to_end", "wind_field", "footprints", "refine", "fieldformer_train", "calibration", "experiments", "reporting", "all"),
         default="task3a",
     )
     parser.add_argument("--strict-all", action="store_true")
@@ -2007,6 +2083,8 @@ def main() -> None:
         result = run_calibration_gate()
     elif args.gate == "experiments":
         result = run_experiments_gate()
+    elif args.gate == "reporting":
+        result = run_reporting_gate()
     elif args.gate == "all":
         result = {
             "status": "ok",
@@ -2023,13 +2101,14 @@ def main() -> None:
             "footprints": run_footprints_gate(),
             "refine": run_refine_gate(),
             "fieldformer_train": run_fieldformer_train_gate(),
-            "skipped_gates": ["calibration", "experiments"],
+            "skipped_gates": ["calibration", "experiments", "reporting"],
         }
         if args.strict_all:
-            # Full gate: include the heavier Gate S7 calibration study and the
-            # Task 10 controlled-experiment-suite sweep.
+            # Full gate: include the heavier Gate S7 calibration study, the Task 10
+            # controlled-experiment-suite sweep, and the Task 11 reporting gate.
             result["calibration"] = run_calibration_gate()
             result["experiments"] = run_experiments_gate()
+            result["reporting"] = run_reporting_gate()
             result["skipped_gates"] = []
     else:
         raise NotImplementedError(f"Gate {args.gate!r} is implemented by a later roadmap task.")

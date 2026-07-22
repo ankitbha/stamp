@@ -1,0 +1,6 @@
+offset,triggering_pair,max_eligible_coherence,ray_distance,individual_relative_error,grouped_relative_error,merged,numerical_rank,sigma_J
+8.0,,0.047697,,0.0,0.0,False,2,21.767119
+6.0,,0.861804,,0.0,0.0,False,2,10.476535
+4.0,,0.905274,,0.0,0.0,False,2,8.396899
+2.0,,0.945356,,0.0,0.0,False,2,5.425126
+1.0,,0.958354,,0.0,0.0,False,2,4.6416

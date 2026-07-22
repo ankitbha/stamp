@@ -1,0 +1,5 @@
+background_mode,declared_before_fit,min_visibility,max_absorption,sigma_J,coefficient_relative_error,residual_norm
+none,True,1.0,0.0,0.08039,2.362513,6.859066
+primary,True,0.972067,0.234704,0.079969,2.606339,6.851815
+redundant,True,0.972067,0.234704,0.079969,2.606339,6.851815
+stress,True,0.0,1.0,0.0,0.775381,6.851815

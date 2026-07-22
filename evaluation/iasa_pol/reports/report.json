@@ -1,0 +1,2041 @@
+{
+  "n_tables": 17,
+  "n_controlled_runs": 10,
+  "n_observed_runs": 4,
+  "tables": [
+    {
+      "label": "exp01_conditioning_recovery",
+      "title": "Experiment 1: Conditioning and Recovery",
+      "columns": [
+        "noise_frac",
+        "geometry",
+        "sigma_J",
+        "numerical_rank",
+        "effective_rank",
+        "condition_number",
+        "coefficient_relative_error",
+        "residual_norm",
+        "min_visibility"
+      ],
+      "rows": [
+        {
+          "noise_frac": 0.0,
+          "geometry": "separated",
+          "sigma_J": 3.273974,
+          "numerical_rank": 2,
+          "effective_rank": 2,
+          "condition_number": 8.894849,
+          "coefficient_relative_error": 0.0,
+          "residual_norm": 0.0,
+          "min_visibility": 3.274887
+        },
+        {
+          "noise_frac": 0.01,
+          "geometry": "separated",
+          "sigma_J": 3.273974,
+          "numerical_rank": 2,
+          "effective_rank": 2,
+          "condition_number": 8.894849,
+          "coefficient_relative_error": 0.013187,
+          "residual_norm": 1.27302,
+          "min_visibility": 3.274887
+        },
+        {
+          "noise_frac": 0.05,
+          "geometry": "separated",
+          "sigma_J": 3.273974,
+          "numerical_rank": 2,
+          "effective_rank": 2,
+          "condition_number": 8.894849,
+          "coefficient_relative_error": 0.065937,
+          "residual_norm": 6.365102,
+          "min_visibility": 3.274887
+        },
+        {
+          "noise_frac": 0.1,
+          "geometry": "separated",
+          "sigma_J": 3.273974,
+          "numerical_rank": 2,
+          "effective_rank": 2,
+          "condition_number": 8.894849,
+          "coefficient_relative_error": 0.131873,
+          "residual_norm": 12.730204,
+          "min_visibility": 3.274887
+        },
+        {
+          "noise_frac": 0.2,
+          "geometry": "separated",
+          "sigma_J": 3.273974,
+          "numerical_rank": 2,
+          "effective_rank": 2,
+          "condition_number": 8.894849,
+          "coefficient_relative_error": 0.263747,
+          "residual_norm": 25.460408,
+          "min_visibility": 3.274887
+        },
+        {
+          "noise_frac": 0.0,
+          "geometry": "close",
+          "sigma_J": 9.598349,
+          "numerical_rank": 2,
+          "effective_rank": 2,
+          "condition_number": 2.263032,
+          "coefficient_relative_error": 0.0,
+          "residual_norm": 0.0,
+          "min_visibility": 12.097923
+        },
+        {
+          "noise_frac": 0.01,
+          "geometry": "close",
+          "sigma_J": 9.598349,
+          "numerical_rank": 2,
+          "effective_rank": 2,
+          "condition_number": 2.263032,
+          "coefficient_relative_error": 0.005665,
+          "residual_norm": 1.684167,
+          "min_visibility": 12.097923
+        },
+        {
+          "noise_frac": 0.05,
+          "geometry": "close",
+          "sigma_J": 9.598349,
+          "numerical_rank": 2,
+          "effective_rank": 2,
+          "condition_number": 2.263032,
+          "coefficient_relative_error": 0.028325,
+          "residual_norm": 8.420834,
+          "min_visibility": 12.097923
+        },
+        {
+          "noise_frac": 0.1,
+          "geometry": "close",
+          "sigma_J": 9.598349,
+          "numerical_rank": 2,
+          "effective_rank": 2,
+          "condition_number": 2.263032,
+          "coefficient_relative_error": 0.056651,
+          "residual_norm": 16.841667,
+          "min_visibility": 12.097923
+        },
+        {
+          "noise_frac": 0.2,
+          "geometry": "close",
+          "sigma_J": 9.598349,
+          "numerical_rank": 2,
+          "effective_rank": 2,
+          "condition_number": 2.263032,
+          "coefficient_relative_error": 0.113302,
+          "residual_norm": 33.683334,
+          "min_visibility": 12.097923
+        }
+      ],
+      "notes": [
+        "Recovery error vs sigma_J and condition number."
+      ]
+    },
+    {
+      "label": "exp02_coherence_grouping",
+      "title": "Experiment 2: Coherence and Grouped Reporting",
+      "columns": [
+        "offset",
+        "triggering_pair",
+        "max_eligible_coherence",
+        "ray_distance",
+        "individual_relative_error",
+        "grouped_relative_error",
+        "merged",
+        "numerical_rank",
+        "sigma_J"
+      ],
+      "rows": [
+        {
+          "offset": 8.0,
+          "triggering_pair": null,
+          "max_eligible_coherence": 0.047697,
+          "ray_distance": null,
+          "individual_relative_error": 0.0,
+          "grouped_relative_error": 0.0,
+          "merged": false,
+          "numerical_rank": 2,
+          "sigma_J": 21.767119
+        },
+        {
+          "offset": 6.0,
+          "triggering_pair": null,
+          "max_eligible_coherence": 0.861804,
+          "ray_distance": null,
+          "individual_relative_error": 0.0,
+          "grouped_relative_error": 0.0,
+          "merged": false,
+          "numerical_rank": 2,
+          "sigma_J": 10.476535
+        },
+        {
+          "offset": 4.0,
+          "triggering_pair": null,
+          "max_eligible_coherence": 0.905274,
+          "ray_distance": null,
+          "individual_relative_error": 0.0,
+          "grouped_relative_error": 0.0,
+          "merged": false,
+          "numerical_rank": 2,
+          "sigma_J": 8.396899
+        },
+        {
+          "offset": 2.0,
+          "triggering_pair": null,
+          "max_eligible_coherence": 0.945356,
+          "ray_distance": null,
+          "individual_relative_error": 0.0,
+          "grouped_relative_error": 0.0,
+          "merged": false,
+          "numerical_rank": 2,
+          "sigma_J": 5.425126
+        },
+        {
+          "offset": 1.0,
+          "triggering_pair": null,
+          "max_eligible_coherence": 0.958354,
+          "ray_distance": null,
+          "individual_relative_error": 0.0,
+          "grouped_relative_error": 0.0,
+          "merged": false,
+          "numerical_rank": 2,
+          "sigma_J": 4.6416
+        }
+      ],
+      "notes": [
+        "Undefined coherence/ray-distance for weak or ineligible pairs are null.",
+        "Grouped error reported wherever a non-singleton component merges sources."
+      ]
+    },
+    {
+      "label": "exp03_background_stress",
+      "title": "Experiment 3: Background Stress",
+      "columns": [
+        "background_mode",
+        "declared_before_fit",
+        "min_visibility",
+        "max_absorption",
+        "sigma_J",
+        "coefficient_relative_error",
+        "residual_norm"
+      ],
+      "rows": [
+        {
+          "background_mode": "none",
+          "declared_before_fit": true,
+          "min_visibility": 1.0,
+          "max_absorption": 0.0,
+          "sigma_J": 0.08039,
+          "coefficient_relative_error": 2.362513,
+          "residual_norm": 6.859066
+        },
+        {
+          "background_mode": "primary",
+          "declared_before_fit": true,
+          "min_visibility": 0.972067,
+          "max_absorption": 0.234704,
+          "sigma_J": 0.079969,
+          "coefficient_relative_error": 2.606339,
+          "residual_norm": 6.851815
+        },
+        {
+          "background_mode": "redundant",
+          "declared_before_fit": true,
+          "min_visibility": 0.972067,
+          "max_absorption": 0.234704,
+          "sigma_J": 0.079969,
+          "coefficient_relative_error": 2.606339,
+          "residual_norm": 6.851815
+        },
+        {
+          "background_mode": "stress",
+          "declared_before_fit": true,
+          "min_visibility": 0.0,
+          "max_absorption": 1.0,
+          "sigma_J": 0.0,
+          "coefficient_relative_error": 0.775381,
+          "residual_norm": 6.851815
+        }
+      ],
+      "notes": [
+        "Predeclared background basis; declared_before_fit records independence from Y and recovery results."
+      ]
+    },
+    {
+      "label": "exp04_wind_geometry",
+      "title": "Experiment 4: Wind Diversity and Sensor Geometry",
+      "columns": [
+        "wind_provider",
+        "wind",
+        "layout",
+        "sigma_J",
+        "numerical_rank",
+        "max_eligible_coherence",
+        "coefficient_relative_error"
+      ],
+      "rows": [
+        {
+          "wind_provider": "constant_direction",
+          "wind": "constant",
+          "layout": "regulatory",
+          "sigma_J": 1.526926,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.975115,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "wind_provider": "constant_direction",
+          "wind": "constant",
+          "layout": "random",
+          "sigma_J": 0.0,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.028406,
+          "coefficient_relative_error": 4e-06
+        },
+        {
+          "wind_provider": "constant_direction",
+          "wind": "constant",
+          "layout": "downwind",
+          "sigma_J": 0.125677,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.989677,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "wind_provider": "single_direction_synthetic",
+          "wind": "single",
+          "layout": "regulatory",
+          "sigma_J": 6.44243,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.741096,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "wind_provider": "single_direction_synthetic",
+          "wind": "single",
+          "layout": "random",
+          "sigma_J": 1e-06,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.999983,
+          "coefficient_relative_error": 0.573115
+        },
+        {
+          "wind_provider": "single_direction_synthetic",
+          "wind": "single",
+          "layout": "downwind",
+          "sigma_J": 1.362939,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.99011,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "wind_provider": "diurnal_synthetic",
+          "wind": "diurnal",
+          "layout": "regulatory",
+          "sigma_J": 6.111524,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.721872,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "wind_provider": "diurnal_synthetic",
+          "wind": "diurnal",
+          "layout": "random",
+          "sigma_J": 2.4e-05,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.880117,
+          "coefficient_relative_error": 0.000896
+        },
+        {
+          "wind_provider": "diurnal_synthetic",
+          "wind": "diurnal",
+          "layout": "downwind",
+          "sigma_J": 2.604398,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.897464,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "wind_provider": "ar1_synthetic",
+          "wind": "ar1",
+          "layout": "regulatory",
+          "sigma_J": 7.35123,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.640798,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "wind_provider": "ar1_synthetic",
+          "wind": "ar1",
+          "layout": "random",
+          "sigma_J": 6.6e-05,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.773931,
+          "coefficient_relative_error": 0.115098
+        },
+        {
+          "wind_provider": "ar1_synthetic",
+          "wind": "ar1",
+          "layout": "downwind",
+          "sigma_J": 2.14415,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.915978,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "wind_provider": "multi_direction_synthetic",
+          "wind": "multi",
+          "layout": "regulatory",
+          "sigma_J": 5.698914,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.1288,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "wind_provider": "multi_direction_synthetic",
+          "wind": "multi",
+          "layout": "random",
+          "sigma_J": 2.794802,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.321684,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "wind_provider": "multi_direction_synthetic",
+          "wind": "multi",
+          "layout": "downwind",
+          "sigma_J": 0.410317,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.109755,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "wind_provider": "gridded_kernel_new_delhi",
+          "wind": "real",
+          "layout": "regulatory",
+          "sigma_J": 2.845609,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.155812,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "wind_provider": "gridded_kernel_new_delhi",
+          "wind": "real",
+          "layout": "random",
+          "sigma_J": 2.102207,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.287236,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "wind_provider": "gridded_kernel_new_delhi",
+          "wind": "real",
+          "layout": "downwind",
+          "sigma_J": 0.379748,
+          "numerical_rank": 2,
+          "max_eligible_coherence": 0.220531,
+          "coefficient_relative_error": 0.0
+        }
+      ],
+      "notes": [
+        "Wind comparisons use identical source-basis columns."
+      ]
+    },
+    {
+      "label": "exp04_wind_window_ensemble",
+      "title": "Experiment 4: Wind-Window Ensemble Distribution",
+      "columns": [
+        "ensemble",
+        "provider",
+        "n_members",
+        "n_windows",
+        "sigma_J_quantiles",
+        "prob_full_numerical_rank",
+        "prob_full_effective_rank",
+        "coefficient_weak_probabilities",
+        "source_pair_ambiguity_probabilities",
+        "report_component_frequencies"
+      ],
+      "rows": [
+        {
+          "ensemble": "historical",
+          "provider": "historical_real_new_delhi_window",
+          "n_members": 20,
+          "n_windows": 20,
+          "sigma_J_quantiles": {
+            "q05": 1.4498089382753365,
+            "q50": 4.510982570762151,
+            "q95": 9.95912220158153
+          },
+          "prob_full_numerical_rank": 1.0,
+          "prob_full_effective_rank": 1.0,
+          "coefficient_weak_probabilities": {
+            "0": 0.0,
+            "1": 0.0
+          },
+          "source_pair_ambiguity_probabilities": {},
+          "report_component_frequencies": {
+            "src_a": 1.0,
+            "src_b": 1.0
+          }
+        },
+        {
+          "ensemble": "simulated",
+          "provider": "ar1_synthetic",
+          "n_members": 20,
+          "n_windows": 20,
+          "sigma_J_quantiles": {
+            "q05": 3.4995474355011127,
+            "q50": 5.576351635681392,
+            "q95": 6.801457165126575
+          },
+          "prob_full_numerical_rank": 1.0,
+          "prob_full_effective_rank": 1.0,
+          "coefficient_weak_probabilities": {
+            "0": 0.0,
+            "1": 0.0
+          },
+          "source_pair_ambiguity_probabilities": {},
+          "report_component_frequencies": {
+            "src_a": 1.0,
+            "src_b": 1.0
+          }
+        }
+      ],
+      "notes": [
+        "Historical windows are contiguous real-record slices; simulated windows are AR(1). Quantiles are [0.05, 0.5, 0.95]."
+      ]
+    },
+    {
+      "label": "exp05_transport_error",
+      "title": "Experiment 5: Transport Error (Parametric)",
+      "columns": [
+        "perturbation_kind",
+        "perturbation_value",
+        "operator_error_norm",
+        "sigma_J",
+        "coefficient_relative_error",
+        "residual_norm"
+      ],
+      "rows": [
+        {
+          "perturbation_kind": "wind_direction_deg",
+          "perturbation_value": 0.0,
+          "operator_error_norm": 0.0,
+          "sigma_J": 0.865305,
+          "coefficient_relative_error": 0.0,
+          "residual_norm": 0.0
+        },
+        {
+          "perturbation_kind": "wind_direction_deg",
+          "perturbation_value": 5.0,
+          "operator_error_norm": 0.28799,
+          "sigma_J": 3.369168,
+          "coefficient_relative_error": 0.622829,
+          "residual_norm": 3.627949
+        },
+        {
+          "perturbation_kind": "wind_direction_deg",
+          "perturbation_value": 10.0,
+          "operator_error_norm": 0.59723,
+          "sigma_J": 7.068079,
+          "coefficient_relative_error": 0.79715,
+          "residual_norm": 6.951087
+        },
+        {
+          "perturbation_kind": "wind_direction_deg",
+          "perturbation_value": 20.0,
+          "operator_error_norm": 0.86758,
+          "sigma_J": 7.97813,
+          "coefficient_relative_error": 0.861271,
+          "residual_norm": 10.750982
+        },
+        {
+          "perturbation_kind": "wind_speed_factor",
+          "perturbation_value": 1.0,
+          "operator_error_norm": 0.0,
+          "sigma_J": 0.865305,
+          "coefficient_relative_error": 0.0,
+          "residual_norm": 0.0
+        },
+        {
+          "perturbation_kind": "wind_speed_factor",
+          "perturbation_value": 1.25,
+          "operator_error_norm": 0.288187,
+          "sigma_J": 2.088865,
+          "coefficient_relative_error": 0.450884,
+          "residual_norm": 1.782354
+        },
+        {
+          "perturbation_kind": "wind_speed_factor",
+          "perturbation_value": 1.5,
+          "operator_error_norm": 0.52893,
+          "sigma_J": 4.566836,
+          "coefficient_relative_error": 0.273777,
+          "residual_norm": 1.55143
+        },
+        {
+          "perturbation_kind": "dispersion_factor",
+          "perturbation_value": 1.0,
+          "operator_error_norm": 0.0,
+          "sigma_J": 0.865305,
+          "coefficient_relative_error": 0.0,
+          "residual_norm": 0.0
+        },
+        {
+          "perturbation_kind": "dispersion_factor",
+          "perturbation_value": 1.5,
+          "operator_error_norm": 0.189049,
+          "sigma_J": 1.417145,
+          "coefficient_relative_error": 0.496889,
+          "residual_norm": 1.258896
+        },
+        {
+          "perturbation_kind": "dispersion_factor",
+          "perturbation_value": 2.0,
+          "operator_error_norm": 0.351806,
+          "sigma_J": 1.759434,
+          "coefficient_relative_error": 0.89331,
+          "residual_norm": 2.516423
+        }
+      ],
+      "notes": [
+        "Transport ensemble kind: transport."
+      ]
+    },
+    {
+      "label": "exp05_structural_mismatch",
+      "title": "Experiment 5: Structural (Edge-Hold PDE) Mismatch",
+      "columns": [
+        "generator",
+        "operator_mismatch_norm",
+        "coefficient_relative_error_mean",
+        "adequacy_rejection_rate",
+        "n_trials"
+      ],
+      "rows": [
+        {
+          "generator": "edge_hold_pde",
+          "operator_mismatch_norm": 0.444317,
+          "coefficient_relative_error_mean": 0.861678,
+          "adequacy_rejection_rate": 1.0,
+          "n_trials": 10
+        }
+      ],
+      "notes": [
+        "Structural generator differs in shape from the puff family; a global scale cannot hide the mismatch."
+      ]
+    },
+    {
+      "label": "exp06_inventory_robustness",
+      "title": "Experiment 6: Inventory Robustness",
+      "columns": [
+        "scenario",
+        "sigma_J",
+        "coefficient_relative_error",
+        "c_hat"
+      ],
+      "rows": [
+        {
+          "scenario": "baseline",
+          "sigma_J": 21.563225,
+          "coefficient_relative_error": 0.0,
+          "c_hat": [
+            0.9999999999999998,
+            0.6
+          ]
+        },
+        {
+          "scenario": "location_shift",
+          "sigma_J": 28.846704,
+          "coefficient_relative_error": 0.0,
+          "c_hat": [
+            0.9999999999999997,
+            0.6
+          ]
+        },
+        {
+          "scenario": "spatial_scale",
+          "sigma_J": 47.001535,
+          "coefficient_relative_error": 0.0,
+          "c_hat": [
+            1.0,
+            0.6
+          ]
+        },
+        {
+          "scenario": "alt_map_version",
+          "sigma_J": 46.007366,
+          "coefficient_relative_error": 0.0,
+          "c_hat": [
+            1.0,
+            0.6
+          ]
+        },
+        {
+          "scenario": "category_swap",
+          "sigma_J": 21.563225,
+          "coefficient_relative_error": 0.0,
+          "c_hat": [
+            1.0,
+            0.5999999999999998
+          ]
+        }
+      ],
+      "notes": [
+        "Rows are robustness scenarios, NOT confidence-interval draws.",
+        "Transport/inventory pooling rejected: True."
+      ]
+    },
+    {
+      "label": "exp07_lag_selection",
+      "title": "Experiment 7: Lag-Window Selection",
+      "columns": [
+        "lag_window_steps",
+        "sigma_J",
+        "numerical_rank",
+        "condition_number",
+        "n_report_components",
+        "coefficient_relative_error"
+      ],
+      "rows": [
+        {
+          "lag_window_steps": 4,
+          "sigma_J": 0.078112,
+          "numerical_rank": 2,
+          "condition_number": 569.16498,
+          "n_report_components": 2,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "lag_window_steps": 6,
+          "sigma_J": 0.70979,
+          "numerical_rank": 2,
+          "condition_number": 63.788337,
+          "n_report_components": 2,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "lag_window_steps": 8,
+          "sigma_J": 2.45787,
+          "numerical_rank": 2,
+          "condition_number": 18.605219,
+          "n_report_components": 2,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "lag_window_steps": 10,
+          "sigma_J": 4.572274,
+          "numerical_rank": 2,
+          "condition_number": 10.101366,
+          "n_report_components": 2,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "lag_window_steps": 12,
+          "sigma_J": 6.15736,
+          "numerical_rank": 2,
+          "condition_number": 7.539568,
+          "n_report_components": 2,
+          "coefficient_relative_error": 0.0
+        },
+        {
+          "lag_window_steps": 16,
+          "sigma_J": 9.074497,
+          "numerical_rank": 2,
+          "condition_number": 5.140908,
+          "n_report_components": 2,
+          "coefficient_relative_error": 0.0
+        }
+      ],
+      "notes": [
+        "Selected lag: 16 (tau_L=0.001, criterion=smallest_L_with_relative_frobenius_delta_le_tau_L).",
+        "Row count fixed across lag: True; coefficients used for selection: False."
+      ]
+    },
+    {
+      "label": "exp08_missing_source_adequacy",
+      "title": "Experiment 8: Missing-Source Adequacy",
+      "columns": [
+        "case",
+        "rejection_rate"
+      ],
+      "rows": [
+        {
+          "case": "null",
+          "rejection_rate": 0.05
+        },
+        {
+          "case": "residual_visible",
+          "rejection_rate": 1.0
+        },
+        {
+          "case": "aligned (in-span)",
+          "rejection_rate": 0.05
+        }
+      ],
+      "notes": [
+        "alpha=0.05, n_replicates=1000, n_trials=100, omission_amplitude=1.2.",
+        "Omitted-source out-of-span fraction=0.913622, background rank=4 (non-empty Q on the platform).",
+        "Rejection diagnoses model inadequacy without identifying its cause; non-rejection cannot certify inventory completeness."
+      ]
+    },
+    {
+      "label": "exp09_temporal_basis",
+      "title": "Experiment 9: Temporal-Basis Recovery",
+      "columns": [
+        "noise_frac",
+        "coefficient_relative_error",
+        "activity_relative_error",
+        "sigma_J"
+      ],
+      "rows": [
+        {
+          "noise_frac": 0.0,
+          "coefficient_relative_error": 0.0,
+          "activity_relative_error": 0.0,
+          "sigma_J": 0.141245
+        },
+        {
+          "noise_frac": 0.02,
+          "coefficient_relative_error": 0.131714,
+          "activity_relative_error": 0.075004,
+          "sigma_J": 0.141245
+        },
+        {
+          "noise_frac": 0.05,
+          "coefficient_relative_error": 0.329296,
+          "activity_relative_error": 0.187515,
+          "sigma_J": 0.141245
+        },
+        {
+          "noise_frac": 0.1,
+          "coefficient_relative_error": 0.658624,
+          "activity_relative_error": 0.37504,
+          "sigma_J": 0.141245
+        },
+        {
+          "noise_frac": 0.2,
+          "coefficient_relative_error": 0.900481,
+          "activity_relative_error": 0.582125,
+          "sigma_J": 0.141245
+        }
+      ],
+      "notes": [
+        "Basis names: ['diurnal', 'block', 'day_night']."
+      ]
+    },
+    {
+      "label": "exp10_footprints",
+      "title": "Experiment 10: Per-Sensor Footprints",
+      "columns": [
+        "footprint_localization_error_cells",
+        "footprint_mass_fraction_within_radius",
+        "localization_radius_cells",
+        "n_active_cells",
+        "contribution_sum_error",
+        "footprints_nonnegative",
+        "coefficient_relative_error"
+      ],
+      "rows": [
+        {
+          "footprint_localization_error_cells": 0.742408,
+          "footprint_mass_fraction_within_radius": 1.0,
+          "localization_radius_cells": 4.0,
+          "n_active_cells": 50,
+          "contribution_sum_error": 0.0,
+          "footprints_nonnegative": true,
+          "coefficient_relative_error": 0.787509
+        }
+      ],
+      "notes": [
+        "Footprint localization error vs known source origins; contributions sum to the fitted sensor signal (contribution_sum_error ~ 0).",
+        "Non-singleton report component present; footprints reported per group."
+      ]
+    },
+    {
+      "label": "observed_identifiability",
+      "title": "New Delhi Identifiability and Report Groups (weeks 1-4)",
+      "columns": [
+        "week",
+        "window_start",
+        "window_end",
+        "sigma_J",
+        "numerical_rank",
+        "effective_rank",
+        "condition_status",
+        "max_eligible_coherence",
+        "weak_set",
+        "report_components"
+      ],
+      "rows": [
+        {
+          "week": 1,
+          "window_start": "2018-05-01 00:00:00+05:30",
+          "window_end": "2018-05-07 23:00:00+05:30",
+          "sigma_J": 3.714655,
+          "numerical_rank": 7,
+          "effective_rank": 7,
+          "condition_status": "finite",
+          "max_eligible_coherence": 0.31647,
+          "weak_set": [],
+          "report_components": [
+            [
+              0
+            ],
+            [
+              1
+            ],
+            [
+              2
+            ],
+            [
+              3
+            ]
+          ]
+        },
+        {
+          "week": 2,
+          "window_start": "2018-05-08 00:00:00+05:30",
+          "window_end": "2018-05-14 23:00:00+05:30",
+          "sigma_J": 5.670984,
+          "numerical_rank": 7,
+          "effective_rank": 7,
+          "condition_status": "finite",
+          "max_eligible_coherence": 0.355326,
+          "weak_set": [],
+          "report_components": [
+            [
+              0
+            ],
+            [
+              1
+            ],
+            [
+              2
+            ],
+            [
+              3
+            ]
+          ]
+        },
+        {
+          "week": 3,
+          "window_start": "2018-05-15 00:00:00+05:30",
+          "window_end": "2018-05-21 23:00:00+05:30",
+          "sigma_J": 10.154152,
+          "numerical_rank": 7,
+          "effective_rank": 7,
+          "condition_status": "finite",
+          "max_eligible_coherence": 0.495568,
+          "weak_set": [],
+          "report_components": [
+            [
+              0
+            ],
+            [
+              1
+            ],
+            [
+              2
+            ],
+            [
+              3
+            ]
+          ]
+        },
+        {
+          "week": 4,
+          "window_start": "2018-05-22 00:00:00+05:30",
+          "window_end": "2018-05-28 23:00:00+05:30",
+          "sigma_J": 7.646498,
+          "numerical_rank": 7,
+          "effective_rank": 7,
+          "condition_status": "finite",
+          "max_eligible_coherence": 0.475097,
+          "weak_set": [],
+          "report_components": [
+            [
+              0
+            ],
+            [
+              1
+            ],
+            [
+              2
+            ],
+            [
+              3
+            ]
+          ]
+        }
+      ],
+      "notes": [
+        "No source-activity ground truth: geometry/residuals/groups only."
+      ]
+    },
+    {
+      "label": "observed_apportionment",
+      "title": "New Delhi Proxy Apportionment (fraction of fitted sensor signal)",
+      "columns": [
+        "week",
+        "brick_kilns",
+        "industries",
+        "population_density",
+        "traffic"
+      ],
+      "rows": [
+        {
+          "week": 1,
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": 1.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 2,
+          "brick_kilns": 0.0,
+          "industries": 0.157134,
+          "population_density": 0.805365,
+          "traffic": 0.0375
+        },
+        {
+          "week": 3,
+          "brick_kilns": 0.05587,
+          "industries": 0.0,
+          "population_density": 0.94413,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "brick_kilns": 0.934903,
+          "industries": 0.065097,
+          "population_density": 0.0,
+          "traffic": 0.0
+        }
+      ],
+      "notes": [
+        "Shares are fractions of fitted inventory-attributed sensor signal, NOT physical-emission shares.",
+        "Denominator: sum over groups of L1 fitted per-group sensor-signal magnitude.",
+        "Groups with no admissible temporal component are marked unsupported."
+      ]
+    },
+    {
+      "label": "observed_residuals",
+      "title": "New Delhi Sensor Fit and Residual Diagnostics (weeks 1-4)",
+      "columns": [
+        "week",
+        "n_observed_rows",
+        "n_total_rows",
+        "observed_mask_fraction",
+        "residual_norm",
+        "projected_residual_norm",
+        "kriged_baseline_subtracted",
+        "pm25_imputed",
+        "wind_provider",
+        "calibration_status"
+      ],
+      "rows": [
+        {
+          "week": 1,
+          "n_observed_rows": 4561,
+          "n_total_rows": 5376,
+          "observed_mask_fraction": 0.8484,
+          "residual_norm": 3768.200619,
+          "projected_residual_norm": null,
+          "kriged_baseline_subtracted": true,
+          "pm25_imputed": false,
+          "wind_provider": "gridded_kernel_new_delhi",
+          "calibration_status": "uncalibrated: no external calibrated noise model exists for observed PM2.5, so per the paper's adequacy contract the residual adequacy test emits no pass/fail verdict"
+        },
+        {
+          "week": 2,
+          "n_observed_rows": 4278,
+          "n_total_rows": 5376,
+          "observed_mask_fraction": 0.795759,
+          "residual_norm": 5955.26548,
+          "projected_residual_norm": null,
+          "kriged_baseline_subtracted": true,
+          "pm25_imputed": false,
+          "wind_provider": "gridded_kernel_new_delhi",
+          "calibration_status": "uncalibrated: no external calibrated noise model exists for observed PM2.5, so per the paper's adequacy contract the residual adequacy test emits no pass/fail verdict"
+        },
+        {
+          "week": 3,
+          "n_observed_rows": 4315,
+          "n_total_rows": 5376,
+          "observed_mask_fraction": 0.802641,
+          "residual_norm": 3049.873933,
+          "projected_residual_norm": null,
+          "kriged_baseline_subtracted": true,
+          "pm25_imputed": false,
+          "wind_provider": "gridded_kernel_new_delhi",
+          "calibration_status": "uncalibrated: no external calibrated noise model exists for observed PM2.5, so per the paper's adequacy contract the residual adequacy test emits no pass/fail verdict"
+        },
+        {
+          "week": 4,
+          "n_observed_rows": 4236,
+          "n_total_rows": 5376,
+          "observed_mask_fraction": 0.787946,
+          "residual_norm": 3760.168265,
+          "projected_residual_norm": null,
+          "kriged_baseline_subtracted": true,
+          "pm25_imputed": false,
+          "wind_provider": "gridded_kernel_new_delhi",
+          "calibration_status": "uncalibrated: no external calibrated noise model exists for observed PM2.5, so per the paper's adequacy contract the residual adequacy test emits no pass/fail verdict"
+        }
+      ],
+      "notes": [
+        "PM2.5 is never imputed. Uncalibrated: no adequacy pass is presented."
+      ]
+    },
+    {
+      "label": "observed_per_monitor",
+      "title": "New Delhi Per-Monitor Fitted Group Contributions (projected sensor signal)",
+      "columns": [
+        "week",
+        "monitor",
+        "brick_kilns",
+        "industries",
+        "population_density",
+        "traffic"
+      ],
+      "rows": [
+        {
+          "week": 1,
+          "monitor": "reg_0_19",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -206.551562,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_11_0",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -136.641945,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_11_39",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -282.825462,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_12_13",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": 1262.347513,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_12_37",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": 3.702619,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_14_28",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": 1846.046252,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_16_24",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": 258.239437,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_16_25",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": 938.447786,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_18_32",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": 1387.08437,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_19_37",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -419.282677,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_21_13",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -79.369691,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_21_31",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -262.372199,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_23_23",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": 256.566114,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_23_36",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -475.624566,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_25_11",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -280.016916,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_27_17",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -184.093795,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_28_15",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -323.595703,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_28_20",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -101.327903,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_30_14",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -237.05531,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_30_22",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -52.8208,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_30_33",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -470.829662,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_32_4",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -494.33947,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_33_11",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -414.775174,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_33_8",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -645.181465,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_35_21",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": 118.037815,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_37_29",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -457.439651,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_39_25",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -577.072582,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_39_28",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": -608.363188,
+          "traffic": 0.0
+        },
+        {
+          "week": 1,
+          "monitor": "reg_5_14",
+          "brick_kilns": 0.0,
+          "industries": 0.0,
+          "population_density": 639.107814,
+          "traffic": 0.0
+        },
+        {
+          "week": 2,
+          "monitor": "reg_0_19",
+          "brick_kilns": 0.0,
+          "industries": -232.589993,
+          "population_density": -884.243476,
+          "traffic": -47.210043
+        },
+        {
+          "week": 2,
+          "monitor": "reg_11_0",
+          "brick_kilns": 0.0,
+          "industries": -197.43419,
+          "population_density": -675.138199,
+          "traffic": -36.40506
+        },
+        {
+          "week": 2,
+          "monitor": "reg_11_39",
+          "brick_kilns": 0.0,
+          "industries": -104.313736,
+          "population_density": -534.209607,
+          "traffic": -26.561746
+        },
+        {
+          "week": 2,
+          "monitor": "reg_12_13",
+          "brick_kilns": 0.0,
+          "industries": 92.716338,
+          "population_density": 2488.695005,
+          "traffic": 224.777314
+        },
+        {
+          "week": 2,
+          "monitor": "reg_12_37",
+          "brick_kilns": 0.0,
+          "industries": 10.33084,
+          "population_density": -175.226479,
+          "traffic": -34.339611
+        },
+        {
+          "week": 2,
+          "monitor": "reg_14_28",
+          "brick_kilns": 0.0,
+          "industries": 30.245638,
+          "population_density": 3202.217656,
+          "traffic": 5.92758
+        },
+        {
+          "week": 2,
+          "monitor": "reg_16_24",
+          "brick_kilns": 0.0,
+          "industries": -63.88316,
+          "population_density": 756.135348,
+          "traffic": 42.663491
+        },
+        {
+          "week": 2,
+          "monitor": "reg_16_25",
+          "brick_kilns": 0.0,
+          "industries": -68.410661,
+          "population_density": 2006.471547,
+          "traffic": 20.941693
+        },
+        {
+          "week": 2,
+          "monitor": "reg_18_32",
+          "brick_kilns": 0.0,
+          "industries": 812.507541,
+          "population_density": 2197.072013,
+          "traffic": -3.140909
+        },
+        {
+          "week": 2,
+          "monitor": "reg_19_37",
+          "brick_kilns": 0.0,
+          "industries": -44.433733,
+          "population_density": -830.82802,
+          "traffic": -24.201712
+        },
+        {
+          "week": 2,
+          "monitor": "reg_21_13",
+          "brick_kilns": 0.0,
+          "industries": -85.990274,
+          "population_density": -89.885327,
+          "traffic": -2.234793
+        },
+        {
+          "week": 2,
+          "monitor": "reg_21_31",
+          "brick_kilns": 0.0,
+          "industries": 217.911791,
+          "population_density": -472.640998,
+          "traffic": -6.544542
+        },
+        {
+          "week": 2,
+          "monitor": "reg_23_23",
+          "brick_kilns": 0.0,
+          "industries": -163.168164,
+          "population_density": 574.370882,
+          "traffic": -0.425855
+        },
+        {
+          "week": 2,
+          "monitor": "reg_23_36",
+          "brick_kilns": 0.0,
+          "industries": -64.511338,
+          "population_density": -631.78919,
+          "traffic": -2.979409
+        },
+        {
+          "week": 2,
+          "monitor": "reg_25_11",
+          "brick_kilns": 0.0,
+          "industries": -15.186144,
+          "population_density": -117.281875,
+          "traffic": -4.458508
+        },
+        {
+          "week": 2,
+          "monitor": "reg_27_17",
+          "brick_kilns": 0.0,
+          "industries": -83.562116,
+          "population_density": 202.100233,
+          "traffic": -4.029745
+        },
+        {
+          "week": 2,
+          "monitor": "reg_28_15",
+          "brick_kilns": 0.0,
+          "industries": -45.94317,
+          "population_density": -96.929252,
+          "traffic": -12.932426
+        },
+        {
+          "week": 2,
+          "monitor": "reg_28_20",
+          "brick_kilns": 0.0,
+          "industries": -147.83032,
+          "population_density": 210.85701,
+          "traffic": 247.919935
+        },
+        {
+          "week": 2,
+          "monitor": "reg_30_14",
+          "brick_kilns": 0.0,
+          "industries": -40.20719,
+          "population_density": -246.586927,
+          "traffic": -7.911509
+        },
+        {
+          "week": 2,
+          "monitor": "reg_30_22",
+          "brick_kilns": 0.0,
+          "industries": -122.182251,
+          "population_density": 25.326531,
+          "traffic": 2.579618
+        },
+        {
+          "week": 2,
+          "monitor": "reg_30_33",
+          "brick_kilns": 0.0,
+          "industries": -112.533602,
+          "population_density": -869.112161,
+          "traffic": -25.821512
+        },
+        {
+          "week": 2,
+          "monitor": "reg_32_4",
+          "brick_kilns": 0.0,
+          "industries": 478.149175,
+          "population_density": -767.186213,
+          "traffic": -21.097505
+        },
+        {
+          "week": 2,
+          "monitor": "reg_33_11",
+          "brick_kilns": 0.0,
+          "industries": -132.66371,
+          "population_density": -905.876003,
+          "traffic": -38.389568
+        },
+        {
+          "week": 2,
+          "monitor": "reg_33_8",
+          "brick_kilns": 0.0,
+          "industries": 327.80601,
+          "population_density": -1481.180819,
+          "traffic": -36.412845
+        },
+        {
+          "week": 2,
+          "monitor": "reg_35_21",
+          "brick_kilns": 0.0,
+          "industries": -211.757969,
+          "population_density": 12.963241,
+          "traffic": -32.929358
+        },
+        {
+          "week": 2,
+          "monitor": "reg_37_29",
+          "brick_kilns": 0.0,
+          "industries": 106.105194,
+          "population_density": -1103.915362,
+          "traffic": -50.353418
+        },
+        {
+          "week": 2,
+          "monitor": "reg_39_25",
+          "brick_kilns": 0.0,
+          "industries": -188.318127,
+          "population_density": -1122.970742,
+          "traffic": -47.877157
+        },
+        {
+          "week": 2,
+          "monitor": "reg_39_28",
+          "brick_kilns": 0.0,
+          "industries": -217.729085,
+          "population_density": -1405.716778,
+          "traffic": -51.907969
+        },
+        {
+          "week": 2,
+          "monitor": "reg_5_14",
+          "brick_kilns": 0.0,
+          "industries": 266.876406,
+          "population_density": 734.507961,
+          "traffic": -26.644429
+        },
+        {
+          "week": 3,
+          "monitor": "reg_0_19",
+          "brick_kilns": -1.091652,
+          "industries": 0.0,
+          "population_density": -31.055388,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_11_0",
+          "brick_kilns": -3.165036,
+          "industries": 0.0,
+          "population_density": -47.628163,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_11_39",
+          "brick_kilns": 4.301618,
+          "industries": 0.0,
+          "population_density": -87.055093,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_12_13",
+          "brick_kilns": 1.61901,
+          "industries": 0.0,
+          "population_density": 242.759114,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_12_37",
+          "brick_kilns": 11.522576,
+          "industries": 0.0,
+          "population_density": -66.914896,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_14_28",
+          "brick_kilns": -2.996507,
+          "industries": 0.0,
+          "population_density": 199.607581,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_16_24",
+          "brick_kilns": -2.011873,
+          "industries": 0.0,
+          "population_density": 16.200407,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_16_25",
+          "brick_kilns": -2.660712,
+          "industries": 0.0,
+          "population_density": 123.814688,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_18_32",
+          "brick_kilns": 3.076781,
+          "industries": 0.0,
+          "population_density": 135.991482,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_19_37",
+          "brick_kilns": 0.350937,
+          "industries": 0.0,
+          "population_density": -76.793915,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_21_13",
+          "brick_kilns": -3.503572,
+          "industries": 0.0,
+          "population_density": 68.726808,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_21_31",
+          "brick_kilns": -0.79688,
+          "industries": 0.0,
+          "population_density": -51.244695,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_23_23",
+          "brick_kilns": -3.737797,
+          "industries": 0.0,
+          "population_density": 16.629017,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_25_11",
+          "brick_kilns": -0.465803,
+          "industries": 0.0,
+          "population_density": 6.556428,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_27_17",
+          "brick_kilns": -2.234071,
+          "industries": 0.0,
+          "population_density": -6.988466,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_28_15",
+          "brick_kilns": -0.575448,
+          "industries": 0.0,
+          "population_density": -2.138678,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_28_20",
+          "brick_kilns": 19.351197,
+          "industries": 0.0,
+          "population_density": -23.053673,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_30_14",
+          "brick_kilns": 7.555307,
+          "industries": 0.0,
+          "population_density": 1.117239,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_30_22",
+          "brick_kilns": -2.396385,
+          "industries": 0.0,
+          "population_density": -9.786582,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_30_33",
+          "brick_kilns": -3.416176,
+          "industries": 0.0,
+          "population_density": -87.321279,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_32_4",
+          "brick_kilns": -1.659003,
+          "industries": 0.0,
+          "population_density": -59.890543,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_33_11",
+          "brick_kilns": -2.713029,
+          "industries": 0.0,
+          "population_density": -48.638777,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_33_8",
+          "brick_kilns": -3.165263,
+          "industries": 0.0,
+          "population_density": -89.364529,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_35_21",
+          "brick_kilns": -2.453144,
+          "industries": 0.0,
+          "population_density": -10.710844,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_37_29",
+          "brick_kilns": -1.087857,
+          "industries": 0.0,
+          "population_density": -62.457747,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_39_25",
+          "brick_kilns": -3.460208,
+          "industries": 0.0,
+          "population_density": -82.517655,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_39_28",
+          "brick_kilns": -2.28683,
+          "industries": 0.0,
+          "population_density": -76.89388,
+          "traffic": 0.0
+        },
+        {
+          "week": 3,
+          "monitor": "reg_5_14",
+          "brick_kilns": -1.90018,
+          "industries": 0.0,
+          "population_density": 109.05204,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_0_19",
+          "brick_kilns": -27.421476,
+          "industries": -7.065071,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_11_0",
+          "brick_kilns": -80.081031,
+          "industries": -7.919522,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_11_39",
+          "brick_kilns": 130.073721,
+          "industries": -0.988813,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_12_13",
+          "brick_kilns": -28.045941,
+          "industries": 4.467489,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_12_37",
+          "brick_kilns": 210.543025,
+          "industries": 11.566189,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_14_28",
+          "brick_kilns": -58.680922,
+          "industries": -4.329771,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_16_24",
+          "brick_kilns": -29.39852,
+          "industries": -2.480201,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_16_25",
+          "brick_kilns": -65.948471,
+          "industries": -5.784498,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_18_32",
+          "brick_kilns": -79.145391,
+          "industries": 19.27505,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_19_37",
+          "brick_kilns": -51.102963,
+          "industries": -3.193174,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_21_13",
+          "brick_kilns": -10.229209,
+          "industries": 0.971971,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_21_31",
+          "brick_kilns": -73.05319,
+          "industries": -2.262313,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_23_23",
+          "brick_kilns": -67.895559,
+          "industries": -5.67431,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_25_11",
+          "brick_kilns": -42.791633,
+          "industries": -0.777219,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_27_17",
+          "brick_kilns": -1.440142,
+          "industries": -0.463551,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_28_15",
+          "brick_kilns": 25.879114,
+          "industries": -1.864181,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_28_20",
+          "brick_kilns": 552.629726,
+          "industries": -1.504439,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_30_14",
+          "brick_kilns": 214.023375,
+          "industries": -2.503206,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_30_22",
+          "brick_kilns": -37.161195,
+          "industries": -3.298845,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_30_33",
+          "brick_kilns": -59.644711,
+          "industries": -7.135732,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_32_4",
+          "brick_kilns": -14.256627,
+          "industries": 13.679406,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_33_11",
+          "brick_kilns": -51.413475,
+          "industries": -3.229462,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_33_8",
+          "brick_kilns": -57.179217,
+          "industries": 10.804208,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_35_21",
+          "brick_kilns": -40.449109,
+          "industries": -5.221705,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_37_29",
+          "brick_kilns": -73.820408,
+          "industries": 5.143129,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_39_25",
+          "brick_kilns": -73.871751,
+          "industries": -5.79355,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_39_28",
+          "brick_kilns": -52.733862,
+          "industries": -3.311361,
+          "population_density": 0.0,
+          "traffic": 0.0
+        },
+        {
+          "week": 4,
+          "monitor": "reg_5_14",
+          "brick_kilns": -57.384158,
+          "industries": 8.893483,
+          "population_density": 0.0,
+          "traffic": 0.0
+        }
+      ],
+      "notes": [
+        "Projected (P_Q^perp) per-monitor contributions can be signed; the reported apportionment shares use L1 magnitudes."
+      ]
+    },
+    {
+      "label": "observed_wind_imputation",
+      "title": "New Delhi Wind-Imputation Validation",
+      "columns": [
+        "metric",
+        "value"
+      ],
+      "rows": [
+        {
+          "metric": "status",
+          "value": "unavailable -- paper-facing wind is the kernel coordinate-query imputer (FieldFormer evaluated but not adopted; see reconciliation)"
+        }
+      ],
+      "notes": [
+        "Dense real wind truth is unavailable; gridded-field accuracy is assessed in controlled synthetic-wind experiments (Experiment 4)."
+      ]
+    }
+  ]
+}

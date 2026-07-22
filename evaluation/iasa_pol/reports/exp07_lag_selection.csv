@@ -1,0 +1,7 @@
+lag_window_steps,sigma_J,numerical_rank,condition_number,n_report_components,coefficient_relative_error
+4,0.078112,2,569.16498,2,0.0
+6,0.70979,2,63.788337,2,0.0
+8,2.45787,2,18.605219,2,0.0
+10,4.572274,2,10.101366,2,0.0
+12,6.15736,2,7.539568,2,0.0
+16,9.074497,2,5.140908,2,0.0

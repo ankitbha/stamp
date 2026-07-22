@@ -1,0 +1,5 @@
+week,n_observed_rows,n_total_rows,observed_mask_fraction,residual_norm,projected_residual_norm,kriged_baseline_subtracted,pm25_imputed,wind_provider,calibration_status
+1,4561,5376,0.8484,3768.200619,,True,False,gridded_kernel_new_delhi,"uncalibrated: no external calibrated noise model exists for observed PM2.5, so per the paper's adequacy contract the residual adequacy test emits no pass/fail verdict"
+2,4278,5376,0.795759,5955.26548,,True,False,gridded_kernel_new_delhi,"uncalibrated: no external calibrated noise model exists for observed PM2.5, so per the paper's adequacy contract the residual adequacy test emits no pass/fail verdict"
+3,4315,5376,0.802641,3049.873933,,True,False,gridded_kernel_new_delhi,"uncalibrated: no external calibrated noise model exists for observed PM2.5, so per the paper's adequacy contract the residual adequacy test emits no pass/fail verdict"
+4,4236,5376,0.787946,3760.168265,,True,False,gridded_kernel_new_delhi,"uncalibrated: no external calibrated noise model exists for observed PM2.5, so per the paper's adequacy contract the residual adequacy test emits no pass/fail verdict"
