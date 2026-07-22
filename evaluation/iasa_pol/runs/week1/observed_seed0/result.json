@@ -1,0 +1,293 @@
+{
+  "adequacy": null,
+  "admissible_components_per_group": [
+    [
+      4
+    ],
+    [
+      5
+    ],
+    [
+      6
+    ],
+    [
+      0,
+      1,
+      2,
+      3
+    ]
+  ],
+  "ambiguous_pairs": [],
+  "calibration_status": "uncalibrated: no external calibrated noise model exists for observed PM2.5, so per the paper's adequacy contract the residual adequacy test emits no pass/fail verdict",
+  "diagnostics": {
+    "condition_number": 13.478009604298865,
+    "condition_status": "finite",
+    "effective_rank": 7,
+    "max_eligible_coherence": 0.31647012633040633,
+    "numerical_rank": 7,
+    "sigma_1": 50.066158078284076,
+    "sigma_J": 3.714655171511027,
+    "visibility": [
+      4.211046937616491,
+      33.62440719954921,
+      47.148512193498,
+      25.778945141885217,
+      23.044029166932855,
+      22.271833586505117,
+      20.982910948623307
+    ],
+    "weak_set": []
+  },
+  "experiment": "observed_new_delhi",
+  "fixed_zero_indices": [
+    0,
+    1,
+    2,
+    3,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    25,
+    26,
+    27
+  ],
+  "has_ground_truth": false,
+  "kriged_baseline": {
+    "U0_max": 102.6541519165039,
+    "baseline_l2_norm": 1529.3692754811325,
+    "ic_release_index": 0,
+    "method": "gaussian_kernel_kriging_surrogate + open_boundary_puff_green_function",
+    "n_stations_kriged": 26,
+    "pusa_handling": "averaged_upstream_in_loader",
+    "subtracted": true
+  },
+  "kriged_baseline_subtracted": true,
+  "n_observed_rows": 4561,
+  "n_source_groups": 4,
+  "n_total_rows": 5376,
+  "observed_mask_fraction": 0.8484002976190477,
+  "per_monitor_group_contributions": {
+    "reg_0_19": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -206.5515623331807,
+      "traffic": 0.0
+    },
+    "reg_11_0": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -136.6419454975569,
+      "traffic": 0.0
+    },
+    "reg_11_39": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -282.82546248756097,
+      "traffic": 0.0
+    },
+    "reg_12_13": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": 1262.3475129279916,
+      "traffic": 0.0
+    },
+    "reg_12_37": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": 3.702618784921718,
+      "traffic": 0.0
+    },
+    "reg_14_28": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": 1846.046251992922,
+      "traffic": 0.0
+    },
+    "reg_16_24": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": 258.2394369808631,
+      "traffic": 0.0
+    },
+    "reg_16_25": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": 938.4477855286746,
+      "traffic": 0.0
+    },
+    "reg_18_32": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": 1387.0843697599737,
+      "traffic": 0.0
+    },
+    "reg_19_37": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -419.28267679252883,
+      "traffic": 0.0
+    },
+    "reg_21_13": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -79.36969058531179,
+      "traffic": 0.0
+    },
+    "reg_21_31": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -262.37219856766,
+      "traffic": 0.0
+    },
+    "reg_23_23": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": 256.5661138634938,
+      "traffic": 0.0
+    },
+    "reg_23_36": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -475.62456563225146,
+      "traffic": 0.0
+    },
+    "reg_25_11": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -280.01691608878343,
+      "traffic": 0.0
+    },
+    "reg_27_17": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -184.09379467388533,
+      "traffic": 0.0
+    },
+    "reg_28_15": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -323.59570264176887,
+      "traffic": 0.0
+    },
+    "reg_28_20": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -101.32790286193497,
+      "traffic": 0.0
+    },
+    "reg_30_14": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -237.05530963790324,
+      "traffic": 0.0
+    },
+    "reg_30_22": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -52.82080011061396,
+      "traffic": 0.0
+    },
+    "reg_30_33": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -470.8296615058632,
+      "traffic": 0.0
+    },
+    "reg_32_4": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -494.3394696826406,
+      "traffic": 0.0
+    },
+    "reg_33_11": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -414.77517363206397,
+      "traffic": 0.0
+    },
+    "reg_33_8": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -645.1814648654403,
+      "traffic": 0.0
+    },
+    "reg_35_21": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": 118.03781503594001,
+      "traffic": 0.0
+    },
+    "reg_37_29": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -457.43965073440245,
+      "traffic": 0.0
+    },
+    "reg_39_25": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -577.0725824649571,
+      "traffic": 0.0
+    },
+    "reg_39_28": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": -608.3631879887537,
+      "traffic": 0.0
+    },
+    "reg_5_14": {
+      "brick_kilns": 0.0,
+      "industries": 0.0,
+      "population_density": 639.1078139102824,
+      "traffic": 0.0
+    }
+  },
+  "pm25_imputed": false,
+  "projected_residual_norm": null,
+  "recovery_error": null,
+  "report_components": [
+    [
+      0
+    ],
+    [
+      1
+    ],
+    [
+      2
+    ],
+    [
+      3
+    ]
+  ],
+  "residual_norm": 3768.200619160978,
+  "sensor_signal_contribution_shares": {
+    "brick_kilns": 0.0,
+    "industries": 0.0,
+    "population_density": 1.0,
+    "traffic": 0.0
+  },
+  "sensor_signal_shares_denominator": "sum over groups of L1 fitted per-group sensor-signal magnitude",
+  "source_names": [
+    "brick_kilns",
+    "industries",
+    "population_density",
+    "traffic"
+  ],
+  "weak_set": [],
+  "wind_provider": "gridded_kernel_new_delhi",
+  "window_end": "2018-05-07 23:00:00+05:30",
+  "window_hours": 168,
+  "window_index": 1,
+  "window_start": "2018-05-01 00:00:00+05:30"
+}
