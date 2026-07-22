@@ -467,8 +467,8 @@ favorable by post-fit tuning.  The procedure is:
     scientifically justified fixed-zero coefficient mask before inspecting
     fitted source activities.
     \item \textbf{Prepare wind.} Convert meteorological \(WD/WS\) to transport
-    vectors, preserve masks and observed values for audit, train or load the
-    FieldFormer wind imputer, query the response grid to obtain
+    vectors, preserve masks and observed values for audit, load the coordinate-query
+    wind imputer (the adopted kernel interpolator), query the response grid to obtain
     \(\widehat{\mathbf w}_t(\mathbf x_g)\), and convert physical velocity to grid
     displacement.
     \item \textbf{Build and select lagged responses.}  For every unmasked
