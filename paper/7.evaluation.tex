@@ -105,9 +105,9 @@ belongs to the background model or residual diagnostics.
 \label{subsec:new_delhi_forward_models}
 
 Both forward paths use the New Delhi-derived \(40\times40\) domain and
-regulatory sensor coordinates.  The paper-facing response matrix uses the
-open-boundary Gaussian puff operator from
-Section~\ref{subsec:plume_response} and evaluates kernels directly at sensors.
+regulatory sensor coordinates.  The response matrix is built from the
+open-boundary Gaussian puff operator of
+Section~\ref{subsec:plume_response}, evaluating kernels directly at sensors.
 The same operator is the matched generator for controlled recovery experiments
 (Experiments~1--4) and the inference operator for observed PM\(_{2.5}\); only the
 initial-condition baseline differs by mode.  Controlled operator-matched runs use
@@ -120,7 +120,9 @@ normalized Gaussian-kernel spatial interpolation on the response grid---a krigin
 surrogate that avoids an additional heavyweight geostatistics dependency.  Its
 zero-source transported trajectory, obtained by propagating this initial field as
 a single release through the same open-boundary puff operator (its Gaussian kernel
-is the advection--diffusion Green's function, so units are preserved), is subtracted
+is the advection--diffusion Green's function, so units are preserved), 
+% Explain how the gaussian kernel is adv-diff green's function.
+is subtracted
 from the sensor observations before fitting source activities.  Source coefficients
 are therefore fitted to the residual sensor-time signal after removing the
 contribution of the initialized background field and the low-rank temporal

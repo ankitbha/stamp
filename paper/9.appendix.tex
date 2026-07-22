@@ -208,7 +208,7 @@ from \(Y\), \(H_\Phi^{\mathrm{lag}}\), \(Q\), and metadata.  Source--basis
 columns are always source-major and basis-minor.  Any row or column metadata
 mismatch is a hard error.
 
-Paper-facing responses use integer source-cell centers, half-cell domain
+The response construction uses integer source-cell centers, half-cell domain
 extents, fractional final advection substeps, a positive minimum dispersion
 age, direct sensor evaluation, finite lag, and complete removal after center
 exit.  Kernel boundary/truncation loss and whole-release exit loss are recorded
@@ -266,7 +266,7 @@ on a controlled orthonormal design, checking that the null rejection rate matche
 \(\alpha\), that the null \(p\)-values are uniform, and that power increases
 monotonically with omission strength.  A final \textbf{reporting gate} exercises
 the evaluation layer that emits the result tables in Section~\ref{sec:evaluation},
-verifying the paper's reporting rules: undefined weak-pair metrics stay null,
+verifying our reporting rules: undefined weak-pair metrics stay null,
 grouped metrics accompany any non-singleton report component, an \(A\)--\(B\)--\(C\)
 merge chain retains both trigger edges, percentages are labeled fractions of fitted
 sensor signal, and an uncalibrated run never reports an adequacy pass.
