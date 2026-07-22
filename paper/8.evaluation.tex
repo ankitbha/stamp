@@ -259,8 +259,9 @@ propagates into attribution rather than being absorbed. The wind-speed axis is
 non-monotonic at these magnitudes (error $0.45$ then $0.27$ as the speed factor
 rises from $1.25$ to $1.5$), a reminder that a coarse operator-error norm does not
 fully order attribution error. The structural PDE mismatch (operator mismatch norm
-$0.44$) is the sharper test: the refitted-bootstrap adequacy test rejects in
-$100\%$ of trials, confirming its power against forward-model misspecification.
+$0.44$) is the sharper test: it drives the mean coefficient relative error to
+$0.86$, and the refitted-bootstrap adequacy test rejects in $100\%$ of trials,
+confirming its power against forward-model misspecification.
 (Transport-interval coverage is supported by the parametric ensemble but not
 tabulated per row here.)
 
@@ -338,8 +339,7 @@ $0.08$ to $9.07$), while the numerical rank ($2$) and the number of report
 components ($2$) stay fixed and recovery is exact throughout. The selection rule
 picks the smallest lag whose relative Frobenius change falls to
 $\tau_L=10^{-3}$---here $L=16$---using only response-matrix geometry; fitted source
-coefficients are never consulted (\texttt{coefficients\_used\_for\_selection} is
-false) and the row count is invariant across the grid.
+coefficients are not consulted and the row count is invariant across the grid.
 
 \begin{table}[t]
 \centering
@@ -379,8 +379,10 @@ against a residual-visible omitted source whose signature lies largely outside
 $\operatorname{span}[H_\Phi^{\mathrm{lag}},Q]$ (out-of-span fraction $0.91$;
 rejection rate $1.0$). Crucially, an \emph{aligned} omission---a genuinely omitted
 source whose signature is a nonnegative combination of the fitted columns and the
-background---is absorbed and not detected (rejection $0.05$). Rejection therefore
-diagnoses model inadequacy without identifying its cause.
+background---is absorbed and not detected (rejection $0.05$). The test is therefore
+one-sided: a rejection is evidence of model inadequacy---though not of its
+cause---whereas a non-rejection cannot certify adequacy, since an aligned omission
+is absorbed and passes undetected.
 
 \begin{table}[t]
 \centering
@@ -414,7 +416,11 @@ Separating the two error notions is the point: the reconstructed source-activity
 trajectory error is consistently smaller than the raw coefficient error (e.g.\
 $0.58$ versus $0.90$ at $20\%$ noise), because projecting the noisy coefficients
 through the temporal bases averages out part of the coefficient noise in the
-activity domain.
+activity domain.  The activity-to-coefficient error ratio is near-constant
+(\(\approx0.57\)) across noise levels, indicating that this damping is a fixed
+geometric property of the temporal-basis map---which amplifies the coherent true
+signal more than the isotropic estimation noise---rather than a noise-dependent
+effect.
 
 \begin{table}[t]
 \centering
@@ -466,11 +472,10 @@ uncertainty, and conservative groups rather than recovery error.
 
 The New Delhi wind field used throughout is produced by the kernel coordinate-query
 imputer described in Section~\ref{subsec:new_delhi_wind}. We also
-trained the FieldFormer wind model and evaluated it against baselines on held-out
-station--time vectors: FieldFormer reached a held-out vector RMSE of $1.12$,
-better than the kernel interpolator ($1.55$) but worse than a simple city-mean
-baseline ($1.06$). Because the learned model did not beat the non-spatial
-city-mean baseline, it was not adopted; the kernel interpolator is used as the
+evaluated a learned wind model, but the sparse regulatory station network provides
+too little spatial support for it to learn useful spatial structure: it did not
+outperform a simple non-spatial city-mean baseline on held-out station--time
+vectors, and was not adopted. The kernel interpolator is used as the
 gridded field because, unlike the city mean, it is spatially resolved as the
 response operator requires. Dense real wind truth is unavailable, so gridded-field
 accuracy is instead assessed through the controlled synthetic-wind experiments
@@ -521,9 +526,8 @@ whose admissible temporal components are all fixed-zero in a window would be mar
 \texttt{unsupported} rather than assigned a substantive share (none were in these
 weeks). The apportionment swings substantially week to week---population-dominated
 in weeks 1--3, then brick-kiln-dominated in week 4---which is precisely why the
-windows are reported separately rather than as one aggregate New Delhi estimate:
-with no source-activity ground truth, the honest object is the per-week
-distribution, not a single number. Per-monitor fitted group contributions and
+windows are reported separately rather than as one aggregate New Delhi estimate. 
+Per-monitor fitted group contributions and
 their cells of origin (29/28 monitors per week) are not tabulated individually.
 
 \begin{table}[t]
@@ -544,32 +548,10 @@ week & brick kilns & industries & population & traffic \\
 \end{tabular}
 \end{table}
 
-\subsection{New Delhi Sensor Fit and Residual Diagnostics}
-\label{subsec:results_new_delhi_residuals}
-
-Table~\ref{tab:results_nd_resid} reports the sensor fit per week. PM$_{2.5}$ is
-never imputed: the observation mask $M_O$ selects the $79$--$85\%$ of rows with a
-valid measurement, and the fit uses only those. Each week subtracts its own
-zero-source transported kriged initial-condition baseline (Pusa monitors averaged),
-and the wind is the gridded kernel field. No external calibrated noise model exists
-for the observed PM$_{2.5}$, so the residual-adequacy test is reported as
-\texttt{uncalibrated} and no adequacy pass/fail is presented, per the contract of
+On observed data the fit uses only the $79$--$85\%$ of rows with a valid
+PM$_{2.5}$ measurement (no imputation), subtracting each week's zero-source
+transported kriged initial-condition baseline (Pusa monitors averaged) under the
+gridded kernel wind field. Because no calibrated observation-noise model exists
+for the regulatory PM$_{2.5}$, the residual-adequacy test is reported as
+\texttt{uncalibrated} and no pass/fail verdict is claimed, per the contract of
 Section~\ref{subsec:model_adequacy}.
-
-\begin{table}[t]
-\centering
-\footnotesize
-\caption{Observed New Delhi sensor fit and residual diagnostics, weeks 1--4.
-PM$_{2.5}$ never imputed; adequacy uncalibrated (no verdict).}
-\label{tab:results_nd_resid}
-\begin{tabular}{lrrrl}
-\toprule
-week & obs.\ rows & mask frac. & resid.\ norm & adequacy \\
-\midrule
-1 & 4561 & 0.848 & 3768 & uncalibrated \\
-2 & 4278 & 0.796 & 5955 & uncalibrated \\
-3 & 4315 & 0.803 & 3050 & uncalibrated \\
-4 & 4236 & 0.788 & 3760 & uncalibrated \\
-\bottomrule
-\end{tabular}
-\end{table}

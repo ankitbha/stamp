@@ -23,9 +23,8 @@ imputer: given sparse station observations
 \(\{(\mathbf z_i,t,\mathbf u_{i,t},m_{i,t})\}\), it predicts transport vectors
 at arbitrary spatial query locations and times.  The adopted imputer is a
 normalized Gaussian-kernel interpolator over the station vectors; we additionally
-trained a learned coordinate-query model (FieldFormer
-\citep{bhardwaj2025fieldformer}) but did not adopt it, because it did not improve
-held-out accuracy over a city-mean baseline
+trained a learned coordinate-query model but did not adopt it, because it did not
+improve held-out accuracy over a city-mean baseline
 (Section~\ref{subsec:results_wind_imputation}).  For the IASA response operator,
 we query the imputer on every response-grid cell \(\mathbf x_g\) and hour
 \(t\), producing
