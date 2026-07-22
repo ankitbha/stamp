@@ -1184,10 +1184,12 @@ def observed_new_delhi(platform: Platform, cfg: dict[str, Any], seed: int) -> di
             "arrays": {},
         }
 
-    idx = torch.as_tensor(keep, dtype=torch.long)
-    H_m = response.H_lag.index_select(0, idx)
+    # Row selection must run on each tensor's own device (H_lag/Q may be on CUDA).
+    H_m = response.H_lag.index_select(
+        0, torch.as_tensor(keep, dtype=torch.long, device=response.H_lag.device))
     Y_m = np.asarray(Y_full, dtype=np.float64)[keep]
-    Q_m = background.Q.index_select(0, idx)
+    Q_m = background.Q.index_select(
+        0, torch.as_tensor(keep, dtype=torch.long, device=background.Q.device))
     row_m = [response.row_index[r] for r in keep]
     masked_bg = _dc_replace(background, Q=Q_m, row_index=row_m)
 
