@@ -2025,7 +2025,7 @@ and paper agree. The `paper/` folder is now editable (previously read-only).
   contradicts the shipped code.
 - `paper/main.pdf` builds.
 
-### Task 12: Documentation and cleanup
+### ~~Task 12: Documentation and cleanup~~  [implemented 2026-07-22]
 
 **Objective**
 

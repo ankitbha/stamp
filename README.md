@@ -1,72 +1,128 @@
 # stamp
 
-STAMP is currently a container-first research codebase. The pollution workflow
-depends on scientific Python packages that are available in the repository's
-Singularity/Apptainer image, not in the host Python environment.
+STAMP is a container-first research codebase. The active workflow is
+**IASA** (identifiability-aware source apportionment) for city-scale
+advection--diffusion systems, instantiated on a New Delhi PM\(_{2.5}\) platform.
+The scientific Python stack lives in the repository's Singularity/Apptainer image,
+not in the host Python environment.
 
-## Runtime
+For the full step-by-step pipeline, command reference, and artifact/provenance
+schema, see [`docs/iasa_workflow.md`](docs/iasa_workflow.md).
 
-Use the existing image and overlay from the repository root:
+## Runtime environment
 
 - Image: `cuda11.8.86-cudnn8.7-devel-ubuntu22.04.2.sif`
-- Overlay: `overlay-25GB-500K.ext3`
-- Apptainer/Singularity binary: `/share/apps/apptainer/bin/singularity`
+- Overlay: `overlay-25GB-500K.ext3` (provides torch via `source /ext3/env.sh`)
+- Apptainer/Singularity: `/share/apps/apptainer/bin/singularity`
+- Numerics: response construction uses `float32`; projection, diagnostics,
+  fitting, covariance, and ensembles use `float64` on an explicit device
+  (`cpu` default, `cuda` supported). `pandas`/`NumPy` are used only for
+  CSV/NPZ ingestion and serialization; all inverse computation is PyTorch.
+- SciPy is **not** a required solver dependency.
 
-The supported runtime command pattern is:
-
-```bash
-/share/apps/apptainer/bin/singularity exec --fakeroot \
-  --overlay overlay-25GB-500K.ext3:ro \
-  cuda11.8.86-cudnn8.7-devel-ubuntu22.04.2.sif \
-  /bin/bash -lc "source /ext3/env.sh && cd /scratch/ab9738/stamp && python3 scripts/smoke_iasa_runtime.py"
-```
-
-The smoke check verifies the runtime packages used by the pollution path:
-`numpy`, `torch`, `pandas`, `pykrige`, `einops`, and optional `scipy`. It also
-imports `sim.polsim`, loads the pollution source maps, builds a 40x40 grid,
-checks the 32-station New Delhi wind smoke window, asserts the cardinal
-`WD`/`WS` to transport-vector conversion, and reports sensor metadata shapes
-without running a simulation.
-
-The minimal Task 3A IASA sanity runner checks the active inventory, weather, and
-simple nonnegative activity source-term path:
+Base command pattern (CPU/login-node work such as smoke checks and the paper build):
 
 ```bash
 /share/apps/apptainer/bin/singularity exec --fakeroot \
   --overlay overlay-25GB-500K.ext3:ro \
   cuda11.8.86-cudnn8.7-devel-ubuntu22.04.2.sif \
-  /bin/bash -lc "source /ext3/env.sh && cd /scratch/ab9738/stamp && python3 scripts/run_iasa_sanity.py"
+  /bin/bash -lc "source /ext3/env.sh && cd /scratch/ab9738/stamp && <command>"
 ```
 
-## New Delhi Wind Imputation
-
-Task 2 adds a FieldFormer-style ImputeFormer wind pipeline. The local
-implementation is this repository's fixed-node ImputeFormer adapter in
-`model/imputation/imputeformer.py`; it trains a fresh checkpoint on the local
-government wind observations unless `--skip-train` is used with an existing
-compatible checkpoint.
-
-Saved wind products keep the legacy `*_mask` fields as valid/observed masks
-where `True` means a raw value was present. They also save explicit
-`*_missing_mask` fields, `vector_mask`, `vector_missing_mask`, and
-`mask_convention` metadata so downstream apportionment code does not need to
-guess mask polarity.
-
-For a quick smoke run, use a short time window and a tiny training budget:
+GPU work (paper-scale experiments, gates) runs through SLURM, not the login node:
 
 ```bash
-/share/apps/apptainer/bin/singularity exec --fakeroot \
-  --overlay overlay-25GB-500K.ext3:ro \
-  cuda11.8.86-cudnn8.7-devel-ubuntu22.04.2.sif \
-  /bin/bash -lc "source /ext3/env.sh && cd /scratch/ab9738/stamp && python3 scripts/impute_new_delhi_wind.py --start '2018-05-01 00:00:00+05:30' --end '2018-05-02 23:00:00+05:30' --epochs 1 --windows 24 --window-stride 24 --batch-size 2 --val-batch-size 2 --device cpu --output /tmp/new_delhi_wind_smoke.npz --checkpoint /tmp/imputeformer_wind_smoke.pt"
+sbatch --account=torch_pr_633_general --partition=l40s_public \
+  --gres=gpu:1 --cpus-per-task=4 --mem=16G --time=24:00:00 <job.sh>
 ```
 
-The full-range default output is `data/new_delhi_wind_imputed.npz`; run it on a
-short SLURM GPU allocation if the login node is unsuitable.
+Host Python is not a supported runtime; it lacks the required scientific stack.
 
-Host Python is not currently a supported runtime for this repository. In the
-current environment, host Python does not provide the required scientific stack.
+## Quickstart: minimal IASA run
 
-If container startup or imports are not suitable on the login node, run the same
-smoke script through a short SLURM allocation/job using the existing
-GPU/container environment. The smoke script itself does not require GPU compute.
+Runtime smoke check (imports, source maps, 40x40 grid, sensor metadata; no simulation):
+
+```bash
+... /bin/bash -lc "source /ext3/env.sh && cd /scratch/ab9738/stamp && python3 scripts/smoke_iasa_runtime.py"
+```
+
+Minimal end-to-end sanity gate (response -> projection -> diagnostics -> fit ->
+merge on a tiny synthetic platform):
+
+```bash
+... python3 scripts/run_iasa_sanity.py --gate end_to_end
+```
+
+Run one controlled experiment and one observed window at paper resolution
+(GPU; see `docs/iasa_workflow.md` for the full sweep and SLURM arrays):
+
+```bash
+... python3 experiments/iasa_pol/run_experiment.py \
+      --config evaluation/iasa_pol/configs/exp01.json --device cuda \
+      --out evaluation/iasa_pol/runs
+```
+
+## Sanity gates
+
+`scripts/run_iasa_sanity.py --gate <name>` runs deterministic gates from public
+APIs. Gates: `task3a`, `response`, `projection`, `parity`, `diagnostics`, `fit`,
+`merge`, `end_to_end`, `wind_field`, `footprints`, `refine`, `fieldformer_train`,
+`calibration` (S7), `experiments` (Task 10 sweep), `reporting` (Task 11), and
+`all`. `--gate all` runs the light regression set; `--gate all --strict-all` adds
+the heavier calibration, experiment-sweep, and reporting gates.
+
+## Evaluation and reporting
+
+- Controlled sweep + observed windows: `experiments/iasa_pol/run_experiment.py`
+  over `evaluation/iasa_pol/configs/*.json` (controlled `expNN`, observed
+  `observed_weekK`).
+- Roll-ups: `experiments/iasa_pol/summarize_results.py` (controlled) and
+  `summarize_weeks.py` (observed weeks, Tier 0).
+- Paper tables: `evaluation/eval_pol_iasa.py --runs evaluation/iasa_pol/runs
+  --out evaluation/iasa_pol/reports` emits `report.{json,md}` and per-table CSVs.
+
+## New Delhi wind imputation
+
+Observed `WD/WS` are converted to transport vectors and completed on the response
+grid by a **kernel coordinate-query imputer** (`model/iasa/wind.py`,
+`KernelCoordinateQueryImputer`), the adopted default. A learned FieldFormer
+coordinate-query model was trained and evaluated
+(`scripts/train_fieldformer_wind.py`) but **not adopted**: on held-out station
+vectors it beat the kernel interpolator (RMSE 1.12 vs 1.55) but lost to a
+non-spatial city-mean baseline (1.06), so the spatially resolved kernel field is
+used. Saved wind products keep valid/observed `*_mask` fields and explicit
+`*_missing_mask`, `vector_mask`, and `mask_convention` metadata so downstream code
+never guesses mask polarity.
+
+## Interpretation caveats
+
+- Identifiability certificates are conditional on the declared inventory,
+  transport, temporal basis, lag, background basis, observation mask, and noise
+  assumptions.
+- A calibrated residual rejection shows model inadequacy but **not its cause**;
+  non-rejection does **not** establish inventory completeness.
+- Report groups (connected components) are conservative, deterministic merges,
+  not a guaranteed finest partition.
+- Inventory-scenario rows are robustness comparisons, never confidence-interval
+  draws; transport uncertainty and inventory robustness occupy separate fields.
+- Reported percentages are fractions of fitted inventory-attributed sensor signal,
+  not physical-emission shares.
+
+## Paper
+
+Sources are in `paper/`; the compiled `paper/main.pdf` is committed. Rebuild inside
+the container (the `algorithm.sty` and `icml2026` style are vendored under
+`paper/icml2026/`):
+
+```bash
+... /bin/bash -lc "source /ext3/env.sh && cd /scratch/ab9738/stamp/paper && \
+  TEXINPUTS=.:./icml2026//: pdflatex -interaction=nonstopmode main.tex && \
+  bibtex main && pdflatex main.tex && pdflatex main.tex"
+```
+
+## Legacy code
+
+Archived legacy files live only in the git-ignored `archive/` directory if kept
+locally. They are **out of the active repository contract**: active code must not
+depend on them, and they are not present in clean checkouts. No heat/SWE, SimGrad,
+free-field recovery, or old pollution-calibration workflow is maintained.
