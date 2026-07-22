@@ -258,7 +258,16 @@ gates built from public APIs:
     one command and write a compact provenance-complete summary.
 \end{enumerate}
 Task 10 experiments begin only after S1--S6 and the PyTorch CPU/CUDA parity
-checks pass.
+checks pass.  Two further gates support the results.  \textbf{S7 (adequacy
+calibration)} runs a statistically calibrated study of the residual-adequacy test
+on a controlled orthonormal design, checking that the null rejection rate matches
+\(\alpha\), that the null \(p\)-values are uniform, and that power increases
+monotonically with omission strength.  A final \textbf{reporting gate} exercises
+the evaluation layer that emits the result tables in Section~\ref{sec:evaluation},
+verifying the paper's reporting rules: undefined weak-pair metrics stay null,
+grouped metrics accompany any non-singleton report component, an \(A\)--\(B\)--\(C\)
+merge chain retains both trigger edges, percentages are labeled fractions of fitted
+sensor signal, and an uncalibrated run never reports an adequacy pass.
 
 \section{PyTorch Solver and Uncertainty Protocol}
 \label{app:pytorch_solver}

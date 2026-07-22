@@ -18,12 +18,16 @@ V_y&=-WS\cos(WD\pi/180).
 \end{aligned}
 \label{eq:wind_direction_conversion}
 \end{equation}
-The observed station vectors and masks are supplied to a FieldFormer wind
-imputer \citep{bhardwaj2025fieldformer}.  FieldFormer is trained as a
-coordinate-query model: given sparse station observations
+The observed station vectors and masks are supplied to a coordinate-query wind
+imputer: given sparse station observations
 \(\{(\mathbf z_i,t,\mathbf u_{i,t},m_{i,t})\}\), it predicts transport vectors
-at arbitrary spatial query locations and times.  For the IASA response operator,
-we query the trained model on every response-grid cell \(\mathbf x_g\) and hour
+at arbitrary spatial query locations and times.  The adopted imputer is a
+normalized Gaussian-kernel interpolator over the station vectors; we additionally
+trained a learned coordinate-query model (FieldFormer
+\citep{bhardwaj2025fieldformer}) but did not adopt it, because it did not improve
+held-out accuracy over a city-mean baseline
+(Section~\ref{subsec:results_wind_imputation}).  For the IASA response operator,
+we query the imputer on every response-grid cell \(\mathbf x_g\) and hour
 \(t\), producing
 \begin{equation}
 \widehat{\mathbf w}_t(\mathbf x_g)

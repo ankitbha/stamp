@@ -34,10 +34,13 @@ their metadata.
 \subsection{Wind Preparation}
 \label{subsec:new_delhi_wind}
 The observed \(WD/WS\) values are converted using
-Equation~\ref{eq:wind_direction_conversion} before entering the FieldFormer wind
-imputation pipeline.  The saved wind product retains raw station values, masks,
+Equation~\ref{eq:wind_direction_conversion} before entering the coordinate-query
+wind imputation pipeline.  The saved wind product retains raw station values, masks,
 station coordinates, held-out validation splits, model configuration, checkpoint
-metadata, and the gridded query field used by the response operator.  The New Delhi runs use the FieldFormer-imputed grid wind field.
+metadata, and the gridded query field used by the response operator.  The New Delhi
+runs use the gridded kernel-imputed wind field; a learned FieldFormer imputer was
+trained and evaluated but not adopted
+(Section~\ref{subsec:results_wind_imputation}).
 
 \subsection{Inventories and Proxy Temporal Activities}
 \label{subsec:new_delhi_inventories}
@@ -112,13 +115,17 @@ a zero-source, zero-initial-state baseline, while observed runs subtract a
 declared zero-source transported initial-condition baseline, as described next.
 
 For observed New Delhi runs, the initial pollution field is estimated from the
-first available regulatory observations using spatial kriging on the response
-grid.  Its zero-source transported trajectory is subtracted from the sensor
-observations before fitting source activities.  Source coefficients are
-therefore fitted to the residual sensor-time signal after removing the
+first available regulatory observations (the two Pusa monitors averaged) by a
+normalized Gaussian-kernel spatial interpolation on the response grid---a kriging
+surrogate that avoids an additional heavyweight geostatistics dependency.  Its
+zero-source transported trajectory, obtained by propagating this initial field as
+a single release through the same open-boundary puff operator (its Gaussian kernel
+is the advection--diffusion Green's function, so units are preserved), is subtracted
+from the sensor observations before fitting source activities.  Source coefficients
+are therefore fitted to the residual sensor-time signal after removing the
 contribution of the initialized background field and the low-rank temporal
-background basis.  Kriging from sparse first-hour observations is itself an
-ill-posed spatial interpolation, so this baseline injects some uncertainty; the
+background basis.  Kernel interpolation from sparse first-hour observations is
+itself an ill-posed spatial estimate, so this baseline injects some uncertainty; the
 effect is limited by declaring and subtracting the baseline before fitting and by
 the low-rank background basis \(Q\), which absorbs residual broad structure.
 Controlled operator-matched experiments may instead use a zero initial field when
@@ -146,15 +153,22 @@ Section~\ref{sec:evaluation}.
 \subsection{Controlled and Observed-Data Study Modes}
 \label{subsec:new_delhi_study_modes}
 
-The controlled mode preserves New Delhi inventories and sensor geometry while
+The controlled mode preserves New Delhi sensor geometry and transport while
 assigning known nonnegative source--basis coefficients.  It uses synthetic or
-real imputed wind, controlled observation noise, source splits, sensor-layout
-variants, and optional operator mismatch.  Because its coefficients are known,
-it supports recovery and interval-coverage metrics.
+real gridded wind, controlled observation noise, source splits, sensor-layout
+variants, and optional operator mismatch.  Where the study is explicitly about
+inventory geometry (Experiments~2 and~6) the real New Delhi inventory maps are
+used; the remaining controlled experiments use compact synthetic source cells for
+tractability, since their conclusions concern conditioning, coherence, and
+recovery rather than the specific inventory footprints.  Because its coefficients
+are known, it supports recovery and interval-coverage metrics.
 
 The observed-data mode combines real PM\(_{2.5}\), its observation mask, the
-imputed New Delhi wind field, the named normalized inventories, and the
-declared proxy temporal bases.  It has no ground-truth source activities.
+gridded kernel-imputed New Delhi wind field, the named normalized inventories, and
+the declared proxy temporal bases.  It has no ground-truth source activities.
 Accordingly, it reports residuals, response geometry, uncertainty, weak and
 ambiguous coefficients, normalized proxy contributions, and recommended report
-groups rather than synthetic recovery error.
+groups rather than synthetic recovery error.  The observed study is run over four
+consecutive one-week windows, each fitted and reported independently (no
+cross-window aggregation), so that the reported object is the per-week
+apportionment distribution rather than a single whole-record estimate.

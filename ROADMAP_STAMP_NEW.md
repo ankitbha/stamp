@@ -1955,7 +1955,7 @@ Produce tables matching the paper's evaluation result subsections
 - Omitted-source results state that rejection diagnoses model inadequacy without
   identifying its cause and that non-rejection cannot certify completeness.
 
-### Task 11A: Update the paper with results and reconcile implementation drifts
+### ~~Task 11A: Update the paper with results and reconcile implementation drifts~~  [implemented 2026-07-22]
 
 **Objective**
 
