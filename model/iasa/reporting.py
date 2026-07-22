@@ -24,11 +24,17 @@ ReportTable = dict[str, Any]
 
 
 def _round(x: Any, nd: int = 6) -> Any:
-    """Round floats for display; pass through None (weak-pair nulls) and non-floats."""
+    """Round floats for display; pass through None (weak-pair nulls) and non-floats.
+    Recurses into lists/dicts so a NaN nested in an ensemble-probability block is
+    scrubbed to null too (never serialized as bare NaN)."""
     if isinstance(x, bool) or x is None:
         return x
     if isinstance(x, float):
         return None if x != x else round(x, nd)  # NaN -> None, never "nan"
+    if isinstance(x, list):
+        return [_round(v, nd) for v in x]
+    if isinstance(x, dict):
+        return {k: _round(v, nd) for k, v in x.items()}
     return x
 
 
@@ -116,7 +122,7 @@ def report_exp04(result: dict[str, Any]) -> list[ReportTable]:
 def report_exp05(result: dict[str, Any]) -> list[ReportTable]:
     par = result.get("parametric") or {}
     cols = ["perturbation_kind", "perturbation_value", "operator_error_norm",
-            "sigma_J", "coefficient_relative_error", "residual_norm"]
+            "sigma_J", "singular_values", "coefficient_relative_error", "residual_norm"]
     tables = [_table("exp05_transport_error",
                      "Experiment 5: Transport Error (Parametric)", cols,
                      par.get("rows", []),
@@ -172,6 +178,9 @@ def report_exp08(result: dict[str, Any]) -> list[ReportTable]:
         f"n_trials={result.get('n_trials')}, omission_amplitude={result.get('omission_amplitude')}.",
         f"Omitted-source out-of-span fraction={_round(diag.get('omitted_source_out_of_span_fraction'))}, "
         f"background rank={diag.get('background_rank')} (non-empty Q on the platform).",
+        f"Fitted-design spectrum: sigma_J={_round(diag.get('sigma_J'))}, "
+        f"numerical_rank={diag.get('numerical_rank')}, "
+        f"singular_values={_round(diag.get('singular_values'))}.",
         "Rejection diagnoses model inadequacy without identifying its cause; "
         "non-rejection cannot certify inventory completeness.",
     ]
@@ -226,15 +235,18 @@ def report_observed(results: list[dict[str, Any]]) -> list[ReportTable]:
         d = r.get("diagnostics", {}) or {}
         idr.append({"week": r.get("window_index"),
                     "window_start": r.get("window_start"), "window_end": r.get("window_end"),
-                    "sigma_J": d.get("sigma_J"), "numerical_rank": d.get("numerical_rank"),
+                    "sigma_1": d.get("sigma_1"), "sigma_J": d.get("sigma_J"),
+                    "numerical_rank": d.get("numerical_rank"),
                     "effective_rank": d.get("effective_rank"),
                     "condition_status": d.get("condition_status"),
                     "max_eligible_coherence": d.get("max_eligible_coherence"),
+                    "visibility": d.get("visibility"),
                     "weak_set": d.get("weak_set"),
+                    "ambiguous_pairs": r.get("ambiguous_pairs"),
                     "report_components": r.get("report_components")})
-    idcols = ["week", "window_start", "window_end", "sigma_J", "numerical_rank",
-              "effective_rank", "condition_status", "max_eligible_coherence",
-              "weak_set", "report_components"]
+    idcols = ["week", "window_start", "window_end", "sigma_1", "sigma_J", "numerical_rank",
+              "effective_rank", "condition_status", "max_eligible_coherence", "visibility",
+              "weak_set", "ambiguous_pairs", "report_components"]
     idnotes = ["No source-activity ground truth: geometry/residuals/groups only."]
     if any(_has_nonsingleton(r.get("report_components")) for r in weeks):
         idnotes.append("A non-singleton report component appears; grouped contributions apply.")
@@ -252,10 +264,14 @@ def report_observed(results: list[dict[str, Any]]) -> list[ReportTable]:
     for r in weeks:
         shares = r.get("sensor_signal_contribution_shares") or {}
         admissible = r.get("admissible_components_per_group")
+        week_names = r.get("source_names") or []
         row = {"week": r.get("window_index")}
-        for gi, g in enumerate(groups):
+        for g in groups:
             # A group with no admissible component is unsupported, not zero-share.
-            unsupported = isinstance(admissible, list) and gi < len(admissible) and not admissible[gi]
+            # Index admissibility by THIS week's source order (weeks may differ).
+            gi = week_names.index(g) if g in week_names else None
+            unsupported = (isinstance(admissible, list) and gi is not None
+                           and gi < len(admissible) and not admissible[gi])
             row[g] = "unsupported" if unsupported else shares.get(g)
         aprows.append(row)
     apcols = ["week"] + groups
@@ -339,9 +355,14 @@ _CONTROLLED = {
 
 
 def report_result(result: dict[str, Any]) -> list[ReportTable]:
-    """Single controlled result -> its report tables (observed handled separately)."""
+    """Single controlled result -> its report tables (observed handled separately).
+    When the result carries conservative-merge edges, the retained-edge table is
+    appended so an A-B-C chain shows both edges (Rule 3) in the production report."""
     fn = _CONTROLLED.get(result.get("experiment", ""))
-    return fn(result) if fn else []
+    tables = fn(result) if fn else []
+    if result.get("source_edges"):
+        tables.append(report_merge_edges(result))
+    return tables
 
 
 def report_merge_edges(result: dict[str, Any]) -> ReportTable:

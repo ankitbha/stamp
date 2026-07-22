@@ -1,3 +1,3 @@
 ensemble,provider,n_members,n_windows,sigma_J_quantiles,prob_full_numerical_rank,prob_full_effective_rank,coefficient_weak_probabilities,source_pair_ambiguity_probabilities,report_component_frequencies
-historical,historical_real_new_delhi_window,20,20,"{""q05"":1.4498089382753365,""q50"":4.510982570762151,""q95"":9.95912220158153}",1.0,1.0,"{""0"":0.0,""1"":0.0}",{},"{""src_a"":1.0,""src_b"":1.0}"
-simulated,ar1_synthetic,20,20,"{""q05"":3.4995474355011127,""q50"":5.576351635681392,""q95"":6.801457165126575}",1.0,1.0,"{""0"":0.0,""1"":0.0}",{},"{""src_a"":1.0,""src_b"":1.0}"
+historical,historical_real_new_delhi_window,20,20,"{""q05"":1.449809,""q50"":4.510983,""q95"":9.959122}",1.0,1.0,"{""0"":0.0,""1"":0.0}",{},"{""src_a"":1.0,""src_b"":1.0}"
+simulated,ar1_synthetic,20,20,"{""q05"":3.499547,""q50"":5.576352,""q95"":6.801457}",1.0,1.0,"{""0"":0.0,""1"":0.0}",{},"{""src_a"":1.0,""src_b"":1.0}"

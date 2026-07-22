@@ -70,25 +70,25 @@
 
 | ensemble | provider | n_members | n_windows | sigma_J_quantiles | prob_full_numerical_rank | prob_full_effective_rank | coefficient_weak_probabilities | source_pair_ambiguity_probabilities | report_component_frequencies |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| historical | historical_real_new_delhi_window | 20 | 20 | {"q05":1.4498089382753365,"q50":4.510982570762151,"q95":9.95912220158153} | 1.0 | 1.0 | {"0":0.0,"1":0.0} | {} | {"src_a":1.0,"src_b":1.0} |
-| simulated | ar1_synthetic | 20 | 20 | {"q05":3.4995474355011127,"q50":5.576351635681392,"q95":6.801457165126575} | 1.0 | 1.0 | {"0":0.0,"1":0.0} | {} | {"src_a":1.0,"src_b":1.0} |
+| historical | historical_real_new_delhi_window | 20 | 20 | {"q05":1.449809,"q50":4.510983,"q95":9.959122} | 1.0 | 1.0 | {"0":0.0,"1":0.0} | {} | {"src_a":1.0,"src_b":1.0} |
+| simulated | ar1_synthetic | 20 | 20 | {"q05":3.499547,"q50":5.576352,"q95":6.801457} | 1.0 | 1.0 | {"0":0.0,"1":0.0} | {} | {"src_a":1.0,"src_b":1.0} |
 
 - _Historical windows are contiguous real-record slices; simulated windows are AR(1). Quantiles are [0.05, 0.5, 0.95]._
 
 ## Experiment 5: Transport Error (Parametric)
 
-| perturbation_kind | perturbation_value | operator_error_norm | sigma_J | coefficient_relative_error | residual_norm |
-| --- | --- | --- | --- | --- | --- |
-| wind_direction_deg | 0.0 | 0.0 | 0.865305 | 0.0 | 0.0 |
-| wind_direction_deg | 5.0 | 0.28799 | 3.369168 | 0.622829 | 3.627949 |
-| wind_direction_deg | 10.0 | 0.59723 | 7.068079 | 0.79715 | 6.951087 |
-| wind_direction_deg | 20.0 | 0.86758 | 7.97813 | 0.861271 | 10.750982 |
-| wind_speed_factor | 1.0 | 0.0 | 0.865305 | 0.0 | 0.0 |
-| wind_speed_factor | 1.25 | 0.288187 | 2.088865 | 0.450884 | 1.782354 |
-| wind_speed_factor | 1.5 | 0.52893 | 4.566836 | 0.273777 | 1.55143 |
-| dispersion_factor | 1.0 | 0.0 | 0.865305 | 0.0 | 0.0 |
-| dispersion_factor | 1.5 | 0.189049 | 1.417145 | 0.496889 | 1.258896 |
-| dispersion_factor | 2.0 | 0.351806 | 1.759434 | 0.89331 | 2.516423 |
+| perturbation_kind | perturbation_value | operator_error_norm | sigma_J | singular_values | coefficient_relative_error | residual_norm |
+| --- | --- | --- | --- | --- | --- | --- |
+| wind_direction_deg | 0.0 | 0.0 | 0.865305 | [21.138254,0.865305] | 0.0 | 0.0 |
+| wind_direction_deg | 5.0 | 0.28799 | 3.369168 | [21.569815,3.369168] | 0.622829 | 3.627949 |
+| wind_direction_deg | 10.0 | 0.59723 | 7.068079 | [21.414989,7.068079] | 0.79715 | 6.951087 |
+| wind_direction_deg | 20.0 | 0.86758 | 7.97813 | [15.362633,7.97813] | 0.861271 | 10.750982 |
+| wind_speed_factor | 1.0 | 0.0 | 0.865305 | [21.138254,0.865305] | 0.0 | 0.0 |
+| wind_speed_factor | 1.25 | 0.288187 | 2.088865 | [19.601894,2.088865] | 0.450884 | 1.782354 |
+| wind_speed_factor | 1.5 | 0.52893 | 4.566836 | [19.235006,4.566836] | 0.273777 | 1.55143 |
+| dispersion_factor | 1.0 | 0.0 | 0.865305 | [21.138254,0.865305] | 0.0 | 0.0 |
+| dispersion_factor | 1.5 | 0.189049 | 1.417145 | [17.677014,1.417145] | 0.496889 | 1.258896 |
+| dispersion_factor | 2.0 | 0.351806 | 1.759434 | [14.722803,1.759434] | 0.89331 | 2.516423 |
 
 - _Transport ensemble kind: transport._
 
@@ -104,11 +104,11 @@
 
 | scenario | sigma_J | coefficient_relative_error | c_hat |
 | --- | --- | --- | --- |
-| baseline | 21.563225 | 0.0 | [0.9999999999999998,0.6] |
-| location_shift | 28.846704 | 0.0 | [0.9999999999999997,0.6] |
+| baseline | 21.563225 | 0.0 | [1.0,0.6] |
+| location_shift | 28.846704 | 0.0 | [1.0,0.6] |
 | spatial_scale | 47.001535 | 0.0 | [1.0,0.6] |
 | alt_map_version | 46.007366 | 0.0 | [1.0,0.6] |
-| category_swap | 21.563225 | 0.0 | [1.0,0.5999999999999998] |
+| category_swap | 21.563225 | 0.0 | [1.0,0.6] |
 
 - _Rows are robustness scenarios, NOT confidence-interval draws._
 - _Transport/inventory pooling rejected: True._
@@ -137,6 +137,7 @@
 
 - _alpha=0.05, n_replicates=1000, n_trials=100, omission_amplitude=1.2._
 - _Omitted-source out-of-span fraction=0.913622, background rank=4 (non-empty Q on the platform)._
+- _Fitted-design spectrum: sigma_J=45.845516, numerical_rank=3, singular_values=[120.555606, 69.205218, 45.845516]._
 - _Rejection diagnoses model inadequacy without identifying its cause; non-rejection cannot certify inventory completeness._
 
 ## Experiment 9: Temporal-Basis Recovery
@@ -162,12 +163,12 @@
 
 ## New Delhi Identifiability and Report Groups (weeks 1-4)
 
-| week | window_start | window_end | sigma_J | numerical_rank | effective_rank | condition_status | max_eligible_coherence | weak_set | report_components |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 2018-05-01 00:00:00+05:30 | 2018-05-07 23:00:00+05:30 | 3.714655 | 7 | 7 | finite | 0.31647 | [] | [[0],[1],[2],[3]] |
-| 2 | 2018-05-08 00:00:00+05:30 | 2018-05-14 23:00:00+05:30 | 5.670984 | 7 | 7 | finite | 0.355326 | [] | [[0],[1],[2],[3]] |
-| 3 | 2018-05-15 00:00:00+05:30 | 2018-05-21 23:00:00+05:30 | 10.154152 | 7 | 7 | finite | 0.495568 | [] | [[0],[1],[2],[3]] |
-| 4 | 2018-05-22 00:00:00+05:30 | 2018-05-28 23:00:00+05:30 | 7.646498 | 7 | 7 | finite | 0.475097 | [] | [[0],[1],[2],[3]] |
+| week | window_start | window_end | sigma_1 | sigma_J | numerical_rank | effective_rank | condition_status | max_eligible_coherence | visibility | weak_set | ambiguous_pairs | report_components |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 2018-05-01 00:00:00+05:30 | 2018-05-07 23:00:00+05:30 | 50.066158 | 3.714655 | 7 | 7 | finite | 0.31647 | [4.211047,33.624407,47.148512,25.778945,23.044029,22.271834,20.982911] | [] | [] | [[0],[1],[2],[3]] |
+| 2 | 2018-05-08 00:00:00+05:30 | 2018-05-14 23:00:00+05:30 | 60.253055 | 5.670984 | 7 | 7 | finite | 0.355326 | [6.031379,33.711076,57.217343,25.844248,24.159022,22.973226,21.761241] | [] | [] | [[0],[1],[2],[3]] |
+| 3 | 2018-05-15 00:00:00+05:30 | 2018-05-21 23:00:00+05:30 | 77.004576 | 10.154152 | 7 | 7 | finite | 0.495568 | [10.617332,40.186352,72.603524,25.986977,24.809319,23.361772,21.428431] | [] | [] | [[0],[1],[2],[3]] |
+| 4 | 2018-05-22 00:00:00+05:30 | 2018-05-28 23:00:00+05:30 | 81.200623 | 7.646498 | 7 | 7 | finite | 0.475097 | [7.954414,36.187254,76.721497,27.85015,23.31544,26.530985,24.76379] | [] | [] | [[0],[1],[2],[3]] |
 
 - _No source-activity ground truth: geometry/residuals/groups only._
 

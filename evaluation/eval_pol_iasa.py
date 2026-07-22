@@ -61,11 +61,9 @@ def _merge_tables(tables: list[reporting.ReportTable]) -> list[reporting.ReportT
         for n in t["notes"]:
             if n not in agg["notes"]:
                 agg["notes"].append(n)
-    # Add a leading `run` column only when a label spans more than one run.
-    out = []
-    for lbl in order:
-        out.append(by_label[lbl])
-    return out
+    # The leading `run` column (for multi-run aggregation) is added upstream in
+    # build_report before merging; here we just preserve first-seen label order.
+    return [by_label[lbl] for lbl in order]
 
 
 def build_report(controlled: list[dict[str, Any]], observed: list[dict[str, Any]],
@@ -143,9 +141,12 @@ def main() -> None:
         wind_report = json.loads(Path(args.wind_report).read_text())
 
     tables = build_report(controlled, observed, wind_report)
+    # allow_nan=False: refuse to emit bare NaN/Infinity (invalid JSON); reporting
+    # already scrubs NaN->null, so this is a belt-and-suspenders guard.
     (out / "report.json").write_text(json.dumps(
         {"n_tables": len(tables), "n_controlled_runs": len(controlled),
-         "n_observed_runs": len(observed), "tables": tables}, indent=2, sort_keys=False))
+         "n_observed_runs": len(observed), "tables": tables},
+        indent=2, sort_keys=False, allow_nan=False))
     (out / "report.md").write_text(_render_md(tables))
     for t in tables:
         _write_csv(t, out / f"{t['label']}.csv")

@@ -465,9 +465,9 @@
           "n_members": 20,
           "n_windows": 20,
           "sigma_J_quantiles": {
-            "q05": 1.4498089382753365,
-            "q50": 4.510982570762151,
-            "q95": 9.95912220158153
+            "q05": 1.449809,
+            "q50": 4.510983,
+            "q95": 9.959122
           },
           "prob_full_numerical_rank": 1.0,
           "prob_full_effective_rank": 1.0,
@@ -487,9 +487,9 @@
           "n_members": 20,
           "n_windows": 20,
           "sigma_J_quantiles": {
-            "q05": 3.4995474355011127,
-            "q50": 5.576351635681392,
-            "q95": 6.801457165126575
+            "q05": 3.499547,
+            "q50": 5.576352,
+            "q95": 6.801457
           },
           "prob_full_numerical_rank": 1.0,
           "prob_full_effective_rank": 1.0,
@@ -516,6 +516,7 @@
         "perturbation_value",
         "operator_error_norm",
         "sigma_J",
+        "singular_values",
         "coefficient_relative_error",
         "residual_norm"
       ],
@@ -525,6 +526,10 @@
           "perturbation_value": 0.0,
           "operator_error_norm": 0.0,
           "sigma_J": 0.865305,
+          "singular_values": [
+            21.138254,
+            0.865305
+          ],
           "coefficient_relative_error": 0.0,
           "residual_norm": 0.0
         },
@@ -533,6 +538,10 @@
           "perturbation_value": 5.0,
           "operator_error_norm": 0.28799,
           "sigma_J": 3.369168,
+          "singular_values": [
+            21.569815,
+            3.369168
+          ],
           "coefficient_relative_error": 0.622829,
           "residual_norm": 3.627949
         },
@@ -541,6 +550,10 @@
           "perturbation_value": 10.0,
           "operator_error_norm": 0.59723,
           "sigma_J": 7.068079,
+          "singular_values": [
+            21.414989,
+            7.068079
+          ],
           "coefficient_relative_error": 0.79715,
           "residual_norm": 6.951087
         },
@@ -549,6 +562,10 @@
           "perturbation_value": 20.0,
           "operator_error_norm": 0.86758,
           "sigma_J": 7.97813,
+          "singular_values": [
+            15.362633,
+            7.97813
+          ],
           "coefficient_relative_error": 0.861271,
           "residual_norm": 10.750982
         },
@@ -557,6 +574,10 @@
           "perturbation_value": 1.0,
           "operator_error_norm": 0.0,
           "sigma_J": 0.865305,
+          "singular_values": [
+            21.138254,
+            0.865305
+          ],
           "coefficient_relative_error": 0.0,
           "residual_norm": 0.0
         },
@@ -565,6 +586,10 @@
           "perturbation_value": 1.25,
           "operator_error_norm": 0.288187,
           "sigma_J": 2.088865,
+          "singular_values": [
+            19.601894,
+            2.088865
+          ],
           "coefficient_relative_error": 0.450884,
           "residual_norm": 1.782354
         },
@@ -573,6 +598,10 @@
           "perturbation_value": 1.5,
           "operator_error_norm": 0.52893,
           "sigma_J": 4.566836,
+          "singular_values": [
+            19.235006,
+            4.566836
+          ],
           "coefficient_relative_error": 0.273777,
           "residual_norm": 1.55143
         },
@@ -581,6 +610,10 @@
           "perturbation_value": 1.0,
           "operator_error_norm": 0.0,
           "sigma_J": 0.865305,
+          "singular_values": [
+            21.138254,
+            0.865305
+          ],
           "coefficient_relative_error": 0.0,
           "residual_norm": 0.0
         },
@@ -589,6 +622,10 @@
           "perturbation_value": 1.5,
           "operator_error_norm": 0.189049,
           "sigma_J": 1.417145,
+          "singular_values": [
+            17.677014,
+            1.417145
+          ],
           "coefficient_relative_error": 0.496889,
           "residual_norm": 1.258896
         },
@@ -597,6 +634,10 @@
           "perturbation_value": 2.0,
           "operator_error_norm": 0.351806,
           "sigma_J": 1.759434,
+          "singular_values": [
+            14.722803,
+            1.759434
+          ],
           "coefficient_relative_error": 0.89331,
           "residual_norm": 2.516423
         }
@@ -643,7 +684,7 @@
           "sigma_J": 21.563225,
           "coefficient_relative_error": 0.0,
           "c_hat": [
-            0.9999999999999998,
+            1.0,
             0.6
           ]
         },
@@ -652,7 +693,7 @@
           "sigma_J": 28.846704,
           "coefficient_relative_error": 0.0,
           "c_hat": [
-            0.9999999999999997,
+            1.0,
             0.6
           ]
         },
@@ -680,7 +721,7 @@
           "coefficient_relative_error": 0.0,
           "c_hat": [
             1.0,
-            0.5999999999999998
+            0.6
           ]
         }
       ],
@@ -779,6 +820,7 @@
       "notes": [
         "alpha=0.05, n_replicates=1000, n_trials=100, omission_amplitude=1.2.",
         "Omitted-source out-of-span fraction=0.913622, background rank=4 (non-empty Q on the platform).",
+        "Fitted-design spectrum: sigma_J=45.845516, numerical_rank=3, singular_values=[120.555606, 69.205218, 45.845516].",
         "Rejection diagnoses model inadequacy without identifying its cause; non-rejection cannot certify inventory completeness."
       ]
     },
@@ -862,12 +904,15 @@
         "week",
         "window_start",
         "window_end",
+        "sigma_1",
         "sigma_J",
         "numerical_rank",
         "effective_rank",
         "condition_status",
         "max_eligible_coherence",
+        "visibility",
         "weak_set",
+        "ambiguous_pairs",
         "report_components"
       ],
       "rows": [
@@ -875,12 +920,23 @@
           "week": 1,
           "window_start": "2018-05-01 00:00:00+05:30",
           "window_end": "2018-05-07 23:00:00+05:30",
+          "sigma_1": 50.066158,
           "sigma_J": 3.714655,
           "numerical_rank": 7,
           "effective_rank": 7,
           "condition_status": "finite",
           "max_eligible_coherence": 0.31647,
+          "visibility": [
+            4.211047,
+            33.624407,
+            47.148512,
+            25.778945,
+            23.044029,
+            22.271834,
+            20.982911
+          ],
           "weak_set": [],
+          "ambiguous_pairs": [],
           "report_components": [
             [
               0
@@ -900,12 +956,23 @@
           "week": 2,
           "window_start": "2018-05-08 00:00:00+05:30",
           "window_end": "2018-05-14 23:00:00+05:30",
+          "sigma_1": 60.253055,
           "sigma_J": 5.670984,
           "numerical_rank": 7,
           "effective_rank": 7,
           "condition_status": "finite",
           "max_eligible_coherence": 0.355326,
+          "visibility": [
+            6.031379,
+            33.711076,
+            57.217343,
+            25.844248,
+            24.159022,
+            22.973226,
+            21.761241
+          ],
           "weak_set": [],
+          "ambiguous_pairs": [],
           "report_components": [
             [
               0
@@ -925,12 +992,23 @@
           "week": 3,
           "window_start": "2018-05-15 00:00:00+05:30",
           "window_end": "2018-05-21 23:00:00+05:30",
+          "sigma_1": 77.004576,
           "sigma_J": 10.154152,
           "numerical_rank": 7,
           "effective_rank": 7,
           "condition_status": "finite",
           "max_eligible_coherence": 0.495568,
+          "visibility": [
+            10.617332,
+            40.186352,
+            72.603524,
+            25.986977,
+            24.809319,
+            23.361772,
+            21.428431
+          ],
           "weak_set": [],
+          "ambiguous_pairs": [],
           "report_components": [
             [
               0
@@ -950,12 +1028,23 @@
           "week": 4,
           "window_start": "2018-05-22 00:00:00+05:30",
           "window_end": "2018-05-28 23:00:00+05:30",
+          "sigma_1": 81.200623,
           "sigma_J": 7.646498,
           "numerical_rank": 7,
           "effective_rank": 7,
           "condition_status": "finite",
           "max_eligible_coherence": 0.475097,
+          "visibility": [
+            7.954414,
+            36.187254,
+            76.721497,
+            27.85015,
+            23.31544,
+            26.530985,
+            24.76379
+          ],
           "weak_set": [],
+          "ambiguous_pairs": [],
           "report_components": [
             [
               0
