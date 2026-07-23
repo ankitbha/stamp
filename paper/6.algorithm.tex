@@ -51,74 +51,66 @@ Threshold & Meaning & How set \\
 \subsection{Procedure}
 \label{subsec:iasa_procedure}
 
-The step order is deliberate and enforces the method's central discipline of
-separating fit from diagnosis: model choices, thresholds, and the fixed-zero mask
-are predeclared; the response is then built, background-projected, and fitted;
-only afterwards are the identifiability diagnostics computed and conservative
-groups reported.  Because no threshold or column set is chosen after inspecting
-the fitted coefficients, the reported identifiability cannot be made artificially
-favorable by post-fit tuning.  The procedure is:
-\begin{enumerate}[leftmargin=*]
-    \item \textbf{Predeclare the model.}  Fix the primary background basis,
-    physical lag-candidate grid, temporal bases, inventory version, and any
-    scientifically justified fixed-zero coefficient mask before inspecting
-    fitted source activities.
-    \item \textbf{Prepare wind.} Convert meteorological \(WD/WS\) to transport
-    vectors, preserve masks and observed values for audit, load the coordinate-query
-    wind imputer (the adopted kernel interpolator), query the response grid to obtain
-    \(\widehat{\mathbf w}_t(\mathbf x_g)\), and convert physical velocity to grid
-    displacement.
-    \item \textbf{Build and select lagged responses.}  For every unmasked
-    source--basis pair and candidate lag, compute
-    \[
-    \mathbf h_{t,kb}^{\mathrm{lag}}=
-    \sum_{\ell\in\mathcal L_t}\phi_b(t-\ell)
-    O G_{t,t-\ell}^{\partial}(\widehat{\mathbf w}_{t-\ell:t})\mathbf s_k.
-    \]
-    Select the smallest \(L\) satisfying Equation~\ref{eq:lag_convergence},
-    independently of \(\widehat{\mathbf c}\), and retain the full lag-sweep
-    diagnostics.
-    \item \textbf{Align, select, and project.}  Form
-    \(H_{\Phi}^{\mathrm{lag}}\), with source-major, basis-minor columns; apply
-    the observed-PM\(_{2.5}\) selection identically to \(Y\), \(H\), \(Q\),
-    and row metadata; then
-    compute
-    \[
-    \widetilde Y=P_Q^\perp Y,
-    \qquad
-    \widetilde H_\Phi=P_Q^\perp H_{\Phi}^{\mathrm{lag}}.
-    \]
-    \item \textbf{Fit source activities.}  Solve for coefficients and reconstruct
-    activities:
-    \[
-    \begin{aligned}
-    \widehat{\mathbf c}
-    &=\arg\min_{\mathbf c\ge0}
-    \|\widetilde Y-\widetilde H_\Phi\mathbf c\|_2^2
-    +\lambda R(\mathbf c),\\
-    \widehat\theta_k(t)&=\sum_b\widehat c_{kb}\phi_b(t).
-    \end{aligned}
-    \]
-    \item \textbf{Audit identifiability.}  Compute \(r_{\mathrm{num}}\), the
-    singular values, \(r_{\mathrm{eff}}(\tau_\sigma)\), coefficient visibility
-    \(v_j\), background absorption \(a_j\), coherence \(\rho_{ij}\), and ray
-    distance \(d^{\mathrm{ray}}_{ij}\).
-    \item \textbf{Flag unsupported groups.}  Mark weak coefficient fingerprints
-    \(\mathcal W=\{j:v_j\le\tau_v\}\).  For eligible pairs only, set
-    \(\mathcal A=\{(i,j):i,j\notin\mathcal W,\rho_{ij}>\tau_\rho\}\).
-    \item \textbf{Recommend report groups.}  Map eligible coefficient-pair
-    warnings to source-graph edges and take deterministic connected components.
-    Weak coefficients are flagged but do not create coherence edges.  Group
-    activities and fitted sensor contributions are sums of their members; the
-    fine-resolution coefficient fit is not silently replaced by a grouped
-    refit.
-    \item \textbf{Check model adequacy.}  When an externally calibrated
-    observation-noise model is available, run the refitted parametric-bootstrap
-    residual test below.  Otherwise label the residual summary uncalibrated.
-    \item \textbf{Report.}  Return source estimates, observation/transport
-    uncertainty, inventory robustness scenarios, residual adequacy, diagnostics,
-    and conservative source groups.
-\end{enumerate}
+Algorithm~\ref{alg:iasa} states the procedure.  Its step order enforces the
+method's central discipline of separating fit from diagnosis: all model choices,
+thresholds, and the fixed-zero mask are predeclared (line~1), the response is
+built, projected, and fitted (lines~2--5), and only afterwards are the
+identifiability diagnostics computed and conservative groups reported
+(lines~6--8).  Because no threshold or column set is chosen after inspecting the
+fitted coefficients---the lag itself is selected from response-matrix geometry,
+not from \(\widehat{\mathbf c}\)---the reported identifiability cannot be made
+artificially favorable by post-fit tuning.
+
+\begin{algorithm}[t]
+\caption{Identifiability-Aware Source Apportionment (IASA).}
+\label{alg:iasa}
+\footnotesize
+\textbf{Input:} observations \(Y\) and observed-row mask, sensors
+\(X_{\mathrm{sens}}\), wind observations and masks, inventories
+\(S\in\mathbb R^{q\times K}\), background basis \(Q\), maximum lag \(L\),
+temporal basis \(\Phi\in\mathbb R_+^{T\times B}\), transport response
+\(G^\partial\), thresholds \(\tau_{\mathrm{num}},\tau_\sigma,\tau_\rho,\tau_v\).\\
+\textbf{Output:} source--basis coefficients and activities at the identifiable
+grouping, fitted trajectories/residuals, uncertainty intervals, diagnostics,
+low-visibility flags, and merge recommendations.
+\begin{algsteps}
+  \item \textbf{Predeclare} the primary \(Q\), the physical lag-candidate grid,
+  \(\Phi\), the inventory version, and the fixed-zero mask \(\mathcal F_0\),
+  before inspecting any fit.
+  \item \textbf{Wind:} convert \(WD/WS\) to transport vectors
+  (Eq.~\ref{eq:wind_direction_conversion}), preserving masks/observed values for
+  audit; query the adopted kernel imputer on each response-grid cell for
+  \(\widehat{\mathbf w}_t(\mathbf x_g)\) and convert to grid displacement.
+  \item \textbf{Response \& lag:} over unmasked source--basis pairs build
+  \(\mathbf h_{t,kb}^{\mathrm{lag}}\) (Eq.~\ref{eq:constructed_response}); select
+  the smallest \(L\) with \(\eta_L\le\tau_L\) from geometry alone
+  (Eq.~\ref{eq:lag_convergence}), retaining the full lag sweep.
+  \item \textbf{Align \& project:} apply the observed-PM\(_{2.5}\) selection
+  identically to \(Y,H,Q\) and metadata (Eq.~\ref{eq:observation_selection}) with
+  source-major, basis-minor columns; form \(\widetilde Y,\widetilde H_\Phi\)
+  (Eq.~\ref{eq:projected_model}).
+  \item \textbf{Fit:} solve \(\widehat{\mathbf c}\)
+  (Eq.~\ref{eq:nnls_estimator}) and reconstruct \(\widehat\theta_k\)
+  (Eq.~\ref{eq:reconstructed_activity}).
+  \item \textbf{Diagnose:} compute \(r_{\mathrm{num}}\), the singular values,
+  \(r_{\mathrm{eff}}(\tau_\sigma)\), visibility \(v_j\), absorption \(a_j\),
+  coherence \(\rho_{ij}\), and ray distance \(d^{\mathrm{ray}}_{ij}\).
+  \item \textbf{Flag:} weak set \(\mathcal W=\{j:v_j\le\tau_v\}\); eligible
+  ambiguous pairs \(\mathcal A=\{(i,j):i,j\notin\mathcal W,\rho_{ij}>\tau_\rho\}\).
+  \item \textbf{Group:} take deterministic connected components of the source
+  ambiguity graph as conservative report groups
+  (Sec.~\ref{subsec:source_merging}); weak coefficients are flagged but create no
+  edges, and group activities/contributions are member sums that do not replace
+  the coefficient fit.
+  \item \textbf{Adequacy:} if an externally calibrated noise model exists, run
+  the refitted parametric-bootstrap residual test
+  (Sec.~\ref{subsec:model_adequacy}); otherwise label the residual summary
+  uncalibrated.
+  \item \textbf{Report} source estimates, observation/transport uncertainty,
+  inventory robustness scenarios, residual adequacy, diagnostics, and
+  conservative source groups.
+\end{algsteps}
+\end{algorithm}
 
 This procedure separates two questions: which source activity trajectories best
 fit the projected sensor data, and which source--basis coefficients are

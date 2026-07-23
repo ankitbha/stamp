@@ -42,6 +42,19 @@
 \usepackage{enumitem}
 \usepackage{microtype}
 
+% Compact algorithm float. The AAAI style forbids several packages but not
+% `float`; the standard `algorithm` package is itself only a \newfloat wrapper
+% around `float`, which the container's TeX Live provides, so we reproduce the
+% same ``Algorithm N'' ruled float here and pair it with a tight numbered-step
+% list built from the already-loaded enumitem package.
+\usepackage{float}
+\floatstyle{ruled}
+\newfloat{algorithm}{t}{loa}
+\floatname{algorithm}{Algorithm}
+\newlist{algsteps}{enumerate}{1}
+\setlist[algsteps]{label=\footnotesize\arabic*:,leftmargin=1.9em,
+  itemsep=1pt,topsep=1pt,parsep=0pt}
+
 % Todonotes is useful during development; simply change [disable] to [] to
 % turn comments back on.
 \usepackage[disable,textsize=tiny]{todonotes}
