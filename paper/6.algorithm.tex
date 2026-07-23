@@ -1,65 +1,32 @@
 \section{Identifiability-Aware Apportionment}
 \label{sec:identifiability_aware_method}
 
-We combine the estimator from Section~\ref{sec:wind_conditioned_source_apportionment}
-with the diagnostics from Section~\ref{sec:identifiability_theory}.  The result
-is an identifiability-aware source apportionment procedure, abbreviated IASA,
-that estimates source contributions only at the resolution supported by the
-projected response matrix.
-
-\subsection{Inputs and Outputs}
-\label{subsec:iasa_inputs_outputs}
-
-IASA takes sparse pollution observations and their row mask, sensor locations
-\(X_{\mathrm{sens}}\), wind observations and masks, source
-inventories \(S\in\mathbb R^{q\times K}\), a background basis \(Q\), a maximum
-lag \(L\), a nonnegative temporal basis \(\Phi\in\mathbb R_+^{T\times B}\),
-and an open-boundary transport response \(G^\partial\).  It also uses a
-numerical SVD tolerance \(\tau_{\mathrm{num}}\) and distinct thresholds
-\(\tau_\sigma\), \(\tau_\rho\), and \(\tau_v\) for effective rank, pairwise
-ambiguity, and visibility.
-
-The outputs are source--basis coefficient estimates, reconstructed source
-activities and contribution estimates at the identifiable grouping, fitted
-trajectories and residuals, uncertainty intervals, singular-value, coherence,
-and ray-distance diagnostics, low-visibility flags, and merge recommendations.
-
-The thresholds \(\tau_{\mathrm{num}},\tau_\sigma,\tau_v,\tau_\rho\) (with the
-refinement coherence cap \(\tau_\rho^{\mathrm{ref}}\) and wind-drift cap
-\(\epsilon_w\)) are each predeclared or calibrated from noise or physics and none
-is tuned on source-recovery results; they are summarized in
-Appendix~\ref{app:reporting_details} (Table~\ref{tab:thresholds}).
-
-\subsection{Procedure}
-\label{subsec:iasa_procedure}
-
-Algorithm~\ref{alg:iasa} states the procedure.  Its step order enforces the
-method's central discipline of separating fit from diagnosis: all model choices,
-thresholds, and the fixed-zero mask are predeclared (line~1), the response is
-built, projected, and fitted (lines~2--5), and only afterwards are the
-identifiability diagnostics computed and conservative groups reported
-(lines~6--8).  Because no threshold or column set is chosen after inspecting the
-fitted coefficients (the lag itself is selected from response-matrix geometry,
-not from \(\widehat{\mathbf c}\)), the reported identifiability cannot be made
-artificially favorable by post-fit tuning.
+We combine the estimator of
+Section~\ref{sec:wind_conditioned_source_apportionment} with the diagnostics of
+Section~\ref{sec:identifiability_theory} into an identifiability-aware source
+apportionment procedure (IASA) that estimates source contributions only at the
+resolution supported by the projected response matrix.  It takes the sparse
+observations and their row mask, sensors \(X_{\mathrm{sens}}\), wind observations
+and masks, inventories \(S\in\mathbb R^{q\times K}\), background basis \(Q\),
+maximum lag \(L\), temporal basis \(\Phi\in\mathbb R_+^{T\times B}\), and transport
+response \(G^\partial\), with distinct thresholds
+\(\tau_{\mathrm{num}},\tau_\sigma,\tau_\rho,\tau_v\) (and the refinement cap
+\(\tau_\rho^{\mathrm{ref}}\) and wind-drift cap \(\epsilon_w\)) each predeclared or
+calibrated from noise or physics and none tuned on source recovery
+(Appendix~\ref{app:reporting_details}, Table~\ref{tab:thresholds}); it returns
+source--basis coefficients and activities at the identifiable grouping, fitted
+trajectories and residuals, uncertainty intervals, diagnostics, low-visibility
+flags, and merge recommendations.  Algorithm~\ref{alg:iasa} states the procedure.
 
 \begin{algorithm}[t]
-\caption{Identifiability-Aware Source Apportionment (IASA).}
+\caption{Identifiability-Aware Source Apportionment}
 \label{alg:iasa}
 \footnotesize
-\textbf{Input:} observations \(Y\) and observed-row mask, sensors
-\(X_{\mathrm{sens}}\), wind observations and masks, inventories
-\(S\in\mathbb R^{q\times K}\), background basis \(Q\), maximum lag \(L\),
-temporal basis \(\Phi\in\mathbb R_+^{T\times B}\), transport response
-\(G^\partial\), thresholds \(\tau_{\mathrm{num}},\tau_\sigma,\tau_\rho,\tau_v\).\\
-\textbf{Output:} source--basis coefficients and activities at the identifiable
-grouping, fitted trajectories/residuals, uncertainty intervals, diagnostics,
-low-visibility flags, and merge recommendations.
 \begin{algsteps}
   \item \textbf{Predeclare} the primary \(Q\), the physical lag-candidate grid,
   \(\Phi\), the inventory version, and the fixed-zero mask \(\mathcal F_0\),
   before inspecting any fit.
-  \item \textbf{Wind:} convert \(WD/WS\) to transport vectors
+  \item \textbf{Wind:} convert \(\mathit{WD}/\mathit{WS}\) to transport vectors
   (Eq.~\ref{eq:wind_direction_conversion}), preserving masks/observed values for
   audit; query the adopted kernel imputer on each response-grid cell for
   \(\widehat{\mathbf w}_t(\mathbf x_g)\) and convert to grid displacement.
@@ -72,8 +39,8 @@ low-visibility flags, and merge recommendations.
   source-major, basis-minor columns; form \(\widetilde Y,\widetilde H_\Phi\)
   (Eq.~\ref{eq:projected_model}).
   \item \textbf{Fit:} solve \(\widehat{\mathbf c}\)
-  (Eq.~\ref{eq:nnls_estimator}) and reconstruct \(\widehat\theta_k\)
-  (Eq.~\ref{eq:reconstructed_activity}).
+  (Eq.~\ref{eq:nnls_estimator}) and reconstruct
+  \(\widehat\theta_k(t)=\sum_b\widehat c_{kb}\phi_b(t)\).
   \item \textbf{Diagnose:} compute \(r_{\mathrm{num}}\), the singular values,
   \(r_{\mathrm{eff}}(\tau_\sigma)\), visibility \(v_j\), absorption \(a_j\),
   coherence \(\rho_{ij}\), and ray distance \(d^{\mathrm{ray}}_{ij}\).
@@ -81,12 +48,12 @@ low-visibility flags, and merge recommendations.
   ambiguous pairs \(\mathcal A=\{(i,j):i,j\notin\mathcal W,\rho_{ij}>\tau_\rho\}\).
   \item \textbf{Group:} take deterministic connected components of the source
   ambiguity graph as conservative report groups
-  (Sec.~\ref{subsec:source_merging}); weak coefficients are flagged but create no
+  (Sec.~\ref{sec:identifiability_theory}); weak coefficients are flagged but create no
   edges, and group activities/contributions are member sums that do not replace
   the coefficient fit.
   \item \textbf{Adequacy:} if an externally calibrated noise model exists, run
   the refitted parametric-bootstrap residual test
-  (Sec.~\ref{subsec:model_adequacy}); otherwise label the residual summary
+  (Sec.~\ref{sec:identifiability_aware_method}); otherwise label the residual summary
   uncalibrated.
   \item \textbf{Report} source estimates, observation/transport uncertainty,
   inventory robustness scenarios, residual adequacy, diagnostics, and
@@ -94,55 +61,36 @@ low-visibility flags, and merge recommendations.
 \end{algsteps}
 \end{algorithm}
 
-This procedure separates two questions: which source activity trajectories best
-fit the projected sensor data, and which source--basis coefficients are
-supported by the geometry of \(\widetilde H_\Phi\).
+The step order enforces the method's central discipline of separating fit from
+diagnosis: all model choices, thresholds, and the fixed-zero mask are predeclared
+(line~1), the response is built, projected, and fitted (lines~2--5), and only
+afterwards are the identifiability diagnostics computed and conservative groups
+reported (lines~6--8).  Because no threshold or column set is chosen after
+inspecting the fitted coefficients (the lag itself is selected from response-matrix
+geometry, not from \(\widehat{\mathbf c}\)), the reported identifiability cannot be
+made artificially favorable by post-fit tuning.  The objective in
+Equation~\ref{eq:nnls_estimator} is a smooth convex quadratic under a simple
+nonnegativity constraint, solved with projected FISTA \citep{beck2009fast}
+(Appendix~\ref{app:pytorch_solver}).
 
-The objective in Equation~\ref{eq:nnls_estimator} is a smooth convex quadratic
-under a simple nonnegativity constraint, so we solve it with projected FISTA
-\citep{beck2009fast}: an accelerated proximal-gradient method whose proximal step
-for the indicator of \(\{\mathbf c\ge0\}\) is the clamp
-\(\mathbf c\leftarrow\max(\mathbf c,0)\).  Each gradient step uses a Lipschitz
-step size derived from the largest singular value, with monotone restart, and
-convergence is checked on the projected-gradient/KKT residual and the relative
-objective change.  Device, dtype, convergence status, iteration count,
-    and the final KKT residual are part of the fit record.  Transport-ensemble
-    and bootstrap refits are batched on the same device when their shapes agree.
-
-\subsection{Model Adequacy, Uncertainty, and Reporting}
-\label{subsec:model_adequacy}
-
+\noindent\textbf{Model Adequacy, Uncertainty, and Reporting.}
 IASA attaches uncertainty to reported contributions from an active-set/ridge
 covariance of the fitted coefficients and, when transport ensembles are supplied,
-from empirical quantiles across ensemble refits; transport uncertainty
-(\texttt{ensemble\_kind=transport}) and inventory-robustness scenarios
-(\texttt{ensemble\_kind=inventory}) are never pooled into one interval
-(Appendix~\ref{app:reporting_details}).
-
-Residual magnitude alone is not calibrated evidence of misspecification.  When an
-externally calibrated observation-noise model \(\Sigma_e\) is available, IASA
-computes a background-orthogonal residual statistic \(T_{\mathrm{res}}\) whose
-null distribution (not a plain \(\chi^2\), since \(\widehat{\mathbf c}\) is
-fitted from the same data) is calibrated by a parametric bootstrap
-(\(B_{\mathrm{res}}=1000\) refits, \(\alpha=0.05\);
-Appendix~\ref{app:reporting_details}).  The test is one-sided: a rejection
-establishes a mismatch with the declared model but not its cause, whereas a
-non-rejection does not establish inventory completeness: an omitted source whose
-signature lies in \(\operatorname{span}[H_\Phi^{\mathrm{lag}},Q]\) is absorbed by
-fitted terms and stays residual-invisible.  If no calibrated noise model is
-supplied, IASA reports raw and projected residual summaries with
-\texttt{calibration\_status=uncalibrated} and emits no pass/fail claim.
-Prospective network adequacy over a distribution of historical or simulated wind
-windows, and acceptance criteria for the optional refinement, are described in
-Appendix~\ref{app:reporting_details}.
-
-For each reported source group, IASA returns the group activity trajectory, its
-uncertainty interval, member visibilities, and the maximum eligible coherence
-with other groups; a contribution is marked reliable only when its coefficients
-are above the visibility threshold, its interval is sufficiently narrow, and its
-eligible coherence is below the ambiguity threshold, and is otherwise labeled
-weakly visible, ambiguous, or merged into a coarser group.  It additionally
-reports the per-sensor contribution decomposition and source footprints of
-Section~\ref{subsec:per_sensor_footprints} as spatial overlays of the same global
-fit, aggregated to the identifiable report groups wherever the pooled diagnostics
-require grouping.
+from empirical quantiles across ensemble refits; transport uncertainty and
+inventory-robustness scenarios are never pooled into one interval.  Residual
+magnitude alone is not calibrated evidence of misspecification: when an externally
+calibrated observation-noise model is available, IASA computes a
+background-orthogonal residual statistic whose null distribution (not a plain
+\(\chi^2\), since \(\widehat{\mathbf c}\) is fitted from the same data) is
+calibrated by a parametric bootstrap (\(1000\) refits, \(\alpha=0.05\)); otherwise
+it reports raw and projected residual summaries with
+\texttt{calibration\_status=uncalibrated} and emits no pass/fail claim.  The test
+is one-sided: a rejection establishes a mismatch with the declared model but not
+its cause, whereas a non-rejection does not establish inventory completeness, since
+an omitted source whose signature lies in
+\(\operatorname{span}[H_\Phi^{\mathrm{lag}},Q]\) is absorbed by fitted terms and
+stays residual-invisible.  Prospective network adequacy over historical or
+simulated wind windows, per-group reliability labeling, the per-sensor
+contribution decomposition and footprints of
+Section~\ref{sec:identifiability_theory}, and acceptance criteria for the
+optional refinement are detailed in Appendix~\ref{app:reporting_details}.

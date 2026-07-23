@@ -1,46 +1,20 @@
 \section{Discussion and Conclusion}
 \label{sec:discussion_conclusion}
 
-We framed sparse-sensor source apportionment as an identifiable-resolution
-problem: known or proxy inventories restrict the source space and make attribution
-meaningful, but they do not guarantee that source groups are separable from sparse
-observations.  Separability is governed by the projected lagged source--basis
-response matrix \(\widetilde H_\Phi=P_Q^\perp H_{\Phi}^{\mathrm{lag}}\in\mathbb
-R^{N\times J}\) (\(J=KB\)): exact identifiability at the selected temporal-basis
-resolution requires \(\operatorname{rank}(\widetilde H_\Phi)=J\), while robust
-attribution depends on its singular values, effective rank, coefficient
-visibility, background absorption, pairwise coherence, ray distance, and
-perturbation sensitivity.  Because a model can fit sensor trajectories while
-producing non-unique coefficient estimates, prediction accuracy alone is not
-evidence of identifiability.  IASA therefore reports a conservative grouping
-supported by the sensing system, estimating source contributions where the data
-support them and coarsening or qualifying attribution (deterministic connected
-report groups, weak-coefficient flags, retained trigger pairs) where the projected
-response does not.  The same view guides design: sensors, wind diversity, and
-background choices should be judged by whether they improve the visibility,
-conditioning, and coherence of coefficient fingerprints, not merely spatial
-coverage.
-
-Several limitations bound these claims.  The theory is linear in source--basis
-coefficients conditional on fixed wind, transport, temporal basis, inventory, and
-background; the selected temporal basis limits recoverable activity patterns
-(modeling traffic as one spatial map with diurnal components assumes a
-time-invariant congestion pattern); missing source categories may be absorbed into
-available inventories or background, a misspecification risk rather than
-identifiable attribution; a calibrated residual bootstrap can reject an inadequate
-model but cannot prove inventory completeness, especially when an omitted signature
-lies in the span of the fitted response and background; transport ensembles
-quantify uncertainty under their sampling model whereas alternative inventories are
-separate robustness scenarios that must not be pooled into intervals; and the
-gridded wind field is only as reliable as the sparse station network and its
-held-out validation.  Extending the open-boundary puff response with richer
-meteorology, vertical mixing, deposition, chemistry, and boundary inflow,
-augmenting the per-sensor footprints of Section~\ref{subsec:per_sensor_footprints} with explicit spatial
-diagnostics, and jointly estimating temporal basis, transport, and inventory under
-identifiability control are natural next steps.  By separating fitting the sensor
-signal from determining which source claims the sensing system supports, the
-identifiability view provides a concrete basis for more reliable policy-facing
-apportionment.
+We framed sparse-sensor apportionment as an identifiable-resolution problem:
+inventories make attribution meaningful but need not make source groups separable.
+Separability is governed by the projected response matrix \(\widetilde H_\Phi\);
+exact identifiability requires \(\operatorname{rank}(\widetilde H_\Phi)=J\) and
+robust attribution its singular values, visibility, absorption, and coherence, so
+prediction accuracy alone is not evidence of identifiability.  IASA reports
+contributions only where this geometry supports them and qualifies them otherwise,
+and judges sensor, wind, and background design by fingerprint conditioning and
+coherence, not coverage.  All claims are conditional on the
+declared wind, transport, basis, inventory, and background: the basis bounds
+recoverable activity, aligned omitted sources stay residual-invisible, and
+transport uncertainty (intervals) stays separate from inventory scenarios
+(unpooled).  Richer meteorology, spatial diagnostics, and joint basis, transport,
+and inventory estimation are natural next steps.
 
 % ANONYMIZED FOR DOUBLE-BLIND SUBMISSION.
 % The acknowledgements name the authors and grant numbers, which would

@@ -1,4 +1,4 @@
-\section{Problem Setup: Sparse Sensors, Wind, and Source Apportionment}
+\section{Problem Setup}
 \label{sec:problem_setup}
 
 We formalize source apportionment as a finite-dimensional inverse problem in
@@ -7,18 +7,15 @@ a wind-conditioned lagged operator, defining the observation model, inventory
 parameterization, background correction, and projected response matrix used
 throughout.
 
-\paragraph{City-scale transport model.}
-Let \(u(\mathbf x,t)\in \mathbb R\) denote the pollutant concentration field on
-\(\Omega\subset \mathbb R^d\).  A generic continuous-time model is
-\(\partial u/\partial t
-= \mathcal F_\eta(u,\mathbf x,t;w(t)) + s(\mathbf x,t)+b(\mathbf x,t)\),
-where \(w(t)\) is the meteorological state, \(s\) is local source emission,
-\(b\) is background or regional pollution, and \(\eta\) denotes transport and
-dispersion parameters.  The exact dynamics may be approximated by a plume
-model, an advection--diffusion solver, or a learned surrogate constrained by
-transport structure.
+\noindent\textbf{City-scale transport model.}
+Let \(u(\mathbf x,t)\) be the pollutant concentration field on
+\(\Omega\subset \mathbb R^d\), evolving as \(\partial u/\partial t
+= \mathcal F_\eta(u,\mathbf x,t;w(t)) + s(\mathbf x,t)+b(\mathbf x,t)\) under
+meteorological state \(w(t)\), local emission \(s\), background \(b\), and
+transport/dispersion parameters \(\eta\); the dynamics may be realized by a plume
+model, an advection--diffusion solver, or a transport-constrained surrogate.
 
-\paragraph{Sparse observations.}
+\noindent\textbf{Sparse observations.}
 Discretize the concentration field on \(n\) grid cells, so that
 \(\mathbf u_t\in \mathbb R^n\).  Let
 \(X_{\mathrm{sens}}=\{\mathbf x_1,\ldots,\mathbf x_m\}\) be the fixed sensor
@@ -30,34 +27,30 @@ these locations, \(\mathbf y_t = O\mathbf u_t + \boldsymbol\epsilon_t\) with
 Because \(m\) is small relative to the field dimension, many latent fields and
 source configurations can be consistent with the same sensor~trajectory.
 
-\paragraph{Inventory-based source parameterization.}
+\noindent\textbf{Inventory-based source parameterization.}
 We assume a set of \(K\) known or proxy source maps,
 \(S = [\mathbf s_1\;\mathbf s_2\;\cdots\;\mathbf s_K]\in \mathbb R^{q\times K}\),
 where \(\mathbf s_k\in\mathbb R^q\) is the spatial pattern of source group
-\(k\).  The source grid dimension \(q\) may differ from the concentration-grid
-dimension \(n\).  We represent time-varying source activity with a fixed,
-predeclared nonnegative temporal dictionary
+\(k\) (the source grid dimension \(q\) may differ from \(n\)).  Time-varying
+source activity uses a fixed, predeclared nonnegative temporal dictionary
 \(\Phi=[\boldsymbol\phi_1\;\cdots\;\boldsymbol\phi_B]\in\mathbb R_+^{T\times B}\)
 and coefficients \(C=[c_{kb}]\in\mathbb R_+^{K\times B}\).
 The activity of source \(k\) at time \(t\) is
 \(\theta_k(t)=\sum_{b=1}^{B}c_{kb}\phi_b(t)\ge0\).
-The basis \(\Phi\) is shared as a dictionary of admissible temporal patterns,
-not as a claim that all sources follow the same activity trajectory: each source
-has its own nonnegative mixture weights \(c_{kb}\).  In applications, these
-basis functions may encode predeclared calendar, diurnal, seasonal, regulatory,
-or inventory-derived activity patterns, and source-specific prior knowledge can
-be imposed by masking inadmissible source--basis coefficients.  We do not learn
-\(\Phi\) from the same sparse concentration observations used for apportionment;
-jointly estimating both \(\Phi\) and \(C\) would introduce additional bilinear
-non-identifiability beyond the source distinguishability analyzed here.
-The activity bases used for source emissions are nonnegative; signed temporal
-harmonics, when used, belong to the separate background basis \(Q\).  We
-vectorize \(C\) in source-major, basis-minor order as
-\(\mathbf c=\operatorname{vec}_{\mathrm{src}}(C)\in\mathbb R_+^J\), where
-\(J=KB\).  The constant source activity model is the special case \(B=1\),
-\(\phi_1(t)=1\), and \(c_{k1}=\theta_k\).
+The basis \(\Phi\) is a shared dictionary of admissible temporal patterns
+(calendar, diurnal, seasonal, regulatory, or inventory-derived), not a claim that
+all sources follow one trajectory: each source has its own nonnegative weights
+\(c_{kb}\), and source-specific prior knowledge is imposed by masking inadmissible
+coefficients.  We do not learn \(\Phi\) from the same sparse observations used for
+apportionment, since jointly estimating \(\Phi\) and \(C\) would add bilinear
+non-identifiability beyond the source distinguishability analyzed here.  Activity
+bases are nonnegative; signed temporal harmonics belong to the separate background
+basis \(Q\).  We vectorize \(C\) in source-major, basis-minor order as
+\(\mathbf c=\operatorname{vec}_{\mathrm{src}}(C)\in\mathbb R_+^J\), \(J=KB\); the
+constant-activity model is the special case \(B=1\), \(\phi_1(t)=1\),
+\(c_{k1}=\theta_k\).
 
-\paragraph{Lagged wind-conditioned response.}
+\noindent\textbf{Lagged wind-conditioned response.}
 Emissions released at time \(t-\ell\) may affect sensors at time \(t\) only
 after being transported by the intervening wind field.  Let
 \(G_{t,t-\ell}^{\partial}(w_{t-\ell:t})\in \mathbb R^{n\times q}\)
@@ -84,12 +77,10 @@ finite-horizon unit-coefficient sensor fingerprint, the sensor-time pattern
 produced by one unit of coefficient \(c_{kb}\).  When \(B=1\), these columns
 reduce to the fingerprints of the constant-activity model.
 
-The lag window changes these fingerprints and the release times contributing to
-each observation; it does not add sensor--time observations or change the row
-count.  We choose it before fitting source coefficients.  Physical travel-time
-and residence-time bounds define an increasing candidate grid
-\(\mathcal L_{\mathrm{cand}}\).  For adjacent candidates \(L\) and
-\(L+\Delta\), with the same observed rows and columns, define
+The lag window changes these fingerprints and the contributing release times but
+adds no sensor--time rows.  It is chosen before fitting: physical travel- and
+residence-time bounds define an increasing candidate grid, and for adjacent
+candidates \(L\) and \(L+\Delta\) with the same rows and columns we set
 \begin{equation}
 \eta_L=
 \frac{\|H_{\Phi}^{\mathrm{lag}}(L+\Delta)
@@ -97,18 +88,15 @@ and residence-time bounds define an increasing candidate grid
 {\max\{\|H_{\Phi}^{\mathrm{lag}}(L+\Delta)\|_F,\epsilon\}},
 \label{eq:lag_convergence}
 \end{equation}
-where the subscript \(F\) is the Frobenius norm
-\(\|A\|_F = (\sum_{i,j} A_{ij}^2)^{1/2}\).
-The primary lag is the smallest candidate with \(\eta_L\le\tau_L\), using
-\(\tau_L=10^{-3}\) by default.  Rank, conditioning, and ambiguity components
-are also reported across the candidate grid.  The fitted value of
+with \(\|\cdot\|_F\) the Frobenius norm.  The primary lag is the smallest
+candidate with \(\eta_L\le\tau_L\) (default \(\tau_L=10^{-3}\)); the fitted
 \(\mathbf c\) is never used to select \(L\).
 
-\paragraph{Background and temporal correction.}
-Observed concentrations include components not explained by the local source
-inventory, including regional background, smooth temporal trends, and
-sensor-specific offsets.  We represent these components with a low-dimensional
-basis \(Q\in \mathbb R^{mT\times r}\), \(\boldsymbol\gamma\in \mathbb R^r\), and write
+\noindent\textbf{Background and temporal correction.}
+Observed concentrations include components not explained by the local inventory:
+regional background, smooth temporal trends, and sensor-specific offsets.  We
+represent these with a low-dimensional basis \(Q\in \mathbb R^{mT\times r}\),
+\(\boldsymbol\gamma\in \mathbb R^r\), and write
 \begin{equation}
 Y = H_{\Phi}^{\mathrm{lag}}\mathbf c + Q\boldsymbol\gamma + E.
 \label{eq:model_with_background}
@@ -127,9 +115,9 @@ H_{\Phi,\mathcal O}^{\mathrm{lag}}
 Q_{\mathcal O}=M_{\mathcal O}Q.
 \label{eq:observation_selection}
 \end{equation}
-Row metadata are filtered by the same ordered index set; an alignment mismatch
-is an error rather than an invitation to reorder silently.  Wind may be
-imputed, but missing PM\(_{2.5}\) values are not.  For complete controlled
+Row metadata are filtered by the same ordered index set, and an alignment
+mismatch is an error rather than a silent reordering.  Wind may be imputed, missing
+PM\(_{2.5}\) values are not.  For complete controlled
 observations, \(M_{\mathcal O}=I\) and \(N=mT\).  Below we drop the
 \(\mathcal O\) subscript and use \(Y\in\mathbb R^N\),
 \(H_{\Phi}^{\mathrm{lag}}\in\mathbb R^{N\times J}\), and
@@ -150,15 +138,14 @@ All identifiability diagnostics in this paper are computed from
 \(\widetilde H_\Phi\), not from the raw inventory matrix or the
 \mbox{unprojected response}.
 
-\paragraph{Projected source--basis fingerprints.}
+\noindent\textbf{Projected source--basis fingerprints.}
 Writing
 \(H_{\Phi}^{\mathrm{lag}}
 =[\mathbf h_{11}^{\mathrm{lag}}\;\cdots\;\mathbf h_{KB}^{\mathrm{lag}}]\) and
 \(\widetilde H_\Phi
 =[\widetilde{\mathbf h}_{11}\;\cdots\;\widetilde{\mathbf h}_{KB}]\),
 we have \(\widetilde{\mathbf h}_{kb}=P_Q^\perp\mathbf h_{kb}^{\mathrm{lag}}\).
-These projected fingerprints encode the observable effect of each temporal
-component of each source after wind transport, lag, sparse sensing, and
-background correction.  Source apportionment at the chosen temporal-basis
-resolution is well posed only to the extent that these coefficient fingerprints
-are visible and separable.
+Each encodes the observable effect of one source--basis coefficient after wind
+transport, lag, sparse sensing, and background correction; apportionment at the
+chosen resolution is well posed only to the extent that these fingerprints are
+visible and separable.

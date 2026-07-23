@@ -2,29 +2,19 @@
 \label{sec:identifiability_theory}
 
 We now characterize when source activity at a chosen temporal-basis resolution
-is determined by the projected observations.  Throughout this section
+is determined by the projected observations.  Throughout,
 \(\widetilde Y=\widetilde H_\Phi\mathbf c+\widetilde E\) with
-\(\widetilde H_\Phi=P_Q^\perp H_{\Phi}^{\mathrm{lag}}\in\mathbb R^{N\times J}\)
-and \(J=KB\).
-The analysis is conditional on the constructed wind field, transport operator,
-source inventories, temporal basis, lag window, and background basis.  We use
-the flattened coefficient index \(j=(k,b)\); ``source fingerprint'' without a
-basis qualifier refers only to the constant-activity case \(B=1\).
-
-\subsection{Exact Identifiability}
-\label{subsec:exact_identifiability}
+\(\widetilde H_\Phi=P_Q^\perp H_{\Phi}^{\mathrm{lag}}\in\mathbb R^{N\times J}\),
+\(J=KB\), conditional on the constructed wind field, transport operator,
+inventories, temporal basis, lag window, and background basis.  We use the
+flattened coefficient index \(j=(k,b)\).
 
 \begin{definition}[Exact identifiability]
 The source--basis coefficient vector is identifiable from \(\widetilde Y\) if
 \(\widetilde H_\Phi\mathbf c_1=\widetilde H_\Phi\mathbf c_2\Longrightarrow
-\mathbf c_1=\mathbf c_2\).
-This is identifiability of the reconstructed source activity trajectories at
-the selected temporal-basis resolution.
+\mathbf c_1=\mathbf c_2\); this is identifiability of the reconstructed source
+activity trajectories at the selected temporal-basis resolution.
 \end{definition}
-
-Here \(\mathbb R_+^J=\{\mathbf c\in\mathbb R^J:c_j\ge0\text{ for all }j\}\) is the
-nonnegative orthant, i.e.\ the feasible set of nonnegative source--basis
-coefficient vectors.
 
 \begin{proposition}[Identifiability of inventory-based apportionment]
 \label{prop:rank_identifiability}
@@ -37,24 +27,20 @@ In the noiseless projected model \(\widetilde Y=\widetilde H_\Phi\mathbf c\),
 \end{equation}
 \end{proposition}
 
-The proof (rank-nullity in both directions, with a nonnegative-feasible
+The proof (rank--nullity in both directions, with a nonnegative-feasible
 counterexample when the rank is deficient) is given in
 Appendix~\ref{app:identifiability_proofs}.  We use this full-column-rank
 condition as our identifiability criterion for the declared source--basis
 coefficient set.  Coefficients fixed to zero by scientific knowledge are masked
 before fitting; the theorem and all diagnostics then apply to the reduced,
-predeclared column set.  A near-zero fitted estimate does not justify deleting
-its column after fitting or recomputing diagnostics on a more favorable response
-matrix.  Rank deficiency may arise from spatial source ambiguity, dependence
-among temporal modes, or their interaction.
+predeclared column set, and a near-zero fitted estimate never justifies deleting
+its column after fitting.  Rank deficiency may arise from spatial source
+ambiguity, dependence among temporal modes, or their interaction.
 
-\subsection{Noise-Robust Identifiability}
-\label{subsec:noise_robust_identifiability}
-
+\noindent\textbf{Noise-Robust Identifiability.}
 Let \(\sigma_1(\widetilde H_\Phi)\ge\cdots\ge
-\sigma_J(\widetilde H_\Phi)\ge0\) be the square roots of the eigenvalues of
-\(\widetilde H_\Phi^\top\widetilde H_\Phi\), including zeros when
-\(J>N\) or the matrix is rank deficient.  Even with full rank, small singular
+\sigma_J(\widetilde H_\Phi)\ge0\) be the singular values, padded with zeros when
+\(J>N\) or the matrix is rank deficient.  Even at full rank, small singular
 values amplify noise.
 
 \begin{proposition}[Noise-robust apportionment]
@@ -77,166 +63,77 @@ If \(\widehat{\mathbf c}\) is the nonnegative least-squares estimate and
 
 Both bounds follow from the pseudoinverse identity
 \(\|\widetilde H_\Phi^\dagger\|_2=1/\sigma_J(\widetilde H_\Phi)\) together with
-feasibility of the true \(\mathbf c\) in the nonnegative program; the derivation
-is in Appendix~\ref{app:identifiability_proofs}.
-Thus \(\sigma_J(\widetilde H_\Phi)\) measures worst-case robustness: source
+feasibility of the true \(\mathbf c\) in the nonnegative program
+(Appendix~\ref{app:identifiability_proofs}).  Thus
+\(\sigma_J(\widetilde H_\Phi)\) measures worst-case robustness: source
 apportionment can be exactly identifiable but practically unstable when this
 quantity is small.
 
-\subsection{Identifiability Diagnostics}
-\label{subsec:identifiability_diagnostics}
-
-For floating-point computation, the default numerical rank tolerance is
-\(\tau_{\mathrm{num}}=\max(N,J)\,\epsilon_{\mathrm{mach}}\,\sigma_1\) with
-numerical rank \(r_{\mathrm{num}}=\#\{i:\sigma_i>\tau_{\mathrm{num}}\}\),
-where \(\epsilon_{\mathrm{mach}}\) is the machine precision of the SVD dtype
-(about \(2.2\times10^{-16}\) in double precision).  This
-\(\tau_{\mathrm{num}}\) is a purely numerical tolerance for detecting exact rank
-deficiency; it is distinct from the scientific, noise-dependent threshold
-\(\tau_\sigma\) introduced below.  The primary identifiability score is the
-\emph{padded minimum singular value} \(\sigma_J(\widetilde H_\Phi)\), where the
-singular spectrum is padded with zeros whenever \(J>N\) or
-\(\widetilde H_\Phi\) is rank deficient.  A rank-deficient response therefore
-scores zero and is never reported as stable.
-The condition number is \(\kappa(\widetilde H_\Phi)=\sigma_1/\sigma_J\) when
-\(r_{\mathrm{num}}=J\) and \(\infty\) when \(r_{\mathrm{num}}<J\).
-The smallest numerically positive value may additionally be reported as
-\(\sigma_{\min,+}\), but it is not the identifiability score and never turns a
-rank-deficient matrix into a stable one.  For a separately chosen,
-noise-dependent threshold \(\tau_\sigma\), the effective rank is
-\(r_{\mathrm{eff}}(\tau_\sigma)
-=\#\{i:\sigma_i(\widetilde H_\Phi)>\tau_\sigma\}\).
-Unlike \(\tau_{\mathrm{num}}\), the threshold \(\tau_\sigma\) is set from the
-observation-noise scale, not from machine precision.  Given a per-row noise
-standard deviation \(\sigma_e\) (from sensor calibration or a bootstrap residual
-estimate), a singular direction is only resolvable when its singular value
-exceeds the level at which iid noise projects onto it; a workable predeclared
-default is \(\tau_\sigma=\sigma_e\sqrt{N}\).  It is recorded independently of
-\(\tau_{\mathrm{num}}\) and is not tuned on source-recovery results.  If
-\(r_{\mathrm{eff}}(\tau_\sigma)<J\), the sensor network does not support reliable
-estimation of all \(J\) source--basis coefficients at that noise level.
-
-For coefficient-specific diagnostics, let \(\widetilde{\mathbf h}_j\),
-\(j=(k,b)\), be a projected source--basis fingerprint.  Its visibility and the
-weak set at threshold \(\tau_v\ge0\) are
-\(v_j=\|\widetilde{\mathbf h}_j\|_2\) and
-\(\mathcal W=\{j:v_j\le\tau_v\}\).
-A weak coefficient has little measurable effect after transport and background
-correction: \(v_j\) is the sensor-time magnitude produced by one unit of
-coefficient \(c_j\), and \(\tau_v\) marks fingerprints below the minimum
-detectable signal.  A practical predeclared rule sets \(\tau_v\) from the noise
-scale and a target signal-to-noise ratio, e.g.\ \(\tau_v=\mathrm{SNR}_{\min}\,
-\sigma_e\), so a unit coefficient is flagged weak when even its full response is
-indistinguishable from noise.  For eligible indices \(i,j\notin\mathcal W\),
-pairwise ambiguity is measured by projected fingerprint coherence
+\noindent\textbf{Identifiability Diagnostics.}
+Beyond exact rank, IASA reports a fixed panel of diagnostics computed from
+\(\widetilde H_\Phi\), each with a predeclared, noise- or physics-derived
+threshold that is never tuned on source recovery (full definitions in
+Appendix~\ref{app:diagnostics_definitions}, threshold values in
+Table~\ref{tab:thresholds}, and a summary in Table~\ref{tab:diagnostics}).  The
+\emph{padded minimum singular value} \(\sigma_J\) is the primary score: a
+rank-deficient response is padded to zero and never reported as stable, and the
+condition number is \(\kappa=\sigma_1/\sigma_J\).  The \emph{effective rank}
+\(r_{\mathrm{eff}}(\tau_\sigma)\) counts directions resolvable above the
+observation-noise level \(\tau_\sigma\); when it is below \(J\) the network
+cannot support all \(J\) coefficients at that noise level.  \emph{Coefficient
+visibility} \(v_j=\|\widetilde{\mathbf h}_j\|_2\) is the post-projection
+fingerprint magnitude, and the weak set \(\mathcal W=\{j:v_j\le\tau_v\}\) flags
+coefficients below the minimum detectable signal.  For eligible (nonweak) pairs,
+\emph{pairwise coherence}
 \(\rho_{ij}=|\widetilde{\mathbf h}_i^\top\widetilde{\mathbf h}_j|/
-(\|\widetilde{\mathbf h}_i\|_2\|\widetilde{\mathbf h}_j\|_2)\).
-Values near one indicate nearly proportional sensor-time signatures.  The
-ambiguous-pair set is
-\(\mathcal A=\{(i,j):i,j\notin\mathcal W,\ \rho_{ij}>\tau_\rho\}\),
-\(\tau_\rho\in[0,1]\).  The threshold \(\tau_\rho\) is predeclared or calibrated
-on controlled experiments, not optimized after inspecting source recovery; a
-conservative default takes \(\tau_\rho\) close to one so that only
-near-proportional fingerprints are merged.  Coherence and ray distance are
-reported only for eligible (nonweak) pairs; entries involving a weak fingerprint
-are shown as ``N/A'' and excluded from extrema, while the weak-visibility flag
-is always reported.
+(\|\widetilde{\mathbf h}_i\|_2\|\widetilde{\mathbf h}_j\|_2)\) measures
+near-proportional signatures, giving the ambiguous-pair set
+\(\mathcal A=\{(i,j):i,j\notin\mathcal W,\ \rho_{ij}>\tau_\rho\}\); an equivalent
+scale-invariant ray distance \(\sqrt{1-\rho_{ij}^2}\) encodes the same geometry.
+\emph{Background absorption}
+\(a_j=\|P_Q\mathbf h_j^{\mathrm{lag}}\|_2/\|\mathbf h_j^{\mathrm{lag}}\|_2\) is the
+source-signal fraction lying in the background space, which is why
+identifiability is assessed after projection.  Finally, response error, whether
+from transport or inventory, acts like additional observation error: it inflates
+the \(\sigma_J\) bound and is most damaging when \(\widetilde H_\Phi\) is already
+ill-conditioned, with transport error propagated into uncertainty intervals and
+inventory error reported only as named robustness scenarios
+(Appendix~\ref{app:operator_error_details}).
 
-To express the same scale-invariant geometry as a distance, we also report the
-ray distance for eligible, generally signed projected fingerprints,
-\(d^{\mathrm{ray}}_{ij}
-=\min_{\alpha\in\mathbb R}
-\|\widetilde{\mathbf h}_i-\alpha\widetilde{\mathbf h}_j\|_2/
-\|\widetilde{\mathbf h}_i\|_2\).
-For nonweak fingerprints,
-\begin{equation}
-d^{\mathrm{ray}}_{ij}=\sqrt{1-\rho_{ij}^2},
-\label{eq:ray_distance_coherence_relation}
-\end{equation}
-which we derive in Appendix~\ref{app:identifiability_proofs}; numerical
-implementations evaluate \(\sqrt{\max(0,1-\rho_{ij}^2)}\).  This is an unoriented
-linear-ray diagnostic, not a claim that projected fingerprints are nonnegative.
-High coherence and small ray distance encode the same pairwise geometry, so ray
-distance is a diagnostic geometrically equivalent to coherence under this
-normalization, not an independent identifiability criterion.  Like coherence, it
-is ``N/A'' for pairs involving \(\mathcal W\) and excluded from distance extrema.
-
-\paragraph{Background absorption.}\label{subsec:background_absorption}
-Background correction can improve robustness by removing broad temporal
-variation, but it can also remove source-driven signal.  Let \(P_Q=QQ^\dagger\).
-For coefficient fingerprint \(j=(k,b)\), define the background absorption
-fraction \(a_j=\|P_Q\mathbf h_j^{\mathrm{lag}}\|_2/\|\mathbf h_j^{\mathrm{lag}}\|_2\).
-If \(\|\mathbf h_j^{\mathrm{lag}}\|_2\) is zero at numerical tolerance,
-\(a_j\) is undefined and reported as N/A; the coefficient remains explicitly
-weak.
-If \(a_j\approx 1\), most of the raw source--basis fingerprint lies in the
-background space, and the projected visibility \(v_j\) will be small even if
-the raw fingerprint is large.  This is why identifiability must be assessed
-after projection.
-
-\paragraph{Response-matrix perturbations.}\label{subsec:operator_error}
-The constructed response can be wrong for two scientifically different reasons:
-transport error (wind interpolation, transport approximation, dispersion) and
-inventory error (missing, misplaced, misclassified, or incorrectly scaled
-sources).  Writing the projected discrepancy as
-\(\Delta_H=\Delta_{\mathrm{tr}}+\Delta_{\mathrm{inv}}+\Delta_{\mathrm{int}}\),
-response error acts like additional observation error: a perturbation
-\(\|\widehat{\widetilde H}_\Phi-\widetilde H_\Phi^\star\|_2\le\delta_H\) inflates
-the least-squares error bound to
-\((\|\widetilde E\|_2+\delta_H\|\mathbf c\|_2)/
-\sigma_J(\widehat{\widetilde H}_\Phi)\) (Proposition and proof in
-Appendix~\ref{app:operator_error_details}), so either error is most damaging when
-the projected response is already ill-conditioned.  Crucially, the transport term
-\(\Delta_{\mathrm{tr}}\) may be propagated through ensembles into uncertainty
-intervals, whereas the inventory term \(\Delta_{\mathrm{inv}}\) is reported only
-as named robustness scenarios that are never pooled into an interval.
-
-\subsection{Identifiable Source Resolution}
-\label{subsec:source_merging}
-
+\noindent\textbf{Identifiable Source Resolution.}
 When coefficient fingerprints are weak or highly coherent, separate source
-estimates can be misleading.  We define the source ambiguity graph by
+estimates can mislead.  We define the source ambiguity graph
 \(\mathcal E_{\mathrm{src}}
-=\{(k,k'):\exists b,b'\ ((k,b),(k',b'))\in\mathcal A\}\).
-Each edge retains the maximum eligible coefficient coherence, minimum ray
-distance, and the source--basis pair attaining the trigger.  Deterministically
-ordered connected components \(\mathcal G=\{G_1,\ldots,G_M\}\) are recommended
-report groups.  Weak coefficients remain separate flags and do not create
-edges.  Rank deficiency with no eligible edge produces a global unresolved
-warning rather than an invented merge.
+=\{(k,k'):\exists b,b'\ ((k,b),(k',b'))\in\mathcal A\}\); each edge retains the
+maximum eligible coefficient coherence, minimum ray distance, and the
+source--basis pair attaining the trigger.  Its deterministically ordered
+connected components \(\mathcal G=\{G_1,\ldots,G_M\}\) are the recommended report
+groups.  Weak coefficients remain separate flags and create no edges; rank
+deficiency with no eligible edge produces a global unresolved warning rather than
+an invented merge.  These components are conservative reporting units, not the
+finest identifiable partition: they can transitively over-merge (edges \(A\)--\(B\)
+and \(B\)--\(C\) group all three even when \(A\) and \(C\) are distinguishable),
+so the edge table retains both triggering pairs and their diagnostic values to
+keep this visible.
 
-These components are deterministic, conservative reporting units, not a claim
-of the globally finest identifiable partition.  In particular, if edges join
-\(A\) to \(B\) and \(B\) to \(C\), the component contains
-\(\{A,B,C\}\) even when \(A\) and \(C\) are distinguishable as a pair.  The
-edge table therefore retains both triggering pairs and their diagnostic values
-so that this transitive over-merging is visible.
-
-The coefficient fit is not silently replaced by a grouped refit.  For reporting,
-group activity and fitted sensor contribution are the sums
+The coefficient fit is not silently replaced by a grouped refit; for reporting,
+group activity and fitted sensor contribution are the member sums
 \(\widehat\theta_{G_a}(t)=\sum_{k\in G_a}\widehat\theta_k(t)\) and
 \(\widehat Y_{G_a}=\sum_{k\in G_a}\sum_b
-\mathbf h_{kb}^{\mathrm{lag}}\widehat c_{kb}\).
-Matrix diagnostics remain coefficient level; these group summaries express the
-coarser claims supported by the fit without inventing a scalar source
-fingerprint.  Table~\ref{tab:diagnostics} in
+\mathbf h_{kb}^{\mathrm{lag}}\widehat c_{kb}\), while matrix diagnostics remain
+coefficient level.  Table~\ref{tab:diagnostics} in
 Appendix~\ref{app:temporal_basis_notation} summarizes the scalar diagnostics and
 the set- and graph-valued reporting outputs.
 
-\paragraph{Per-sensor source footprints and spatial attribution.}\label{subsec:per_sensor_footprints}
-The diagnostics above certify which coefficients are separable in the pooled
-sensor-time space; policy questions are often also spatial.  Because the response
-is linear in \(\mathbf c\), the fitted solution already localizes each monitor's
-signal without a new model: per-sensor contributions decompose exactly, and the
-sensor footprint is the pullback of the response row onto the source grid: the
-puff response of Section~\ref{subsec:plume_response} read backward from the
-sensor, requiring no new operator (Appendix~\ref{app:footprint_details}).
-Identifiability is inherited, not created: for the row submatrix
-\(\widetilde H_\Phi^{(s)}\) of a single sensor,
-\(\sigma_J(\widetilde H_\Phi^{(s)})\le\sigma_J(\widetilde H_\Phi)\) and
-\(\operatorname{rank}(\widetilde H_\Phi^{(s)})\le
-\operatorname{rank}(\widetilde H_\Phi)\), so a single sensor is never more
-identifiable than the pooled network.  Footprints are therefore reported as
-spatial overlays of the global fit, with per-sensor source \emph{shares} asserted
-only at the globally identifiable resolution, aggregating to a report group
-wherever the pooled diagnostics require one.
+\noindent\textbf{Per-sensor source footprints.}
+Policy questions are often also spatial.  Because the response is linear in
+\(\mathbf c\), the fitted solution already localizes each monitor's signal
+without a new model: the per-sensor footprint is the puff response of
+Section~\ref{subsec:plume_response} read backward from the sensor, requiring no
+new operator, and identifiability is inherited rather than created
+(\(\sigma_J(\widetilde H_\Phi^{(s)})\le\sigma_J(\widetilde H_\Phi)\), so a single
+sensor is never more identifiable than the pooled network).  Footprints are
+therefore reported as spatial overlays of the global fit, with per-sensor source
+\emph{shares} asserted only at the globally identifiable resolution and
+aggregated to a report group wherever the pooled diagnostics require one
+(Appendix~\ref{app:footprint_details}).

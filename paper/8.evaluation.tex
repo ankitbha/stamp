@@ -1,30 +1,24 @@
-\subsection{Metrics and Reporting}
-\label{subsec:evaluation_metrics}
-
-Controlled trials report absolute and relative coefficient error,
-reconstructed-activity error, per-source and grouped activity/contribution error,
-projected sensor residual, uncertainty-interval coverage, and correlations
-between diagnostic values and attribution error.  All trials additionally report
-the padded singular spectrum, \(\sigma_J\), numerical and effective rank,
-condition number, coefficient visibility, background absorption, eligible
-coherence and ray distance, weak flags, triggering coefficient pairs, and
-deterministic report groups (definitions from
-Section~\ref{sec:identifiability_theory}), accompanied by lag convergence, the
-fixed-zero mask and index mapping, primary background specification, and ensemble
-provenance, with transport uncertainty and inventory robustness in separate
-fields.  Observed New Delhi runs instead report raw and projected residuals,
-fitted trajectories, normalized proxy coefficients and activities, sensor-space
-fitted contributions, observation/transport uncertainty intervals,
-inventory-scenario robustness, weak/ambiguous flags, conservative grouped
-contributions, and the residual calibration status; a reported percentage is
-explicitly a fraction of the fitted inventory-attributed sensor signal, not a
-physical-emission share.
+\noindent\textbf{Metrics and Reporting.}
+Controlled trials, having known coefficients, report coefficient and
+reconstructed-activity error, grouped activity/contribution error, projected
+residual, and uncertainty-interval coverage.  All trials additionally report the
+singular spectrum and its diagnostics (\(\sigma_J\), numerical and effective rank,
+condition number, visibility, background absorption, eligible coherence and ray
+distance), the weak set, triggering pairs, and deterministic report groups
+(Section~\ref{sec:identifiability_theory}), together with lag convergence, the
+fixed-zero mask, background specification, and ensemble provenance (transport and
+inventory kept separate).  Observed New Delhi runs instead report raw and
+projected residuals, fitted trajectories, normalized proxy coefficients and
+contributions, uncertainty intervals, inventory-scenario robustness,
+weak/ambiguous flags, conservative grouped contributions, and residual calibration
+status; a reported percentage is explicitly a fraction of the fitted
+inventory-attributed sensor signal, not a physical-emission share.
 
 \subsection{Controlled Results}
 \label{subsec:controlled_results}
 
 The controlled trials have known source--basis coefficients and therefore recovery
-and coverage metrics.  Figure~\ref{fig:identifiability} consolidates the three
+and coverage metrics.  Figure~\ref{fig:results}(a--c) consolidates the three
 experiments that establish the central claim (response-matrix geometry, not noise
 alone, sets the recovery ceiling), and the adequacy study below tests residual
 adequacy.  Six further controlled experiments (coherence and grouped reporting,
@@ -34,118 +28,74 @@ Appendix~\ref{app:additional_experiments}.
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\textwidth]{figures/fig1_identifiability.pdf}
-\caption{Controlled identifiability geometry governs recovery. \textbf{(a)}
-Experiment~1: coefficient relative error grows linearly with observation noise,
-and the better-conditioned \emph{close} geometry ($\sigma_J=9.60$, $\kappa=2.26$)
-recovers proportionally more accurately than the \emph{separated} geometry
-($\sigma_J=3.27$, $\kappa=8.89$): $0.11$ versus $0.26$ at $20\%$ noise; both
-designs are full rank ($=2$). \textbf{(b)} Experiment~4: $\sigma_J$ (log) versus
-maximum eligible coherence across six wind providers $\times$ three sensor
-layouts (marker size $\propto$ coefficient error). Wind diversity lowers
-coherence (multi/real regulatory reach $0.13$/$0.16$) while a seeded random
-layout under steady wind collapses $\sigma_J\!\to\!0$ and inflates coherence,
-producing the only nonzero errors (single/random: coherence $1.00$, error
-$0.57$). \textbf{(c)} Experiment~3: four predeclared backgrounds; the redundant
-basis is byte-identical to the primary (same span), while the labeled
-source-like \emph{stress} basis drives absorption to $1$ and $\sigma_J$ and
-minimum visibility to $0$: a too-flexible background can erase the attributed
-signal.}
-\label{fig:identifiability}
+\includegraphics[width=\textwidth]{figures/fig_results.pdf}
+\caption{Consolidated results. \textbf{(a)}~Exp~1: conditioning, not noise, sets
+the coefficient-recovery ceiling (close $\sigma_J$9.6/$\kappa$2.3 vs.\ separated
+$\sigma_J$3.3/$\kappa$8.9). \textbf{(b)}~Exp~4: $\sigma_J$ versus maximum eligible
+coherence; colour~=~wind provider (constant, single, diurnal, AR(1), multi, real;
+dark$\to$light), marker~=~layout (circle regulatory, square random, triangle
+downwind), size~$\propto$~coefficient error, and only single/random collapses
+($\sigma_J\!\to\!0$, error~$0.57$). \textbf{(c)}~Exp~3: a source-like background
+drives absorption to~$1$ and $\sigma_J$/visibility to~$0$. \textbf{(d)}~Observed New
+Delhi weeks 1--4: every week is full rank; bars $\sigma_1$/$\sigma_J$ (left, log)
+and max eligible coherence (red, right axis $0$--$1$). \textbf{(e)}~proxy
+apportionment as a fraction of fitted sensor signal (not physical emissions),
+swinging population- to brick-kiln-dominated.}
+\label{fig:results}
 \end{figure*}
 
-\paragraph{Conditioning and Recovery.}
+\noindent\textbf{Conditioning and Recovery.}
 \label{subsec:results_h1}
-We vary source geometry and Gaussian observation noise at 0\%, 1\%, 5\%, 10\%,
-and 20\% of the maximum clean sensor signal.  For each trial we compare
-coefficient and reconstructed-activity errors with \(\sigma_J\), numerical and
-effective rank, condition number, and visibility.
-Figure~\ref{fig:identifiability}(a) reports the sweep. The design is full rank in both
-geometries (numerical rank $=$ effective rank $=2$); the fixed geometry fixes
-$\sigma_J$ and the condition number, and coefficient error then grows linearly
-with the injected noise. The better-conditioned \emph{close} geometry
-($\sigma_J=9.60$, $\kappa=2.26$) recovers proportionally more accurately than the
-\emph{separated} geometry ($\sigma_J=3.27$, $\kappa=8.89$): at 20\% noise the
-coefficient relative error is $0.11$ versus $0.26$. This is our central
-claim: response-matrix geometry, not noise alone, sets the recovery ceiling.
-(Reconstructed-activity error and interval coverage are reported for the
-temporal-basis and adequacy studies, Experiments~9 and~8; Experiment~1 isolates
-the coefficient-error/conditioning relationship.)  The projected sensor residual
-grows linearly with the injected noise, through $0$, $6.37$, $12.73$, $25.46$
-(separated) and $0$, $8.42$, $16.84$, $33.68$ (close) at $0/5/10/20\%$ noise.
+We vary source geometry and Gaussian observation noise (0--20\% of the maximum
+clean sensor signal).  Both geometries are full rank (numerical rank $=$ effective
+rank $=2$), so the fixed geometry fixes $\sigma_J$ and $\kappa$ and coefficient
+error grows linearly with noise; the better-conditioned \emph{close} geometry
+recovers proportionally more accurately than the \emph{separated} one
+(Figure~\ref{fig:results}(a)).  This is our central claim:
+response-matrix geometry, not noise alone, sets the recovery ceiling.
+Reconstructed-activity error and interval coverage are reported for the
+temporal-basis and adequacy studies below.
 
-\paragraph{Background Stress.}
+\noindent\textbf{Background Stress.}
 \label{subsec:results_h3}
-We compare no background, the normal rank-four basis from
-Section~\ref{subsec:new_delhi_forward_models}, a redundant-column basis with the
-same span, and a labeled source-like stress basis.  This tests background
-flexibility directly: too little background leaves broad confounding in the
-residual, while a too-flexible or source-like basis can absorb source-driven
-signal and reduce identifiability.  The response geometry is audited through
-visibility and the removed/raw absorption ratio.  The rank-four primary and every
-sensitivity variant are declared before fitting; no basis is selected from \(Y\)
-or from its source-recovery score.
-Figure~\ref{fig:identifiability}(c) compares the four predeclared bases (all fixed before
-fitting: \texttt{declared\_before\_fit} is true throughout). The redundant basis
-is byte-identical to the primary in every reported quantity, confirming that
-duplicate columns spanning the same subspace leave the projection, and therefore
-visibility, absorption, and recovery, unchanged. The labeled source-like
-\emph{stress} basis is the cautionary case: it drives $\sigma_J$ to $0$, absorption
-to $1$, and minimum visibility to $0$, i.e.\ it absorbs the source-driven signal
-and destroys identifiability, even though the fitted residual is essentially
-unchanged. This is precisely how a too-flexible background can quietly
-erase the very signal being attributed.  (Coefficient error is a misleading
-summary in the stress case: it \emph{falls} to $0.78$ from the primary's $2.61$
-precisely because the source-like basis has absorbed the signal, whereas the
-\texttt{none}, \texttt{primary}, and \texttt{redundant} bases give $2.36$,
-$2.61$, and $2.61$.)
+We compare no background, the normal rank-four basis, a redundant-column basis
+with the same span, and a labeled source-like stress basis, all declared before
+fitting.  The redundant basis is byte-identical to the primary in every reported
+quantity (duplicate columns spanning the same subspace leave the projection
+unchanged), while the source-like \emph{stress} basis drives $\sigma_J$ and
+minimum visibility to $0$ and absorption to $1$
+(Figure~\ref{fig:results}(c)): a too-flexible background can quietly
+absorb the source-driven signal and destroy identifiability even when the fitted
+residual is essentially unchanged.  Coefficient error is then misleading, since it
+\emph{falls} in the stress case precisely because the signal has been absorbed.
 
-\paragraph{Wind Diversity and Sensor Geometry.}
+\noindent\textbf{Wind Diversity and Sensor Geometry.}
 \label{subsec:results_h4}
-Matched source, basis, and sensor sets are evaluated under constant,
-single-direction, diurnal, AR(1), multi-directional, and real gridded New Delhi
-wind.  Sensor variants are the regulatory layout, seeded random layouts, and
-downwind-focused layouts.  The same columns are required on both
-sides of every wind comparison.  Separate historical and simulated window
-ensembles estimate the 5th, 50th, and 95th percentiles of \(\sigma_J\), rank
-probabilities, coefficient weakness probabilities, pairwise ambiguity
-probabilities, and conservative component frequencies.
-Figure~\ref{fig:identifiability}(b) crosses six wind providers with three sensor layouts
-(identical source--basis columns throughout; the design is rank-2 everywhere).
-Two effects dominate. First, wind diversity improves conditioning: multi-directional
-and real gridded New Delhi wind give the lowest maximum eligible coherence
-($0.13$ and $0.16$ at the regulatory layout), whereas a single steady direction
-pushes coherence toward $1$. Second, geometry matters as much as wind: under a
-steady wind a seeded \emph{random} layout collapses $\sigma_J$ to $\approx 0$ and
-inflates coherence, producing the only nonzero coefficient errors in the sweep
-(e.g.\ single-direction/random, $\sigma_J\!\approx\!10^{-6}$, coherence $1.00$,
-error $0.57$), while the regulatory layout keeps $\sigma_J$ well away from zero.
-Separate window ensembles confirm robustness across realized wind: historical
-(contiguous real-record slices) and simulated (AR(1)) both attain full numerical
-and effective rank with probability $1.0$ and no pairwise ambiguity, differing
-only in their $\sigma_J$ spread (5th/50th/95th percentiles $1.45$/$4.51$/$9.96$
-historical versus $3.50$/$5.58$/$6.80$ simulated).
+Matched source, basis, and sensor sets are evaluated across six wind providers
+(constant, single-direction, diurnal, AR(1), multi-directional, and real gridded
+New Delhi wind) and three sensor layouts (regulatory, seeded random,
+downwind-focused), with identical source--basis columns on both sides of every
+comparison (Figure~\ref{fig:results}(b)).  Two effects dominate: wind
+diversity improves conditioning (multi-directional and real wind give the lowest
+maximum eligible coherence, while a single steady direction pushes it toward one),
+and geometry matters as much as wind (under steady wind a seeded random layout
+collapses $\sigma_J$ to $\approx0$ and produces the only nonzero coefficient errors
+in the sweep, whereas the regulatory layout keeps $\sigma_J$ well away from zero).
+Separate historical and AR(1) window ensembles both attain full numerical and
+effective rank with probability $1.0$ and no pairwise ambiguity, differing only in
+their $\sigma_J$ spread.
 
-\paragraph{Missing-Source Adequacy.}
+\noindent\textbf{Missing-Source Adequacy.}
 \label{subsec:results_missing_source}
-Controlled trials omit either a residual-visible source outside
-\(\operatorname{span}[H_\Phi^{\mathrm{lag}},Q]\) or an aligned source whose
-signature lies in that span.  The refitted parametric-bootstrap test from
-Section~\ref{subsec:model_adequacy} is evaluated for calibration and power.  The
-aligned case demonstrates why non-rejection cannot certify inventory completeness.
-The adequacy study is run on the real New
-Delhi platform with a non-empty rank-4 primary background $Q$ (fitted-design
-singular values $[120.6, 69.2, 45.8]$, so $\sigma_J=45.8$). The refitted
-parametric bootstrap ($\alpha=0.05$, $1000$ replicates, $100$ trials) is
-well-calibrated: with no omission the rejection rate is $0.05$. It has full power
-against a residual-visible omitted source whose signature lies largely outside
-$\operatorname{span}[H_\Phi^{\mathrm{lag}},Q]$ (out-of-span fraction $0.91$;
-rejection rate $1.0$). Crucially, an \emph{aligned} omission (a genuinely omitted
-source whose signature is a nonnegative combination of the fitted columns and the
-background) is absorbed and not detected (rejection $0.05$). The test is therefore
-one-sided: a rejection is evidence of model inadequacy (though not of its
-cause), whereas a non-rejection cannot certify adequacy, since an aligned omission
-is absorbed and passes undetected.
+On the real New Delhi platform with a non-empty rank-4 primary background, the
+refitted parametric bootstrap ($\alpha=0.05$, $1000$ replicates) is well-calibrated
+(null rejection rate $0.05$) and has full power against a residual-visible omitted
+source whose signature lies largely outside
+$\operatorname{span}[H_\Phi^{\mathrm{lag}},Q]$ (rejection $1.0$).  Crucially, an
+\emph{aligned} omission, whose signature is a nonnegative combination of the fitted
+columns and the background, is absorbed and not detected (rejection $0.05$).  The
+test is therefore one-sided: a rejection is evidence of model inadequacy (though
+not of its cause), whereas a non-rejection cannot certify inventory completeness.
 
 \subsection{Observed New Delhi Results}
 \label{subsec:observed_results}
@@ -154,68 +104,39 @@ The observed-data study has no source-activity ground truth and therefore report
 geometry, residuals, uncertainty, and conservative groups rather than recovery
 error.
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/fig2_observed.pdf}
-\caption{Observed New Delhi study, four consecutive one-week windows
-(2018-05-01 through 2018-05-28), each fitted and reported independently.
-\textbf{(a)} Identifiability geometry: every week is full numerical rank
-($7$ free coefficients after the fixed-zero admissibility mask, four singleton
-report components), with $\sigma_1$ rising from $50.1$ to $81.2$, $\sigma_J$
-from $3.71$ to $10.15$ (week 3), and low maximum eligible coherence
-($0.32$--$0.50$). \textbf{(b)} Proxy apportionment as a fraction of the fitted
-inventory-attributed sensor signal (\emph{not} physical-emission shares): the
-mixture swings from population-dominated in weeks 1--3 to brick-kiln-dominated
-in week 4, which is why the windows are reported separately rather than as one
-aggregate estimate.}
-\label{fig:observed}
-\end{figure*}
-
-\paragraph{New Delhi Wind-Imputation Validation.}
+\noindent\textbf{New Delhi Wind-Imputation Validation.}
 \label{subsec:results_wind_imputation}
-The New Delhi wind field used throughout is produced by the kernel coordinate-query
-imputer described in Section~\ref{subsec:new_delhi_wind}. We also
-evaluated a learned wind model, but the sparse regulatory station network provides
-too little spatial support for it to learn useful spatial structure: it did not
-outperform a simple non-spatial city-mean baseline on held-out station--time
-vectors, and was not adopted. The kernel interpolator is used as the
-gridded field because, unlike the city mean, it is spatially resolved as the
-response operator requires. Dense real wind truth is unavailable, so gridded-field
-accuracy is instead assessed through the controlled synthetic-wind experiments
-(Experiment~4), where the true wind is known.
+The wind field used throughout is the kernel coordinate-query imputer of
+Section~\ref{subsec:new_delhi_wind}.  A learned wind model was also evaluated, but
+the sparse regulatory network provides too little spatial support: it did not beat
+a non-spatial city-mean baseline on held-out station--time vectors and was not
+adopted.  The kernel interpolator is used because, unlike the city mean, it is
+spatially resolved as the response operator requires.  Dense real wind truth is
+unavailable, so gridded-field accuracy is instead assessed through the controlled
+synthetic-wind experiments, where the true wind is known.
 
-\paragraph{New Delhi Identifiability and Report Groups.}
+\noindent\textbf{New Delhi Identifiability and Report Groups.}
 \label{subsec:results_new_delhi_identifiability}
-The observed study is run as four consecutive one-week windows (2018-05-01 through
+The observed study runs as four consecutive one-week windows (2018-05-01 through
 2018-05-28), each a self-contained fit reported on its own terms; results are not
-aggregated across windows. Figure~\ref{fig:observed}(a) summarizes the
-identifiability geometry per week. Every week is full numerical rank ($7$ free
-coefficients after the fixed-zero admissibility mask), finite-conditioned, with
-low maximum eligible coherence ($0.32$--$0.50$), an empty weak set, no
-cross-source ambiguous pairs, and four singleton report components. Each source
-group is therefore individually identifiable in every week and no conservative
-merge is required.
+aggregated across windows.  Every week is full numerical rank ($7$ free
+coefficients after the fixed-zero mask), finite-conditioned, with low maximum
+eligible coherence ($0.32$--$0.50$), an empty weak set, no cross-source ambiguous
+pairs, and four singleton report components (Figure~\ref{fig:results}(d)).  Each
+source group is therefore individually identifiable in every week and no
+conservative merge is required.
 
-\paragraph{New Delhi Proxy Apportionment and Uncertainty.}
+\noindent\textbf{New Delhi Proxy Apportionment and Uncertainty.}
 \label{subsec:results_new_delhi_apportionment}
-Figure~\ref{fig:observed}(b) reports the proxy apportionment for each week as a
-fraction of the fitted inventory-attributed sensor signal (denominator: the sum
-over groups of the $L_1$ fitted per-group sensor-signal magnitude); these are
-explicitly \emph{not} physical-emission shares. Traffic is a single road-network
-group carrying diurnal slot temporal bases under the fixed-zero admissibility
-mask, so there is no per-slot \texttt{traffic\_06} inventory to estimate; a group
-whose admissible temporal components are all fixed-zero in a window would be marked
-\texttt{unsupported} rather than assigned a substantive share (none were in these
-weeks). The apportionment swings substantially week to week: population-dominated
-in weeks 1--3 (shares $1.00$, $0.81$, $0.94$), then brick-kiln-dominated in week 4
-($0.93$), which is precisely why the windows are reported separately rather than as
-one aggregate New Delhi estimate.  Per-monitor fitted group contributions and
-their cells of origin (29/28 monitors per week) are not tabulated individually.
-
-On observed data the fit uses only the $79$--$85\%$ of rows with a valid
-PM$_{2.5}$ measurement (no imputation), subtracting each week's zero-source
-transported kriged initial-condition baseline (Pusa monitors averaged) under the
-gridded kernel wind field. Because no calibrated observation-noise model exists
-for the regulatory PM$_{2.5}$, the residual-adequacy test is reported as
-\texttt{uncalibrated} and no pass/fail verdict is claimed, per the contract of
-Section~\ref{subsec:model_adequacy}.
+Figure~\ref{fig:results}(e) reports each week's proxy apportionment as a fraction
+of the fitted inventory-attributed sensor signal (the sum over groups of the
+$L_1$ fitted per-group sensor-signal magnitude); these are explicitly \emph{not}
+physical-emission shares.  The mixture swings substantially, population-dominated
+in weeks 1--3 and brick-kiln-dominated in week 4, which is precisely why the
+windows are reported separately rather than as one aggregate estimate.  The fit
+uses only the $79$--$85\%$ of rows with a valid PM$_{2.5}$ measurement (no
+imputation), subtracting each week's zero-source transported kriged
+initial-condition baseline (Pusa monitors averaged) under the gridded kernel wind
+field.  Because no calibrated observation-noise model exists for the regulatory
+PM$_{2.5}$, the residual-adequacy test is reported as \texttt{uncalibrated} and no
+pass/fail verdict is claimed (Section~\ref{sec:identifiability_aware_method}).

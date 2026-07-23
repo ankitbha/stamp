@@ -8,97 +8,42 @@ wind record, and one set of proxy inventories, and we ask whether the geometry o
 claims are defensible.  A shared base configuration is varied along one controlled
 axis at a time, avoiding conflation of wind, source geometry, background
 flexibility, noise, and forward-model error; all runs use the \(40\times40\)
-resolution, and unless stated otherwise the controlled experiments use a 72-hour
-transport window and the observed study four consecutive one-week windows.  Real
-imputed wind is a controlled transport input when coefficients are synthetically
-known; the observed-PM\(_{2.5}\) mode is a separate evaluation and is never
-assigned synthetic source-recovery metrics.
+resolution, with a 72-hour transport window for the controlled experiments and
+four consecutive one-week windows for the observed study.  Real imputed wind is a
+controlled transport input when coefficients are synthetically known; the
+observed-PM\(_{2.5}\) mode is a separate evaluation and is never assigned synthetic
+source-recovery metrics.
 
-\subsection{New Delhi Experimental Platform}
-\label{sec:new_delhi_platform}
+\noindent\textbf{New Delhi Experimental Platform.}
+The platform is built from hourly government PM\(_{2.5}\) and wind records
+\citep{cpcb,cpcb_portal} spanning 1 May 2018--31 October 2020 over a 32-sensor
+regulatory network; PM\(_{2.5}\) is never imputed, and its valid-value mask defines
+\(M_{\mathcal O}\) in Equation~\ref{eq:observation_selection}, with the same
+ordered sensor--time rows retained in \(Y\), \(H_\Phi^{\mathrm{lag}}\), \(Q\), and
+metadata.  Observed wind is converted (Equation~\ref{eq:wind_direction_conversion})
+and completed on the response grid by the kernel coordinate-query imputer of
+Section~\ref{subsec:wind_field_estimation}\label{subsec:new_delhi_wind}; a learned
+imputer was trained but not adopted (Section~\ref{subsec:results_wind_imputation}).
+Four source groups (brick kilns, industries, population density, traffic) each
+carry one normalized spatial proxy map and its own admissible temporal-basis
+components (Table~\ref{tab:new_delhi_inventories},
+Appendix~\ref{app:platform_details}), so fitted coefficients are in normalized
+proxy units, not physical emission shares.  Both forward paths use the
+open-boundary Gaussian puff operator of Section~\ref{subsec:plume_response}
+evaluated at sensors, the matched generator for controlled recovery and the
+inference operator for observed PM\(_{2.5}\); an auxiliary advection--diffusion
+simulator supplies a structural forward-model mismatch for the adequacy study
+(Section~\ref{sec:identifiability_aware_method}), and normal backgrounds follow
+Section~\ref{subsec:background_construction}.
 
-We define the platform once; the studies that follow vary wind, noise,
-backgrounds, source ambiguity, activity bases, and forward-model error within it.
-
-\paragraph{Government observations and sensor network.}\label{subsec:new_delhi_observations}
-We use hourly government observations \citep{cpcb,cpcb_portal} (columns
-\texttt{monitor\_id}, \texttt{timestamp\_round}, \texttt{AT}, \texttt{RH},
-\texttt{WD}, \texttt{WS}, \texttt{pm10}, \texttt{pm25}) spanning 21,960 hourly
-timestamps from 1 May 2018 through 31 October 2020 in Indian Standard Time;
-approximately 74.9\% of wind-direction, 72.8\% of wind-speed, and 90.5\% of
-PM\(_{2.5}\) entries are observed, and a valid-value mask (\texttt{True} where the
-record is present) is retained alongside station coordinates and timestamps.  The
-two Pusa monitors are not treated as coincident independent sensors:
-\texttt{Pusa\_IMD} and \texttt{Pusa\_DPCC} are averaged by timestamp into
-\texttt{Pusa\_averaged} (mean coordinates, per-variable hourly averaging), giving
-the final 32-sensor layout.  PM\(_{2.5}\) is never imputed: its flattened
-valid-value mask defines \(M_{\mathcal O}\) in
-Equation~\ref{eq:observation_selection}, and the same ordered sensor--time rows
-are retained in \(Y\), \(H_\Phi^{\mathrm{lag}}\), \(Q\), and their metadata.
-
-\paragraph{Wind preparation.}\label{subsec:new_delhi_wind}
-The observed \(WD/WS\) values are converted using
-Equation~\ref{eq:wind_direction_conversion} and completed on the response grid by
-the kernel coordinate-query imputer of Section~\ref{subsec:wind_field_estimation};
-a learned imputer was trained and evaluated but not adopted
-(Section~\ref{subsec:results_wind_imputation}).  The saved wind product retains
-raw station values, masks, station coordinates, held-out validation splits,
-checkpoint metadata, and the gridded query field used by the response operator.
-
-\paragraph{Inventories and proxy temporal activities.}\label{subsec:new_delhi_inventories}
-The study uses four source groups (brick kilns, industries, population density,
-and traffic; Table~\ref{tab:new_delhi_inventories} in
-Appendix~\ref{app:platform_details}), each with one spatial proxy map and its own
-admissible set of temporal-basis components.  Brick-kiln and industry proxies
-follow the regional emissions inventory \citep{GUTTIKUNDA2013101}, population
-density uses the gridded population product \citep{ColumbiaUniversity2018}, and the
-traffic map is derived from road map data \citep{google_maps}.  Every
-\(80\times80\) map is cropped to the New Delhi study window (rows \(21{:}61\),
-columns \(16{:}56\)) covering the regulatory network, giving a \(40\times40\) map,
-then divided by its own cropped 99th percentile.  Traffic is modeled as a single
-road-network source whose nearest-slot maps at 00:00, 06:00, 12:00, and 18:00
-define traffic-specific temporal-basis components under the shared dictionary
-\(\Phi\) and the fixed-zero mask \(\mathcal F_0\), so one road map carries a
-time-varying activity (assuming the congestion \emph{spatial} pattern is
-time-invariant and only its amplitude varies).  Brick-kiln activity uses
-deterministic alternating 12-hour blocks, industry a continuous operating fraction
-with higher daytime (07:00--19:00) activity, and population a baseline with smooth
-cooking peaks; these are deterministic study assumptions, not observed emissions
-truth.  Because each map uses independent proxy normalization, fitted coefficients
-and contributions are in normalized proxy units, not physical emission totals or
-shares; no learned free residual source map is used, and unexplained broad signal
-belongs to the background model or residual diagnostics.
-
-\paragraph{Forward models, sensor observations, and backgrounds.}\label{subsec:new_delhi_forward_models}
-Both forward paths use the New Delhi-derived \(40\times40\) domain and regulatory
-sensor coordinates, with the open-boundary Gaussian puff operator of
-Section~\ref{subsec:plume_response} evaluated directly at sensors.  The same
-operator is the matched generator for controlled recovery experiments
-(Experiments~1--4) and the inference operator for observed PM\(_{2.5}\); only the
-initial-condition baseline differs by mode: a zero-source, zero-initial-state
-baseline for controlled operator-matched runs, and a subtracted zero-source
-transported kriged-initial-condition baseline for observed runs.  An auxiliary
-edge-hold advection--diffusion simulator provides a \emph{structural}
-forward-model mismatch (data generated by a distinct transport operator, fit with
-the puff response) that also drives the residual-adequacy test of
-Section~\ref{subsec:model_adequacy} (Experiment~5).  Normal backgrounds follow
-Section~\ref{subsec:background_construction}, with the base controlled background
-the rank-four member; the kriged-baseline construction and simulator settings are
-given in Appendix~\ref{app:platform_details}.
-
-\paragraph{Controlled and observed-data study modes.}\label{subsec:new_delhi_study_modes}
-The controlled mode preserves New Delhi sensor geometry and transport while
-assigning known nonnegative source--basis coefficients, using synthetic or real
-gridded wind, controlled observation noise, source splits, sensor-layout variants,
-and optional operator mismatch.  Where the study is explicitly about inventory
-geometry (Experiments~2 and~6) the real New Delhi inventory maps are used; the
-remaining controlled experiments use compact synthetic source cells for
-tractability, since their conclusions concern conditioning, coherence, and
-recovery rather than specific inventory footprints.  Because its coefficients are
-known, it supports recovery and interval-coverage metrics.  The observed-data mode
-combines real PM\(_{2.5}\), its observation mask, the gridded kernel-imputed wind
-field, the named normalized inventories, and the declared proxy temporal bases; it
-has no ground-truth source activities and is run over four consecutive one-week
-windows, each fitted and reported independently, reporting residuals, response
-geometry, uncertainty, weak and ambiguous coefficients, normalized proxy
-contributions, and recommended report groups rather than synthetic recovery error.
+The \emph{controlled} mode preserves this sensor geometry and transport while
+assigning known nonnegative source--basis coefficients (synthetic or real gridded
+wind, controlled observation noise, source splits, sensor-layout variants, and
+optional operator mismatch), so it supports recovery and interval-coverage
+metrics.  The \emph{observed} mode combines real PM\(_{2.5}\), its observation
+mask, the imputed wind field, and the named normalized inventories; it has no
+ground-truth source activities and is run over four consecutive one-week windows,
+each fitted and reported independently.  Column-level records, Pusa-monitor
+averaging and coverage, proxy normalization and crop, temporal-activity
+assumptions, forward-model baselines, and simulator settings are given in
+Appendix~\ref{app:platform_details}.\\

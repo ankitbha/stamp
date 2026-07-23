@@ -6,12 +6,13 @@ describe how the response matrix is built and how source activities are
 estimated; construction, background, and refinement details are deferred to
 Appendix~\ref{app:transport_response}.
 
-\paragraph{Masked wind preparation.}\label{subsec:wind_field_estimation}
-Government wind direction is meteorological (it records where wind comes
-from), whereas transport needs the direction in which pollution moves.  We
-convert direction \(WD\) and speed \(WS\) to transport vectors
+\noindent\textbf{Masked wind preparation.}\label{subsec:wind_field_estimation}
+Government wind direction records where wind comes from, whereas transport needs
+the direction pollution moves.  We convert direction \(\mathit{WD}\) and speed
+\(\mathit{WS}\) to transport vectors
 \begin{equation}
-U_x=-WS\sin(WD\pi/180), V_y=-WS\cos(WD\pi/180),
+(U_x,V_y)=-\mathit{WS}\,(\sin\alpha,\cos\alpha),\;\;
+\alpha=\mathit{WD}\,\pi/180,
 \label{eq:wind_direction_conversion}
 \end{equation}
 supply the station vectors and masks to a coordinate-query wind imputer, and
@@ -22,13 +23,12 @@ the station vectors; a learned coordinate-query model was trained but not
 adopted, as it did not beat a city-mean baseline on held-out station--time error
 (Section~\ref{subsec:results_wind_imputation}).  The gridded field is an
 estimated input, not ground truth: to propagate wind uncertainty we build
-transport ensembles kept separate from inventory-robustness scenarios.
-Controlled experiments use the same interface for constant, single-direction,
-diurnal, AR(1), and multi-directional synthetic winds.  The imputer query, unit
+transport ensembles kept separate from inventory-robustness scenarios, and the
+same interface supplies synthetic controlled winds.  The imputer query, unit
 conversion, and ensemble construction are detailed in
 Appendix~\ref{app:transport_response}.
 
-\paragraph{Open-boundary lagged plume response.}\label{subsec:plume_response}
+\noindent\textbf{Open-boundary lagged plume response.}\label{subsec:plume_response}
 The transport response \(G_{t,\tau}^{\partial}\) maps emissions released at
 \(\tau\le t\) to the concentration field at time \(t\).  It is realized by an
 open-boundary Gaussian puff approximation: each source cell releases a puff whose
@@ -48,11 +48,10 @@ initial-condition baseline.  The puff dynamics, dispersion covariance, exit
 bookkeeping, baseline policy, and PyTorch differentiability are given in
 Appendix~\ref{app:transport_response}.
 
-\paragraph{Background construction and projection.}\label{subsec:background_construction}
+\noindent\textbf{Background construction and projection.}\label{subsec:background_construction}
 The primary background basis \(Q\) is specified before source fitting from
-source-independent metadata only: timestamps, day labels, sensor identity, and
-sensor coordinates (a global constant, elapsed-time polynomials, daily
-sine/cosine harmonics, day and sensor offsets, and coordinate trends), with
+source-independent metadata only (timestamps, day labels, sensor identity, and
+coordinates; column families in Appendix~\ref{app:transport_response}), with
 effective rank capped at eight; for the New Delhi study it is the rank-four
 member (constant, centered linear trend, first daily sine and cosine).  Columns
 built from inventories, response fingerprints, or fitted source signals are
@@ -64,7 +63,7 @@ through a thin SVD of \(Q\), requiring identical row metadata across \(Y\),
 predeclared sensitivity analyses, not data-selected replacements
 (Appendix~\ref{app:transport_response}).
 
-\paragraph{Response matrix and source activity fit.}\label{subsec:response_and_fit}
+\noindent\textbf{Response matrix and source activity fit.}\label{subsec:response_and_fit}
 Given the wind field, inventory, and temporal basis, the response columns are
 formed as in Equation~\ref{eq:constructed_response}, now evaluated with the
 estimated wind field \(\widehat{\mathbf w}\) and dispersion parameters \(\psi\).
@@ -77,9 +76,9 @@ before the response is diagnosed or fitted; with
 \(\mathcal I=\{1,\ldots,J\}\setminus\mathcal F_0\), IASA removes those columns,
 computes every diagnostic and the fit on \(\widetilde H_{\Phi,\mathcal I}\), and
 restores zeros afterward (default \(\mathcal F_0=\varnothing\)).  Coefficients are
-never deleted after fitting merely because their estimates are small, which would
-change the diagnosed inverse problem after seeing the data and could make the
-reported identifiability artificially favorable.  Source--basis coefficients are
+never deleted after fitting merely for being small, which would change the
+diagnosed problem after seeing the data and could make the reported
+identifiability artificially favorable.  Source--basis coefficients are
 estimated by nonnegative regularized least squares
 \begin{equation}
 \widehat{\mathbf c}
@@ -89,11 +88,7 @@ estimated by nonnegative regularized least squares
 \label{eq:nnls_estimator}
 \end{equation}
 with \(R\) a ridge or weak inventory-prior penalty, and reshaped into activity
-trajectories
-\begin{equation}
-\widehat\theta_k(t)=\sum_{b=1}^{B}\widehat c_{kb}\phi_b(t).
-\label{eq:reconstructed_activity}
-\end{equation}
+trajectories \(\widehat\theta_k(t)=\sum_{b=1}^{B}\widehat c_{kb}\phi_b(t)\).
 The projected formulation is used for identifiability because it exposes the part
 of each fingerprint that remains after background correction; the regularizer
 choices, an equivalent joint source/background fit, and an optional constrained
