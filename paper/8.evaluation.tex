@@ -41,6 +41,31 @@ fitted inventory-attributed sensor signal and not a physical-emission share.
 \paragraph{Controlled results.}
 The following subsections report the controlled trials, which have known
 source--basis coefficients and therefore recovery and coverage metrics.
+Figure~\ref{fig:identifiability} consolidates the three experiments that
+establish the central claim---response-matrix geometry, not noise alone, sets
+the recovery ceiling.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig1_identifiability.pdf}
+\caption{Controlled identifiability geometry governs recovery. \textbf{(a)}
+Experiment~1: coefficient relative error grows linearly with observation noise,
+and the better-conditioned \emph{close} geometry ($\sigma_J=9.60$, $\kappa=2.26$)
+recovers proportionally more accurately than the \emph{separated} geometry
+($\sigma_J=3.27$, $\kappa=8.89$)---$0.11$ versus $0.26$ at $20\%$ noise; both
+designs are full rank ($=2$). \textbf{(b)} Experiment~4: $\sigma_J$ (log) versus
+maximum eligible coherence across six wind providers $\times$ three sensor
+layouts (marker size $\propto$ coefficient error). Wind diversity lowers
+coherence (multi/real regulatory reach $0.13$/$0.16$) while a seeded random
+layout under steady wind collapses $\sigma_J\!\to\!0$ and inflates coherence,
+producing the only nonzero errors (single/random: coherence $1.00$, error
+$0.57$). \textbf{(c)} Experiment~3: four predeclared backgrounds; the redundant
+basis is byte-identical to the primary (same span), while the labeled
+source-like \emph{stress} basis drives absorption to $1$ and $\sigma_J$ and
+minimum visibility to $0$---a too-flexible background can erase the attributed
+signal.}
+\label{fig:identifiability}
+\end{figure*}
 
 \subsection{Experiment 1: Conditioning and Recovery}
 \label{subsec:results_h1}
@@ -50,7 +75,7 @@ and 20\% of the maximum clean sensor signal.  For each trial we compare
 coefficient and reconstructed-activity errors with \(\sigma_J\), numerical and
 effective rank, condition number, and visibility.
 
-Table~\ref{tab:results_h1} reports the sweep. The design is full rank in both
+Figure~\ref{fig:identifiability}(a) reports the sweep. The design is full rank in both
 geometries (numerical rank $=$ effective rank $=2$); the fixed geometry fixes
 $\sigma_J$ and the condition number, and coefficient error then grows linearly
 with the injected noise. The better-conditioned \emph{close} geometry
@@ -60,29 +85,9 @@ coefficient relative error is $0.11$ versus $0.26$. This is our central
 claim---response-matrix geometry, not noise alone, sets the recovery ceiling.
 (Reconstructed-activity error and interval coverage are reported for the
 temporal-basis and adequacy studies, Experiments~9 and~8; Experiment~1 isolates
-the coefficient-error/conditioning relationship.)
-
-\begin{table}[t]
-\centering
-\footnotesize
-\caption{Experiment 1: coefficient recovery versus conditioning and noise. The
-better-conditioned geometry recovers more accurately at matched noise.}
-\label{tab:results_h1}
-\begin{tabular}{llrrrr}
-\toprule
-geom. & noise & $\sigma_J$ & $\kappa$ & coef.\ err. & resid. \\
-\midrule
-separated & 0.00 & 3.27 & 8.89 & 0.000 & 0.00 \\
-separated & 0.05 & 3.27 & 8.89 & 0.066 & 6.37 \\
-separated & 0.10 & 3.27 & 8.89 & 0.132 & 12.73 \\
-separated & 0.20 & 3.27 & 8.89 & 0.264 & 25.46 \\
-close     & 0.00 & 9.60 & 2.26 & 0.000 & 0.00 \\
-close     & 0.05 & 9.60 & 2.26 & 0.028 & 8.42 \\
-close     & 0.10 & 9.60 & 2.26 & 0.057 & 16.84 \\
-close     & 0.20 & 9.60 & 2.26 & 0.113 & 33.68 \\
-\bottomrule
-\end{tabular}
-\end{table}
+the coefficient-error/conditioning relationship.)  The projected sensor residual
+grows linearly with the injected noise, through $0$, $6.37$, $12.73$, $25.46$
+(separated) and $0$, $8.42$, $16.84$, $33.68$ (close) at $0/5/10/20\%$ noise.
 
 \subsection{Experiment 2: Coherence and Grouped Reporting}
 \label{subsec:results_h2}
@@ -136,7 +141,7 @@ visibility and the removed/raw absorption ratio.  The rank-four primary and ever
 sensitivity variant are declared before fitting; no basis is selected from \(Y\)
 or from its source-recovery score.
 
-Table~\ref{tab:results_h3} compares the four predeclared bases (all fixed before
+Figure~\ref{fig:identifiability}(c) compares the four predeclared bases (all fixed before
 fitting: \texttt{declared\_before\_fit} is true throughout). The redundant basis
 is byte-identical to the primary in every reported quantity, confirming that
 duplicate columns spanning the same subspace leave the projection---and therefore
@@ -145,26 +150,11 @@ visibility, absorption, and recovery---unchanged. The labeled source-like
 to $1$, and minimum visibility to $0$, i.e.\ it absorbs the source-driven signal
 and destroys identifiability, even though the fitted residual is essentially
 unchanged. This is precisely how a too-flexible background can quietly
-erase the very signal being attributed.
-
-\begin{table}[t]
-\centering
-\footnotesize
-\caption{Experiment 3: background stress. Redundant $\equiv$ primary (same span);
-the source-like stress basis collapses identifiability ($\sigma_J\!\to\!0$,
-absorption $\to\!1$).}
-\label{tab:results_h3}
-\begin{tabular}{lrrrr}
-\toprule
-background & min.\ vis. & absorp. & $\sigma_J$ & coef.\ err. \\
-\midrule
-none      & 1.000 & 0.000 & 0.080 & 2.36 \\
-primary   & 0.972 & 0.235 & 0.080 & 2.61 \\
-redundant & 0.972 & 0.235 & 0.080 & 2.61 \\
-stress    & 0.000 & 1.000 & 0.000 & 0.78 \\
-\bottomrule
-\end{tabular}
-\end{table}
+erase the very signal being attributed.  (Coefficient error is a misleading
+summary in the stress case: it \emph{falls} to $0.78$ from the primary's $2.61$
+precisely because the source-like basis has absorbed the signal, whereas the
+\texttt{none}, \texttt{primary}, and \texttt{redundant} bases give $2.36$,
+$2.61$, and $2.61$.)
 
 \subsection{Experiment 4: Wind Diversity and Sensor Geometry}
 \label{subsec:results_h4}
@@ -178,7 +168,7 @@ ensembles estimate the 5th, 50th, and 95th percentiles of \(\sigma_J\), rank
 probabilities, coefficient weakness probabilities, pairwise ambiguity
 probabilities, and conservative component frequencies.
 
-Table~\ref{tab:results_h4} crosses six wind providers with three sensor layouts
+Figure~\ref{fig:identifiability}(b) crosses six wind providers with three sensor layouts
 (identical source--basis columns throughout; the design is rank-2 everywhere).
 Two effects dominate. First, wind diversity improves conditioning: multi-directional
 and real gridded New Delhi wind give the lowest maximum eligible coherence
@@ -188,55 +178,11 @@ steady wind a seeded \emph{random} layout collapses $\sigma_J$ to $\approx 0$ an
 inflates coherence, producing the only nonzero coefficient errors in the sweep
 (e.g.\ single-direction/random, $\sigma_J\!\approx\!10^{-6}$, coherence $1.00$,
 error $0.57$), while the regulatory layout keeps $\sigma_J$ well away from zero.
-Table~\ref{tab:results_h4_ens} reports the window ensembles: historical (contiguous
-real-record slices) and simulated (AR(1)) both attain full numerical and effective
-rank with probability $1.0$ and no pairwise ambiguity, differing only in their
-$\sigma_J$ spread.
-
-\begin{table}[t]
-\centering
-\footnotesize
-\caption{Experiment 4: $\sigma_J$, maximum eligible coherence, and coefficient
-error across wind provider $\times$ sensor layout.}
-\label{tab:results_h4}
-\begin{tabular}{llrrr}
-\toprule
-wind & layout & $\sigma_J$ & max.\ coh. & coef.\ err. \\
-\midrule
-constant & regulatory & 1.53 & 0.975 & 0.000 \\
-constant & random     & 0.00 & 0.028 & 0.000 \\
-constant & downwind   & 0.13 & 0.990 & 0.000 \\
-single   & regulatory & 6.44 & 0.741 & 0.000 \\
-single   & random     & 0.00 & 1.000 & 0.573 \\
-single   & downwind   & 1.36 & 0.990 & 0.000 \\
-diurnal  & regulatory & 6.11 & 0.722 & 0.000 \\
-diurnal  & random     & 0.00 & 0.880 & 0.001 \\
-ar1      & regulatory & 7.35 & 0.641 & 0.000 \\
-ar1      & random     & 0.00 & 0.774 & 0.115 \\
-multi    & regulatory & 5.70 & 0.129 & 0.000 \\
-multi    & random     & 2.79 & 0.322 & 0.000 \\
-real     & regulatory & 2.85 & 0.156 & 0.000 \\
-real     & random     & 2.10 & 0.287 & 0.000 \\
-real     & downwind   & 0.38 & 0.221 & 0.000 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[t]
-\centering
-\footnotesize
-\caption{Experiment 4: wind-window ensemble distribution ($\sigma_J$ percentiles;
-both ensembles reach full rank with probability 1 and show no ambiguity).}
-\label{tab:results_h4_ens}
-\begin{tabular}{lrrr}
-\toprule
-ensemble & $\sigma_J^{5}$ & $\sigma_J^{50}$ & $\sigma_J^{95}$ \\
-\midrule
-historical (real slices) & 1.45 & 4.51 & 9.96 \\
-simulated (AR(1))        & 3.50 & 5.58 & 6.80 \\
-\bottomrule
-\end{tabular}
-\end{table}
+Separate window ensembles confirm robustness across realized wind: historical
+(contiguous real-record slices) and simulated (AR(1)) both attain full numerical
+and effective rank with probability $1.0$ and no pairwise ambiguity, differing
+only in their $\sigma_J$ spread (5th/50th/95th percentiles $1.45$/$4.51$/$9.96$
+historical versus $3.50$/$5.58$/$6.80$ simulated).
 
 \subsection{Experiment 5: Transport Error}
 \label{subsec:results_h5a}
@@ -481,12 +427,29 @@ response operator requires. Dense real wind truth is unavailable, so gridded-fie
 accuracy is instead assessed through the controlled synthetic-wind experiments
 (Experiment~4), where the true wind is known.
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig2_observed.pdf}
+\caption{Observed New Delhi study, four consecutive one-week windows
+(2018-05-01 through 2018-05-28), each fitted and reported independently.
+\textbf{(a)} Identifiability geometry: every week is full numerical rank
+($7$ free coefficients after the fixed-zero admissibility mask, four singleton
+report components), with $\sigma_1$ rising from $50.1$ to $81.2$, $\sigma_J$
+from $3.71$ to $10.15$ (week 3), and low maximum eligible coherence
+($0.32$--$0.50$). \textbf{(b)} Proxy apportionment as a fraction of the fitted
+inventory-attributed sensor signal (\emph{not} physical-emission shares): the
+mixture swings from population-dominated in weeks 1--3 to brick-kiln-dominated
+in week 4, which is why the windows are reported separately rather than as one
+aggregate estimate.}
+\label{fig:observed}
+\end{figure*}
+
 \subsection{New Delhi Identifiability and Report Groups}
 \label{subsec:results_new_delhi_identifiability}
 
 The observed study is run as four consecutive one-week windows (2018-05-01 through
 2018-05-28), each a self-contained fit reported on its own terms; results are not
-aggregated across windows. Table~\ref{tab:results_nd_ident} summarizes the
+aggregated across windows. Figure~\ref{fig:observed}(a) summarizes the
 identifiability geometry per week. Every week is full numerical rank ($7$ free
 coefficients after the fixed-zero admissibility mask), finite-conditioned, with
 low maximum eligible coherence ($0.32$--$0.50$), an empty weak set, no
@@ -494,29 +457,10 @@ cross-source ambiguous pairs, and four singleton report components. Each source
 group is therefore individually identifiable in every week and no conservative
 merge is required.
 
-\begin{table}[t]
-\centering
-\footnotesize
-\caption{Observed New Delhi identifiability, weeks 1--4. All weeks are full rank,
-finite-conditioned, with singleton report groups.}
-\label{tab:results_nd_ident}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{lrrrrl}
-\toprule
-week & $\sigma_1$ & $\sigma_J$ & num.\ rank & max.\ coh. & groups \\
-\midrule
-1 & 50.1 & 3.71  & 7 & 0.316 & 4 singletons \\
-2 & 60.3 & 5.67  & 7 & 0.355 & 4 singletons \\
-3 & 77.0 & 10.15 & 7 & 0.496 & 4 singletons \\
-4 & 81.2 & 7.65  & 7 & 0.475 & 4 singletons \\
-\bottomrule
-\end{tabular}
-\end{table}
-
 \subsection{New Delhi Proxy Apportionment and Uncertainty}
 \label{subsec:results_new_delhi_apportionment}
 
-Table~\ref{tab:results_nd_appt} reports the proxy apportionment for each week as a
+Figure~\ref{fig:observed}(b) reports the proxy apportionment for each week as a
 fraction of the fitted inventory-attributed sensor signal (denominator: the sum
 over groups of the $L_1$ fitted per-group sensor-signal magnitude); these are
 explicitly \emph{not} physical-emission shares. Traffic is a single road-network
@@ -525,28 +469,10 @@ mask, so there is no per-slot \texttt{traffic\_06} inventory to estimate; a grou
 whose admissible temporal components are all fixed-zero in a window would be marked
 \texttt{unsupported} rather than assigned a substantive share (none were in these
 weeks). The apportionment swings substantially week to week---population-dominated
-in weeks 1--3, then brick-kiln-dominated in week 4---which is precisely why the
-windows are reported separately rather than as one aggregate New Delhi estimate. 
-Per-monitor fitted group contributions and
+in weeks 1--3 (shares $1.00$, $0.81$, $0.94$), then brick-kiln-dominated in week 4
+($0.93$)---which is precisely why the windows are reported separately rather than as
+one aggregate New Delhi estimate.  Per-monitor fitted group contributions and
 their cells of origin (29/28 monitors per week) are not tabulated individually.
-
-\begin{table}[t]
-\centering
-\footnotesize
-\caption{Observed New Delhi proxy apportionment, weeks 1--4 (fraction of fitted
-sensor signal, not physical emissions). Note the large week-to-week swing.}
-\label{tab:results_nd_appt}
-\begin{tabular}{lrrrr}
-\toprule
-week & brick kilns & industries & population & traffic \\
-\midrule
-1 & 0.00 & 0.00 & 1.00 & 0.00 \\
-2 & 0.00 & 0.16 & 0.81 & 0.04 \\
-3 & 0.06 & 0.00 & 0.94 & 0.00 \\
-4 & 0.93 & 0.07 & 0.00 & 0.00 \\
-\bottomrule
-\end{tabular}
-\end{table}
 
 On observed data the fit uses only the $79$--$85\%$ of rows with a valid
 PM$_{2.5}$ measurement (no imputation), subtracting each week's zero-source

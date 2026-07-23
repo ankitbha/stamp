@@ -2,16 +2,10 @@
 \label{sec:identifiability_theory}
 
 We now characterize when source activity at a chosen temporal-basis resolution
-is determined by the projected observations.  Throughout this section,
-\begin{equation}
-\begin{aligned}
-\widetilde Y&=\widetilde H_\Phi\mathbf c+\widetilde E,\\
-\widetilde H_\Phi&=P_Q^\perp H_{\Phi}^{\mathrm{lag}}
-\in\mathbb R^{N\times J},\\
-J&=KB.
-\end{aligned}
-\label{eq:theory_projected_model}
-\end{equation}
+is determined by the projected observations.  Throughout this section
+\(\widetilde Y=\widetilde H_\Phi\mathbf c+\widetilde E\) with
+\(\widetilde H_\Phi=P_Q^\perp H_{\Phi}^{\mathrm{lag}}\in\mathbb R^{N\times J}\)
+and \(J=KB\).
 The analysis is conditional on the constructed wind field, transport operator,
 source inventories, temporal basis, lag window, and background basis.  We use
 the flattened coefficient index \(j=(k,b)\); ``source fingerprint'' without a
@@ -22,12 +16,8 @@ basis qualifier refers only to the constant-activity case \(B=1\).
 
 \begin{definition}[Exact identifiability]
 The source--basis coefficient vector is identifiable from \(\widetilde Y\) if
-\begin{equation}
-\widetilde H_\Phi\mathbf c_1=\widetilde H_\Phi\mathbf c_2
-\quad\Longrightarrow\quad
-\mathbf c_1=\mathbf c_2.
-\label{eq:exact_identifiability_definition}
-\end{equation}
+\(\widetilde H_\Phi\mathbf c_1=\widetilde H_\Phi\mathbf c_2\Longrightarrow
+\mathbf c_1=\mathbf c_2\).
 This is identifiability of the reconstructed source activity trajectories at
 the selected temporal-basis resolution.
 \end{definition}
@@ -47,26 +37,16 @@ In the noiseless projected model \(\widetilde Y=\widetilde H_\Phi\mathbf c\),
 \end{equation}
 \end{proposition}
 
-\begin{proof}
-If \(\operatorname{rank}(\widetilde H_\Phi)=J\), then
-\(\ker(\widetilde H_\Phi)=\{0\}\), so
-\(\widetilde H_\Phi(\mathbf c_1-\mathbf c_2)=0\) implies
-\(\mathbf c_1=\mathbf c_2\), including for all nonnegative coefficient vectors.  Conversely, if
-\(\operatorname{rank}(\widetilde H_\Phi)<J\), there exists a nonzero
-\(\Delta\mathbf c\in\ker(\widetilde H_\Phi)\).  Choose an interior
-\(\mathbf c\) with entries large enough that both \(\mathbf c\) and
-\(\mathbf c+\alpha\Delta\mathbf c\) are nonnegative for some nonzero,
-sufficiently small \(\alpha\).  They have the same response, so uniform
-identifiability on \(\mathbb R_+^J\) fails.
-\end{proof}
-
-We use this full-column-rank condition as our identifiability criterion
-for the declared source--basis coefficient set.  Coefficients fixed to zero by
-scientific knowledge are masked before fitting; the theorem and all diagnostics
-then apply to the reduced, predeclared column set.  A near-zero fitted estimate
-does not justify deleting its column after fitting or recomputing diagnostics on
-a more favorable response matrix.  Rank deficiency may arise from spatial
-source ambiguity, dependence among temporal modes, or their interaction.
+The proof (rank-nullity in both directions, with a nonnegative-feasible
+counterexample when the rank is deficient) is given in
+Appendix~\ref{app:identifiability_proofs}.  We use this full-column-rank
+condition as our identifiability criterion for the declared source--basis
+coefficient set.  Coefficients fixed to zero by scientific knowledge are masked
+before fitting; the theorem and all diagnostics then apply to the reduced,
+predeclared column set.  A near-zero fitted estimate does not justify deleting
+its column after fitting or recomputing diagnostics on a more favorable response
+matrix.  Rank deficiency may arise from spatial source ambiguity, dependence
+among temporal modes, or their interaction.
 
 \subsection{Noise-Robust Identifiability}
 \label{subsec:noise_robust_identifiability}
@@ -83,12 +63,8 @@ Assume \(\widetilde Y=\widetilde H_\Phi\mathbf c+\widetilde E\) and
 \(\operatorname{rank}(\widetilde H_\Phi)=J\).  Let
 \(\widehat{\mathbf c}_{\mathrm{LS}}\) be the unconstrained least-squares
 estimate.  Then
-\begin{equation}
-\|\widehat{\mathbf c}_{\mathrm{LS}}-\mathbf c\|_2
-\le
-\frac{\|\widetilde E\|_2}{\sigma_J(\widetilde H_\Phi)}.
-\label{eq:ls_noise_bound}
-\end{equation}
+\(\|\widehat{\mathbf c}_{\mathrm{LS}}-\mathbf c\|_2
+\le\|\widetilde E\|_2/\sigma_J(\widetilde H_\Phi)\).
 If \(\widehat{\mathbf c}\) is the nonnegative least-squares estimate and
 \(\mathbf c\ge0\), then
 \begin{equation}
@@ -99,20 +75,10 @@ If \(\widehat{\mathbf c}\) is the nonnegative least-squares estimate and
 \end{equation}
 \end{proposition}
 
-\begin{proof}
-For least squares,
-\(\widehat{\mathbf c}_{\mathrm{LS}}-\mathbf c=
-\widetilde H_\Phi^\dagger\widetilde E\), giving
-\(\|\widehat{\mathbf c}_{\mathrm{LS}}-\mathbf c\|_2\le
-\|\widetilde H_\Phi^\dagger\|_2\|\widetilde E\|_2=
-\|\widetilde E\|_2/\sigma_J(\widetilde H_\Phi)\).  For nonnegative least
-squares, the true \(\mathbf c\) is feasible, so optimality gives
-\(\|\widetilde Y-\widetilde H_\Phi\widehat{\mathbf c}\|_2\le
-\|\widetilde E\|_2\).  Hence
-\(\|\widetilde H_\Phi(\widehat{\mathbf c}-\mathbf c)\|_2\le
-2\|\widetilde E\|_2\).  The lower singular-value bound completes the proof.
-\end{proof}
-
+Both bounds follow from the pseudoinverse identity
+\(\|\widetilde H_\Phi^\dagger\|_2=1/\sigma_J(\widetilde H_\Phi)\) together with
+feasibility of the true \(\mathbf c\) in the nonnegative program; the derivation
+is in Appendix~\ref{app:identifiability_proofs}.
 Thus \(\sigma_J(\widetilde H_\Phi)\) measures worst-case robustness: source
 apportionment can be exactly identifiable but practically unstable when this
 quantity is small.
@@ -121,46 +87,25 @@ quantity is small.
 \label{subsec:identifiability_diagnostics}
 
 For floating-point computation, the default numerical rank tolerance is
-\begin{equation}
-\begin{aligned}
-\tau_{\mathrm{num}}
-&=\max(N,J)\,\epsilon_{\mathrm{mach}}\,\sigma_1,\\
-r_{\mathrm{num}}
-&=\#\{i:\sigma_i>\tau_{\mathrm{num}}\}.
-\end{aligned}
-\label{eq:numerical_rank}
-\end{equation}
-where \(\epsilon_{\mathrm{mach}}\) is the machine precision of the floating-point
-dtype used for the SVD (about \(2.2\times10^{-16}\) in double precision).  This
+\(\tau_{\mathrm{num}}=\max(N,J)\,\epsilon_{\mathrm{mach}}\,\sigma_1\) with
+numerical rank \(r_{\mathrm{num}}=\#\{i:\sigma_i>\tau_{\mathrm{num}}\}\),
+where \(\epsilon_{\mathrm{mach}}\) is the machine precision of the SVD dtype
+(about \(2.2\times10^{-16}\) in double precision).  This
 \(\tau_{\mathrm{num}}\) is a purely numerical tolerance for detecting exact rank
 deficiency; it is distinct from the scientific, noise-dependent threshold
 \(\tau_\sigma\) introduced below.  The primary identifiability score is the
-\emph{padded minimum singular value}
-\begin{equation}
-\sigma_J(\widetilde H_\Phi),
-\label{eq:identifiability_score}
-\end{equation}
-where the singular spectrum is padded with zeros whenever \(J>N\) or
+\emph{padded minimum singular value} \(\sigma_J(\widetilde H_\Phi)\), where the
+singular spectrum is padded with zeros whenever \(J>N\) or
 \(\widetilde H_\Phi\) is rank deficient.  A rank-deficient response therefore
 scores zero and is never reported as stable.
-The condition number is
-\begin{equation}
-\kappa(\widetilde H_\Phi)=
-\begin{cases}
-\sigma_1/\sigma_J, & r_{\mathrm{num}}=J,\\
-\infty, & r_{\mathrm{num}}<J.
-\end{cases}
-\label{eq:condition_number}
-\end{equation}
+The condition number is \(\kappa(\widetilde H_\Phi)=\sigma_1/\sigma_J\) when
+\(r_{\mathrm{num}}=J\) and \(\infty\) when \(r_{\mathrm{num}}<J\).
 The smallest numerically positive value may additionally be reported as
 \(\sigma_{\min,+}\), but it is not the identifiability score and never turns a
 rank-deficient matrix into a stable one.  For a separately chosen,
 noise-dependent threshold \(\tau_\sigma\), the effective rank is
-\begin{equation}
-r_{\mathrm{eff}}(\tau_\sigma)
-=\#\{i:\sigma_i(\widetilde H_\Phi)>\tau_\sigma\}.
-\label{eq:effective_rank}
-\end{equation}
+\(r_{\mathrm{eff}}(\tau_\sigma)
+=\#\{i:\sigma_i(\widetilde H_\Phi)>\tau_\sigma\}\).
 Unlike \(\tau_{\mathrm{num}}\), the threshold \(\tau_\sigma\) is set from the
 observation-noise scale, not from machine precision.  Given a per-row noise
 standard deviation \(\sigma_e\) (from sensor calibration or a bootstrap residual
@@ -174,12 +119,8 @@ estimation of all \(J\) source--basis coefficients at that noise level.
 For coefficient-specific diagnostics, let \(\widetilde{\mathbf h}_j\),
 \(j=(k,b)\), be a projected source--basis fingerprint.  Its visibility and the
 weak set at threshold \(\tau_v\ge0\) are
-\begin{equation}
-v_j=\|\widetilde{\mathbf h}_j\|_2,
-\qquad
-\mathcal W=\{j:v_j\le\tau_v\}.
-\label{eq:visibility}
-\end{equation}
+\(v_j=\|\widetilde{\mathbf h}_j\|_2\) and
+\(\mathcal W=\{j:v_j\le\tau_v\}\).
 A weak coefficient has little measurable effect after transport and background
 correction: \(v_j\) is the sensor-time magnitude produced by one unit of
 coefficient \(c_j\), and \(\tau_v\) marks fingerprints below the minimum
@@ -187,39 +128,26 @@ detectable signal.  A practical predeclared rule sets \(\tau_v\) from the noise
 scale and a target signal-to-noise ratio, e.g.\ \(\tau_v=\mathrm{SNR}_{\min}\,
 \sigma_e\), so a unit coefficient is flagged weak when even its full response is
 indistinguishable from noise.  For eligible indices \(i,j\notin\mathcal W\),
-pairwise ambiguity is measured by projected fingerprint coherence,
-\begin{equation}
-\rho_{ij}
-=
-\frac{|\widetilde{\mathbf h}_i^\top\widetilde{\mathbf h}_j|}
-{\|\widetilde{\mathbf h}_i\|_2\|\widetilde{\mathbf h}_j\|_2}.
-\label{eq:pairwise_coherence}
-\end{equation}
+pairwise ambiguity is measured by projected fingerprint coherence
+\(\rho_{ij}=|\widetilde{\mathbf h}_i^\top\widetilde{\mathbf h}_j|/
+(\|\widetilde{\mathbf h}_i\|_2\|\widetilde{\mathbf h}_j\|_2)\).
 Values near one indicate nearly proportional sensor-time signatures.  The
 ambiguous-pair set is
-\begin{equation}
-\mathcal A=\{(i,j):i,j\notin\mathcal W,\ \rho_{ij}>\tau_\rho\},
-\qquad \tau_\rho\in[0,1].
-\label{eq:ambiguous_pair_set}
-\end{equation}
-The threshold \(\tau_\rho\) is predeclared or calibrated on controlled experiments,
-not optimized after inspecting source recovery; a conservative default takes
-\(\tau_\rho\) close to one so that only near-proportional fingerprints are merged.
-Coherence and ray distance are reported only for eligible (nonweak) pairs;
-entries involving a weak fingerprint are shown as ``N/A'' and excluded from
-extrema, while the weak-visibility flag is always reported.
+\(\mathcal A=\{(i,j):i,j\notin\mathcal W,\ \rho_{ij}>\tau_\rho\}\),
+\(\tau_\rho\in[0,1]\).  The threshold \(\tau_\rho\) is predeclared or calibrated
+on controlled experiments, not optimized after inspecting source recovery; a
+conservative default takes \(\tau_\rho\) close to one so that only
+near-proportional fingerprints are merged.  Coherence and ray distance are
+reported only for eligible (nonweak) pairs; entries involving a weak fingerprint
+are shown as ``N/A'' and excluded from extrema, while the weak-visibility flag
+is always reported.
 
 To express the same scale-invariant geometry as a distance, we also report the
-ray distance for eligible, generally signed projected fingerprints:
-\begin{equation}
-d^{\mathrm{ray}}_{ij}
-=
-\min_{\alpha\in\mathbb R}
-\frac{\|\widetilde{\mathbf h}_i-
-\alpha\widetilde{\mathbf h}_j\|_2}
-{\|\widetilde{\mathbf h}_i\|_2}.
-\label{eq:ray_distance}
-\end{equation}
+ray distance for eligible, generally signed projected fingerprints,
+\(d^{\mathrm{ray}}_{ij}
+=\min_{\alpha\in\mathbb R}
+\|\widetilde{\mathbf h}_i-\alpha\widetilde{\mathbf h}_j\|_2/
+\|\widetilde{\mathbf h}_i\|_2\).
 For nonweak fingerprints,
 \begin{equation}
 d^{\mathrm{ray}}_{ij}=\sqrt{1-\rho_{ij}^2},
@@ -239,13 +167,7 @@ is ``N/A'' for pairs involving \(\mathcal W\) and excluded from distance extrema
 Background correction can improve robustness by removing broad temporal
 variation, but it can also remove source-driven signal.  Let \(P_Q=QQ^\dagger\).
 For coefficient fingerprint \(j=(k,b)\), define the background absorption
-fraction
-\begin{equation}
-a_j=
-\frac{\|P_Q\mathbf h_j^{\mathrm{lag}}\|_2}
-{\|\mathbf h_j^{\mathrm{lag}}\|_2}.
-\label{eq:background_absorption}
-\end{equation}
+fraction \(a_j=\|P_Q\mathbf h_j^{\mathrm{lag}}\|_2/\|\mathbf h_j^{\mathrm{lag}}\|_2\).
 If \(\|\mathbf h_j^{\mathrm{lag}}\|_2\) is zero at numerical tolerance,
 \(a_j\) is undefined and reported as N/A; the coefficient remains explicitly
 weak.
@@ -262,33 +184,19 @@ reasons.  Transport error includes wind interpolation, transport approximation,
 and dispersion parameters; inventory error includes missing, misplaced,
 misclassified, or incorrectly scaled proxy sources.  Write the projected
 response discrepancy as
-\begin{equation}
-\Delta_H=\Delta_{\mathrm{tr}}+\Delta_{\mathrm{inv}}+
-\Delta_{\mathrm{int}},
-\label{eq:response_error_decomposition}
-\end{equation}
+\(\Delta_H=\Delta_{\mathrm{tr}}+\Delta_{\mathrm{inv}}+\Delta_{\mathrm{int}}\),
 where \(\Delta_{\mathrm{tr}}\) is the transport term, \(\Delta_{\mathrm{inv}}\)
 the inventory term, and \(\Delta_{\mathrm{int}}\) their interaction.  The
 decomposition is used to keep uncertainty honest: \(\Delta_{\mathrm{tr}}\) is
 propagated through transport ensembles and may become an uncertainty interval,
 whereas \(\Delta_{\mathrm{inv}}\) is reported only as named robustness scenarios
 and is never pooled into an interval, and \(\Delta_{\mathrm{int}}\) is recorded
-rather than pooled separately.  Let
-\(\widetilde H_\Phi^\star\) be the true projected response and
-\(\widehat{\widetilde H}_\Phi\) the constructed one, with
-\begin{equation}
-\|\widehat{\widetilde H}_\Phi-\widetilde H_\Phi^\star\|_2\le\delta_H.
-\label{eq:operator_perturbation}
-\end{equation}
-Then
-\begin{equation}
-\widetilde Y
-=\widehat{\widetilde H}_\Phi\mathbf c
-+\left[\widetilde E+(\widetilde H_\Phi^\star-
-\widehat{\widetilde H}_\Phi)\mathbf c\right].
-\label{eq:operator_error_as_noise}
-\end{equation}
-Response error therefore acts like additional observation error.
+rather than pooled separately.  Let \(\widetilde H_\Phi^\star\) be the true
+projected response and \(\widehat{\widetilde H}_\Phi\) the constructed one, with
+\(\|\widehat{\widetilde H}_\Phi-\widetilde H_\Phi^\star\|_2\le\delta_H\).  Then
+\(\widetilde Y=\widehat{\widetilde H}_\Phi\mathbf c
++[\widetilde E+(\widetilde H_\Phi^\star-\widehat{\widetilde H}_\Phi)\mathbf c]\),
+so response error acts like additional observation error.
 
 \begin{proposition}[Perturbation bound]
 \label{prop:operator_perturbation}
@@ -323,12 +231,8 @@ already ill-conditioned.
 
 When coefficient fingerprints are weak or highly coherent, separate source
 estimates can be misleading.  We define the source ambiguity graph by
-\begin{equation}
-\mathcal E_{\mathrm{src}}
-=\left\{(k,k'):\exists b,b'\quad
-((k,b),(k',b'))\in\mathcal A\right\}.
-\label{eq:source_ambiguity_graph}
-\end{equation}
+\(\mathcal E_{\mathrm{src}}
+=\{(k,k'):\exists b,b'\ ((k,b),(k',b'))\in\mathcal A\}\).
 Each edge retains the maximum eligible coefficient coherence, minimum ray
 distance, and the source--basis pair attaining the trigger.  Deterministically
 ordered connected components \(\mathcal G=\{G_1,\ldots,G_M\}\) are recommended
@@ -345,13 +249,9 @@ so that this transitive over-merging is visible.
 
 The coefficient fit is not silently replaced by a grouped refit.  For reporting,
 group activity and fitted sensor contribution are the sums
-\begin{equation}
-\widehat\theta_{G_a}(t)=\sum_{k\in G_a}\widehat\theta_k(t),
-\qquad
-\widehat Y_{G_a}=\sum_{k\in G_a}\sum_b
-\mathbf h_{kb}^{\mathrm{lag}}\widehat c_{kb}.
-\label{eq:grouped_reports}
-\end{equation}
+\(\widehat\theta_{G_a}(t)=\sum_{k\in G_a}\widehat\theta_k(t)\) and
+\(\widehat Y_{G_a}=\sum_{k\in G_a}\sum_b
+\mathbf h_{kb}^{\mathrm{lag}}\widehat c_{kb}\).
 Matrix diagnostics remain coefficient level; these group summaries express the
 coarser claims supported by the fit without inventing a scalar source
 fingerprint.
@@ -400,10 +300,7 @@ answers this without a new model.
 
 \paragraph{Per-sensor contribution decomposition.}
 For an observed row \((s,t)\), the background-corrected fit decomposes exactly as
-\begin{equation}
-\widetilde y_{s,t}=\sum_{k,b}\widetilde H_{\Phi,(s,t),(k,b)}\,\widehat c_{kb},
-\label{eq:per_sensor_decomposition}
-\end{equation}
+\(\widetilde y_{s,t}=\sum_{k,b}\widetilde H_{\Phi,(s,t),(k,b)}\,\widehat c_{kb}\),
 so the contribution of source \(k\) to sensor \(s\) over the record is
 \(\widehat Y^{(s)}_k=\sum_t\sum_b
 H_{\Phi,(s,t),(k,b)}^{\mathrm{lag}}\widehat c_{kb}\).  The projected form isolates
@@ -413,36 +310,25 @@ contribution before background removal.
 \paragraph{Sensor footprint.}
 The spatial origin of a sensor's signal is the pullback of its response row onto
 the source grid.  For sensor \(s\) at time \(t\),
-\begin{equation}
-\begin{aligned}
-F_{s,t}(i)&=\sum_{\ell\in\mathcal L_t}
-\bigl[O G_{t,t-\ell}^{\partial}(\widehat{\mathbf w}_{t-\ell:t})\bigr]_{s,i}
-\ \ge 0,\\
-F_s(i)&=\sum_t F_{s,t}(i),
-\end{aligned}
-\label{eq:sensor_footprint}
-\end{equation}
-a nonnegative field over source cells \(i\) recording which upwind cells
-influence sensor \(s\).  Weighting by \(\phi_b(t-\ell)\), the inventory map
-\(\mathbf s_k\), and \(\widehat c_{kb}\) resolves the fitted contribution of each
-source group to each sensor by cell of origin.  This is the puff response of
-Section~\ref{subsec:plume_response} read backward from the sensor and requires no
-new transport operator.
+\(F_{s,t}(i)=\sum_{\ell\in\mathcal L_t}
+[O G_{t,t-\ell}^{\partial}(\widehat{\mathbf w}_{t-\ell:t})]_{s,i}\ge 0\) and
+\(F_s(i)=\sum_t F_{s,t}(i)\), a nonnegative field over source cells \(i\)
+recording which upwind cells influence sensor \(s\).  Weighting by
+\(\phi_b(t-\ell)\), the inventory map \(\mathbf s_k\), and \(\widehat c_{kb}\)
+resolves the fitted contribution of each source group to each sensor by cell of
+origin.  This is the puff response of Section~\ref{subsec:plume_response} read
+backward from the sensor and requires no new transport operator.
 
 \paragraph{Identifiability is inherited, not created.}
 Per-sensor attribution uses only the rows of \(\widetilde H_\Phi\) for that
 sensor.  Let \(\widetilde H_\Phi^{(s)}\) be that row submatrix.  Since
 \(\widetilde H_\Phi^{(s)\top}\widetilde H_\Phi^{(s)}\preceq
 \widetilde H_\Phi^\top\widetilde H_\Phi\), deleting rows cannot increase the
-smallest singular value or the rank,
-\begin{equation}
-\sigma_J(\widetilde H_\Phi^{(s)})\le\sigma_J(\widetilde H_\Phi),
-\qquad
-\operatorname{rank}(\widetilde H_\Phi^{(s)})\le
-\operatorname{rank}(\widetilde H_\Phi),
-\label{eq:footprint_inheritance}
-\end{equation}
-so a single sensor is never more identifiable than the pooled network.
+smallest singular value or the rank, so
+\(\sigma_J(\widetilde H_\Phi^{(s)})\le\sigma_J(\widetilde H_\Phi)\) and
+\(\operatorname{rank}(\widetilde H_\Phi^{(s)})\le
+\operatorname{rank}(\widetilde H_\Phi)\):
+a single sensor is never more identifiable than the pooled network.
 Footprints and per-sensor contributions are therefore reported as spatial
 overlays of the global fit; per-sensor source \emph{shares} are asserted only at
 the globally identifiable resolution, aggregating to a report group wherever the

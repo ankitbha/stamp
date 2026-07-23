@@ -10,11 +10,8 @@ projected response matrix used throughout this work.
 \paragraph{City-scale transport model.}
 Let \(u(\mathbf x,t)\in \mathbb R\) denote the pollutant concentration field on
 \(\Omega\subset \mathbb R^d\).  A generic continuous-time model is
-\begin{equation}
-\frac{\partial u}{\partial t}
-= \mathcal F_\eta(u,\mathbf x,t;w(t)) + s(\mathbf x,t)+b(\mathbf x,t),
-\label{eq:continuous_transport}
-\end{equation}
+\(\partial u/\partial t
+= \mathcal F_\eta(u,\mathbf x,t;w(t)) + s(\mathbf x,t)+b(\mathbf x,t)\),
 where \(w(t)\) is the meteorological state, \(s\) is local source emission,
 \(b\) is background or regional pollution, and \(\eta\) denotes transport and
 dispersion parameters.  The exact dynamics may be approximated by a plume
@@ -27,45 +24,23 @@ Discretize the concentration field on \(n\) grid cells, so that
 \(X_{\mathrm{sens}}=\{\mathbf x_1,\ldots,\mathbf x_m\}\) be the fixed sensor
 locations with \(m\ll n\).  The observation operator
 \(O:\mathbb R^n\to \mathbb R^m\) samples or interpolates the latent field at
-these locations:
-\begin{equation}
-\mathbf y_t = O\mathbf u_t + \boldsymbol\epsilon_t,
-\qquad \mathbf y_t\in \mathbb R^m .
-\label{eq:sensor_obs}
-\end{equation}
-Stacking over \(t=1,\ldots,T\) gives
-\begin{equation}
-Y = [\mathbf y_1^\top,\ldots,\mathbf y_T^\top]^\top \in \mathbb R^{mT}.
-\label{eq:stacked_observations}
-\end{equation}
+these locations, \(\mathbf y_t = O\mathbf u_t + \boldsymbol\epsilon_t\) with
+\(\mathbf y_t\in \mathbb R^m\); stacking over \(t=1,\ldots,T\) gives
+\(Y = [\mathbf y_1^\top,\ldots,\mathbf y_T^\top]^\top \in \mathbb R^{mT}\).
 Because \(m\) is small relative to the field dimension, many latent fields and
 source configurations can be consistent with the same sensor trajectory.
 
-
 \paragraph{Inventory-based source parameterization.}
-We assume a set of \(K\) known or
-proxy source maps,
-\begin{equation}
-S = [\mathbf s_1\;\mathbf s_2\;\cdots\;\mathbf s_K]\in \mathbb R^{q\times K},
-\label{eq:inventory_matrix}
-\end{equation}
+We assume a set of \(K\) known or proxy source maps,
+\(S = [\mathbf s_1\;\mathbf s_2\;\cdots\;\mathbf s_K]\in \mathbb R^{q\times K}\),
 where \(\mathbf s_k\in\mathbb R^q\) is the spatial pattern of source group
 \(k\).  The source grid dimension \(q\) may differ from the concentration-grid
 dimension \(n\).  We represent time-varying source activity with a fixed,
 predeclared nonnegative temporal dictionary
-\begin{equation}
-\Phi=[\boldsymbol\phi_1\;\cdots\;\boldsymbol\phi_B]
-\in\mathbb R_+^{T\times B},
-\qquad
-C=[c_{kb}]\in\mathbb R_+^{K\times B}.
-\label{eq:temporal_activity_basis}
-\end{equation}
+\(\Phi=[\boldsymbol\phi_1\;\cdots\;\boldsymbol\phi_B]\in\mathbb R_+^{T\times B}\)
+and coefficients \(C=[c_{kb}]\in\mathbb R_+^{K\times B}\).
 The activity of source \(k\) at time \(t\) is
-\begin{equation}
-\theta_k(t)=\sum_{b=1}^{B}c_{kb}\phi_b(t),
-\qquad \theta_k(t)\ge0.
-\label{eq:source_activity}
-\end{equation}
+\(\theta_k(t)=\sum_{b=1}^{B}c_{kb}\phi_b(t)\ge0\).
 The basis \(\Phi\) is shared as a dictionary of admissible temporal patterns,
 not as a claim that all sources follow the same activity trajectory: each source
 has its own nonnegative mixture weights \(c_{kb}\).  In applications, these
@@ -85,47 +60,26 @@ vectorize \(C\) in source-major, basis-minor order as
 \paragraph{Lagged wind-conditioned response.}
 Emissions released at time \(t-\ell\) may affect sensors at time \(t\) only
 after being transported by the intervening wind field.  Let
-\begin{equation}
-G_{t,t-\ell}^{\partial}(w_{t-\ell:t})\in \mathbb R^{n\times q}
-\label{eq:lagged_operator}
-\end{equation}
+\(G_{t,t-\ell}^{\partial}(w_{t-\ell:t})\in \mathbb R^{n\times q}\)
 map emissions released on the source grid at time \(t-\ell\) to the
 concentration grid at time \(t\).  The superscript \(\partial\) denotes an
 open-boundary operator: mass transported outside \(\Omega\) leaves the modeled
 domain rather than being reflected or wrapped around.  For a maximum lag \(L\),
-define
-\begin{equation}
-\mathcal L_t = \{0,1,\ldots,\min(L,t-1)\}.
-\label{eq:lag_set}
-\end{equation}
-For source \(k\) and basis component \(b\), the corresponding unit-coefficient sensor fingerprint
-at time \(t\) is
-\begin{equation}
-\mathbf h_{t,kb}^{\mathrm{lag}}
+define \(\mathcal L_t = \{0,1,\ldots,\min(L,t-1)\}\).
+For source \(k\) and basis component \(b\), the corresponding unit-coefficient
+sensor fingerprint at time \(t\) is
+\(\mathbf h_{t,kb}^{\mathrm{lag}}
 = \sum_{\ell\in\mathcal L_t}
-\phi_b(t-\ell)
-O G_{t,t-\ell}^{\partial}(w_{t-\ell:t})\mathbf s_k
-\in \mathbb R^m.
-\label{eq:time_response}
-\end{equation}
+\phi_b(t-\ell)\,O G_{t,t-\ell}^{\partial}(w_{t-\ell:t})\mathbf s_k
+\in \mathbb R^m\).
 Stacking over time and arranging columns in source-major, basis-minor order
-gives
-\begin{equation}
-\begin{aligned}
-H_{\Phi}^{\mathrm{lag}}
-&=
-[\mathbf h_{11}^{\mathrm{lag}}\;\cdots\;
- \mathbf h_{1B}^{\mathrm{lag}}\;\cdots\;
- \mathbf h_{KB}^{\mathrm{lag}}]
-\in \mathbb R^{mT\times J},\\
-J&=KB,
-\end{aligned}
-\label{eq:stacked_response}
-\end{equation}
+gives \(H_{\Phi}^{\mathrm{lag}}
+=[\mathbf h_{11}^{\mathrm{lag}}\;\cdots\;\mathbf h_{1B}^{\mathrm{lag}}\;\cdots\;
+\mathbf h_{KB}^{\mathrm{lag}}]\in \mathbb R^{mT\times J}\), \(J=KB\),
 where each \(\mathbf h_{kb}^{\mathrm{lag}}\in\mathbb R^{mT}\) is the
-finite-horizon unit-coefficient sensor fingerprint, which is the sensor-time pattern produced by one unit of coefficient
-\(c_{kb}\).  When \(B=1\),
-these columns reduce to the fingerprints of the constant-activity model.
+finite-horizon unit-coefficient sensor fingerprint, the sensor-time pattern
+produced by one unit of coefficient \(c_{kb}\).  When \(B=1\), these columns
+reduce to the fingerprints of the constant-activity model.
 
 The lag window changes these fingerprints and the release times contributing to
 each observation; it does not add sensor--time observations or change the row
@@ -140,7 +94,8 @@ and residence-time bounds define an increasing candidate grid
 {\max\{\|H_{\Phi}^{\mathrm{lag}}(L+\Delta)\|_F,\epsilon\}},
 \label{eq:lag_convergence}
 \end{equation}
-where the subscript $F$ refers to the Frobenius norm: $\|A\|_F = \left(\sum_{i,j} A_{ij}^2\right)^{1/2}$.
+where the subscript \(F\) is the Frobenius norm
+\(\|A\|_F = (\sum_{i,j} A_{ij}^2)^{1/2}\).
 The primary lag is the smallest candidate with \(\eta_L\le\tau_L\), using
 \(\tau_L=10^{-3}\) by default.  Rank, conditioning, and ambiguity components
 are also reported across the candidate grid.  The fitted value of
@@ -150,17 +105,13 @@ are also reported across the candidate grid.  The fitted value of
 Observed concentrations include components not explained by the local source
 inventory, including regional background, smooth temporal trends, and
 sensor-specific offsets.  We represent these components with a low-dimensional
-basis
-\begin{equation}
-Q\in \mathbb R^{mT\times r}, \qquad \boldsymbol\gamma\in \mathbb R^r,
-\label{eq:background_basis}
-\end{equation}
-and write
+basis \(Q\in \mathbb R^{mT\times r}\), \(\boldsymbol\gamma\in \mathbb R^r\), and write
 \begin{equation}
 Y = H_{\Phi}^{\mathrm{lag}}\mathbf c + Q\boldsymbol\gamma + E.
 \label{eq:model_with_background}
 \end{equation}
-The low-dimensionality ensures that source apportionment is not confounded by background correction.
+The low-dimensionality ensures that source apportionment is not confounded by
+background correction.
 
 Real concentration records need not be complete.  Let \(\mathcal O\) be the
 ordered set of observed sensor--time PM\(_{2.5}\) rows and let
@@ -181,14 +132,9 @@ observations, \(M_{\mathcal O}=I\) and \(N=mT\).  Below we drop the
 \(H_{\Phi}^{\mathrm{lag}}\in\mathbb R^{N\times J}\), and
 \(Q\in\mathbb R^{N\times r}\) for these aligned arrays.
 
-Let
-\begin{equation}
-P_Q^\perp = I - QQ^\dagger
-\label{eq:background_projection}
-\end{equation}
-be the projection onto the orthogonal complement of the background space, with
-\(Q^\dagger\) denoting the Moore--Penrose pseudoinverse.  The corrected inverse
-problem is
+Let \(P_Q^\perp = I - QQ^\dagger\) be the projection onto the orthogonal
+complement of the background space, with \(Q^\dagger\) the Moore--Penrose
+pseudoinverse.  The corrected inverse problem is
 \begin{equation}
 \widetilde Y = \widetilde H_\Phi\mathbf c + \widetilde E,
 \qquad
@@ -203,16 +149,11 @@ response.
 
 \paragraph{Projected source--basis fingerprints.}
 Writing
-\begin{equation}
-H_{\Phi}^{\mathrm{lag}}
-=[\mathbf h_{11}^{\mathrm{lag}}\;\cdots\;\mathbf h_{KB}^{\mathrm{lag}}],
-\qquad
-\widetilde H_\Phi
-=[\widetilde{\mathbf h}_{11}\;\cdots\;\widetilde{\mathbf h}_{KB}],
-\label{eq:source_fingerprints}
-\end{equation}
-we have
-\(\widetilde{\mathbf h}_{kb}=P_Q^\perp\mathbf h_{kb}^{\mathrm{lag}}\).
+\(H_{\Phi}^{\mathrm{lag}}
+=[\mathbf h_{11}^{\mathrm{lag}}\;\cdots\;\mathbf h_{KB}^{\mathrm{lag}}]\) and
+\(\widetilde H_\Phi
+=[\widetilde{\mathbf h}_{11}\;\cdots\;\widetilde{\mathbf h}_{KB}]\),
+we have \(\widetilde{\mathbf h}_{kb}=P_Q^\perp\mathbf h_{kb}^{\mathrm{lag}}\).
 These projected fingerprints encode the observable effect of each temporal
 component of each source after wind transport, lag, sparse sensing, and
 background correction.  Source apportionment at the chosen temporal-basis
