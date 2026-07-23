@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2023.2.18)  23 JUL 2026 09:15
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2023.2.18)  23 JUL 2026 09:42
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -788,11 +788,11 @@ LaTeX Font Info:    Font shape `TS1/ntxtlf/m/n' will be
 
 ])
 (./2.related.tex) (./3.setup.tex [2]) (./4.method.tex
-Overfull \hbox (23.09012pt too wide) detected at line 16
+Overfull \hbox (3.09012pt too wide) detected at line 16
 []\OML/cmm/m/it/10 U[] \OT1/cmr/m/n/10 = \OMS/cmsy/m/n/10 ^^@\OML/cmm/m/it/10 W
 S []\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 WD^^Y=\OT1/cmr/m/n/10 180)\OML/cmm/m/it/1
-0 ;  V[] \OT1/cmr/m/n/10 = \OMS/cmsy/m/n/10 ^^@\OML/cmm/m/it/10 WS []\OT1/cmr/m
-/n/10 (\OML/cmm/m/it/10 WD^^Y=\OT1/cmr/m/n/10 180)\OML/cmm/m/it/10 ;
+0 ; V[] \OT1/cmr/m/n/10 = \OMS/cmsy/m/n/10 ^^@\OML/cmm/m/it/10 WS []\OT1/cmr/m/
+n/10 (\OML/cmm/m/it/10 WD^^Y=\OT1/cmr/m/n/10 180)\OML/cmm/m/it/10 ;
  []
 
 [3]) (./5.theory.tex
@@ -835,16 +835,18 @@ Package microtype Info: Loading generic protrusion settings for font family
 File: figures/fig1_identifiability.pdf Graphic file (type pdf)
 <use figures/fig1_identifiability.pdf>
 Package pdftex.def Info: figures/fig1_identifiability.pdf  used on input line 3
-4.
+7.
 (pdftex.def)             Requested size: 505.89pt x 145.87454pt.
- [8] [9 <./figures/fig1_identifiability.pdf>]
-<figures/fig2_observed.pdf, id=122, 492.46983pt x 159.85458pt>
+ [8]
+Underfull \vbox (badness 1590) has occurred while \output is active []
+
+<figures/fig2_observed.pdf, id=58, 492.46983pt x 159.85458pt>
 File: figures/fig2_observed.pdf Graphic file (type pdf)
 <use figures/fig2_observed.pdf>
-Package pdftex.def Info: figures/fig2_observed.pdf  used on input line 176.
+Package pdftex.def Info: figures/fig2_observed.pdf  used on input line 159.
 (pdftex.def)             Requested size: 505.89pt x 164.22029pt.
-)
-(./8.conclusion.tex) [10] (./main.bbl
+ [9 <./figures/fig1_identifiability.pdf>]) (./8.conclusion.tex) [10] (./main.bb
+l
 Underfull \hbox (badness 10000) in paragraph at lines 81--85
 \T1/ntxtlf/m/n/10 (+20) com / ccr / \ # /caaqm -[] dashboard -[] all / caaqm -[
 ] landing / caaqm -[]
@@ -885,11 +887,11 @@ x[]\OML/cmm/m/it/10 ; t\OT1/cmr/m/n/10 ) = []\OML/cmm/m/it/10 :
 
 ] (./main.aux) ) 
 Here is how much of TeX's memory you used:
- 20694 strings out of 480247
- 401823 string characters out of 5896151
- 702846 words of memory out of 5000000
- 37956 multiletter control sequences out of 15000+600000
- 526866 words of font info for 200 fonts, out of 8000000 for 9000
+ 20702 strings out of 480247
+ 401977 string characters out of 5896151
+ 702898 words of memory out of 5000000
+ 37958 multiletter control sequences out of 15000+600000
+ 527109 words of font info for 203 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  99i,12n,117p,2207b,445s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}{/us
@@ -921,7 +923,7 @@ ts/type1/public/tex-gyre/qtmr.pfb></usr/share/texlive/texmf-dist/fonts/type1/ur
 w/courier/ucrr8a.pfb></scratch/ab9738/stamp/.vscode/texmf/fonts/type1/public/ne
 wtx/ztmb.pfb></scratch/ab9738/stamp/.vscode/texmf/fonts/type1/public/newtx/ztmr
 .pfb></scratch/ab9738/stamp/.vscode/texmf/fonts/type1/public/newtx/ztmri.pfb>
-Output written on main.pdf (21 pages, 595601 bytes).
+Output written on main.pdf (21 pages, 595160 bytes).
 PDF statistics:
  337 PDF objects out of 1000 (max. 8388607)
  159 compressed objects within 2 object streams

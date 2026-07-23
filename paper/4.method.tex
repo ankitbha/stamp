@@ -1,4 +1,4 @@
-\section{Wind-Conditioned Response Construction and Estimation}
+\section{Wind-Conditioned Response}
 \label{sec:wind_conditioned_source_apportionment}
 
 Building on the projected inverse problem of Section~\ref{sec:problem_setup}, we
@@ -11,7 +11,7 @@ Government wind direction is meteorological (it records where wind comes
 from), whereas transport needs the direction in which pollution moves.  We
 convert direction \(WD\) and speed \(WS\) to transport vectors
 \begin{equation}
-U_x=-WS\sin(WD\pi/180),\qquad V_y=-WS\cos(WD\pi/180),
+U_x=-WS\sin(WD\pi/180), V_y=-WS\cos(WD\pi/180),
 \label{eq:wind_direction_conversion}
 \end{equation}
 supply the station vectors and masks to a coordinate-query wind imputer, and
