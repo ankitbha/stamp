@@ -72,7 +72,8 @@ python3 evaluation/eval_pol_iasa.py \
   --runs evaluation/iasa_pol/runs --out evaluation/iasa_pol/reports
 ```
 
-Paper build: see `README.md` (`TEXINPUTS=.:./icml2026//: pdflatex ...`).
+Paper build (AAAI 2027; `aaai2027.sty` vendored in `paper/`): see `README.md`
+(`pdflatex main.tex && bibtex main && pdflatex main.tex && pdflatex main.tex`).
 
 ## Artifacts and provenance schema
 

@@ -110,14 +110,15 @@ never guesses mask polarity.
 
 ## Paper
 
-Sources are in `paper/`; the compiled `paper/main.pdf` is committed. Rebuild inside
-the container (the `algorithm.sty` and `icml2026` style are vendored under
-`paper/icml2026/`):
+Sources are in `paper/` (AAAI 2027 format; the `aaai2027.sty`/`aaai2027.bst` style
+files are vendored in `paper/`). The compiled `paper/main.pdf` is committed and is
+the reference build. Rebuild in a full TeX Live that provides the AAAI-required
+`newtx` fonts (`newtxtext`/`newtxmath`), which the repository container image does
+**not** include:
 
 ```bash
-... /bin/bash -lc "source /ext3/env.sh && cd /scratch/ab9738/stamp/paper && \
-  TEXINPUTS=.:./icml2026//: pdflatex -interaction=nonstopmode main.tex && \
-  bibtex main && pdflatex main.tex && pdflatex main.tex"
+cd paper && pdflatex -interaction=nonstopmode main.tex && \
+  bibtex main && pdflatex main.tex && pdflatex main.tex
 ```
 
 ## Legacy code
