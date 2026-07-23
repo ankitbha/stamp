@@ -65,16 +65,10 @@ predeclared sensitivity analyses, not data-selected replacements
 (Appendix~\ref{app:transport_response}).
 
 \paragraph{Response matrix and source activity fit.}\label{subsec:response_and_fit}
-Given the wind field, inventory, and temporal basis, the lagged unit-coefficient
-response has \((k,b)\)-th column
-\begin{equation}
-\mathbf h_{t,kb}^{\mathrm{lag}}
-=\sum_{\ell\in\mathcal L_t}\phi_b(t-\ell)
-O G_{t,t-\ell}^{\partial}(\widehat{\mathbf w}_{t-\ell:t};\psi)
-\mathbf s_k,
-\label{eq:constructed_response}
-\end{equation}
-and stacking over time in source-major, basis-minor order yields
+Given the wind field, inventory, and temporal basis, the response columns are
+formed as in Equation~\ref{eq:constructed_response}, now evaluated with the
+estimated wind field \(\widehat{\mathbf w}\) and dispersion parameters \(\psi\).
+Stacking over time in source-major, basis-minor order yields
 \(H_\Phi^{\mathrm{lag}}\in\mathbb R^{N\times J}\), \(J=KB\), after the observation
 selection (Eq.~\ref{eq:observation_selection}); projection then gives
 \(\widetilde Y,\widetilde H_\Phi\) (Eq.~\ref{eq:projected_model}).  Scientific

@@ -68,10 +68,13 @@ domain rather than being reflected or wrapped around.  For a maximum lag \(L\),
 define \(\mathcal L_t = \{0,1,\ldots,\min(L,t-1)\}\).
 For source \(k\) and basis component \(b\), the corresponding unit-coefficient
 sensor fingerprint at time \(t\) is
-\(\mathbf h_{t,kb}^{\mathrm{lag}}
+\begin{equation}
+\mathbf h_{t,kb}^{\mathrm{lag}}
 = \sum_{\ell\in\mathcal L_t}
 \phi_b(t-\ell)\,O G_{t,t-\ell}^{\partial}(w_{t-\ell:t})\mathbf s_k
-\in \mathbb R^m\).
+\in \mathbb R^m.
+\label{eq:constructed_response}
+\end{equation}
 Stacking over time and arranging columns in source-major, basis-minor order
 gives \(H_{\Phi}^{\mathrm{lag}}
 =[\mathbf h_{11}^{\mathrm{lag}}\;\cdots\;\mathbf h_{1B}^{\mathrm{lag}}\;\cdots\;
