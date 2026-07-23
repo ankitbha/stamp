@@ -72,8 +72,10 @@ python3 evaluation/eval_pol_iasa.py \
   --runs evaluation/iasa_pol/runs --out evaluation/iasa_pol/reports
 ```
 
-Paper build (AAAI 2027; `aaai2027.sty` vendored in `paper/`): see `README.md`
-(`pdflatex main.tex && bibtex main && pdflatex main.tex && pdflatex main.tex`).
+Paper build (AAAI 2027; `aaai2027.sty` vendored in `paper/`): run
+`.vscode/texmf-setup.sh` once to populate the project-local `newtx` font tree, then
+build via the LaTeX Workshop extension or the manual container command in
+`README.md`.
 
 ## Artifacts and provenance schema
 
