@@ -24,29 +24,11 @@ activities and contribution estimates at the identifiable grouping, fitted
 trajectories and residuals, uncertainty intervals, singular-value, coherence,
 and ray-distance diagnostics, low-visibility flags, and merge recommendations.
 
-The thresholds are summarized in Table~\ref{tab:thresholds}; each is predeclared
-or calibrated from noise or physics and none is tuned on source-recovery results.
-
-\begin{table}[t]
-\centering
-\small
-\setlength{\tabcolsep}{3pt}
-\caption{IASA thresholds, their meaning, and how they are set.  None is
-optimized on source-recovery error.}
-\label{tab:thresholds}
-\begin{tabular}{lll}
-\toprule
-Threshold & Meaning & How set \\
-\midrule
-\(\tau_{\mathrm{num}}\) & numerical rank tol.\ & \(\max(N,J)\epsilon_{\mathrm{mach}}\sigma_1\) \\
-\(\tau_\sigma\) & effective-rank floor & noise scale, e.g.\ \(\sigma_e\sqrt N\) \\
-\(\tau_v\) & visibility floor & \(\mathrm{SNR}_{\min}\,\sigma_e\) \\
-\(\tau_\rho\) & ambiguity coherence & predeclared, near \(1\) \\
-\(\tau_\rho^{\mathrm{ref}}\) & refinement coherence & default \(\tau_\rho^{\mathrm{ref}}=\tau_\rho\) \\
-\(\epsilon_w\) & wind-drift cap & physical wind tolerance \\
-\bottomrule
-\end{tabular}
-\end{table}
+The thresholds \(\tau_{\mathrm{num}},\tau_\sigma,\tau_v,\tau_\rho\) (with the
+refinement coherence cap \(\tau_\rho^{\mathrm{ref}}\) and wind-drift cap
+\(\epsilon_w\)) are each predeclared or calibrated from noise or physics and none
+is tuned on source-recovery results; they are summarized in
+Appendix~\ref{app:reporting_details} (Table~\ref{tab:thresholds}).
 
 \subsection{Procedure}
 \label{subsec:iasa_procedure}
@@ -127,168 +109,40 @@ objective change.  Device, dtype, convergence status, iteration count,
     and the final KKT residual are part of the fit record.  Transport-ensemble
     and bootstrap refits are batched on the same device when their shapes agree.
 
-\subsection{Uncertainty Reporting}
-\label{subsec:uncertainty_reporting}
-Let
-\begin{equation}
-\widetilde r=\widetilde Y-\widetilde H_\Phi\widehat{\mathbf c}
-\label{eq:projected_residual}
-\end{equation}
-be the projected residual.  A residual variance estimate is
-\begin{equation}
-\widehat\sigma^2
-=
-\frac{\|\widetilde r\|_2^2}{\max(N-r_{\mathrm{eff}}(\tau_\sigma),1)}.
-\label{eq:residual_variance}
-\end{equation}
-For an unconstrained or active-set approximation, let
-\(\mathcal A_c=\{j:\widehat c_j>\tau_c\}\) and let
-\(\widetilde H_{\Phi,\mathcal A_c}\) contain the active columns.  The covariance
-of the active estimates is approximated by
-\begin{equation}
-\operatorname{Cov}(\widehat{\mathbf c}_{\mathcal A_c})
-=
-\widehat\sigma^2
-(\widetilde H_{\Phi,\mathcal A_c}^\top
-\widetilde H_{\Phi,\mathcal A_c}+\lambda I)^\dagger.
-\label{eq:active_covariance}
-\end{equation}
-Here \(\widehat\sigma^2\) is a residual variance estimate that discounts the
-effective degrees of freedom consumed by the fit; the use of
-\(N-r_{\mathrm{eff}}(\tau_\sigma)\) is a heuristic degrees-of-freedom count that
-does not exactly account for the background rank \(r\) or the NNLS active-set
-constraints.  Equation~\ref{eq:active_covariance} is the standard active-set /
-ridge least-squares covariance approximation \citep{seber2003linear}: its
-diagonal entries give per-coefficient uncertainty and its off-diagonal entries
-expose coupled (jointly uncertain) estimates.
-
-For each transport ensemble member from
-Section~\ref{subsec:wind_field_estimation}, IASA rebuilds
-\(\widetilde H_\Phi^{(b)}\), refits \(\widehat{\mathbf c}^{(b)}\), and reports
-empirical quantiles across members as transport uncertainty.  Every ensemble is
-tagged by provenance.  Wind and dispersion members have
-\texttt{ensemble\_kind=transport} and may form transport-uncertainty intervals.
-Alternative inventory maps, source locations, labels, or scales have
-\texttt{ensemble\_kind=inventory} and produce scenario-wise robustness tables.
-The two kinds are never pooled into one interval.  Active-set intervals describe
-the fitted observation model and likewise do not convert inventory scenarios
-into probabilistic uncertainty.
-
-\subsection{Residual Model-Adequacy Check}
+\subsection{Model Adequacy, Uncertainty, and Reporting}
 \label{subsec:model_adequacy}
 
-Residual magnitude alone is not calibrated evidence of misspecification.  Let
-\(Z\) be an orthonormal basis for the background-orthogonal observed-row space,
-and define the nondegenerate residual coordinates and externally supplied noise
-covariance
-\begin{equation}
-\bar r=Z^\top(Y-H_\Phi^{\mathrm{lag}}\widehat{\mathbf c}),
-\qquad
-\bar\Sigma_e=Z^\top\Sigma_e Z.
-\label{eq:adequacy_coordinates}
-\end{equation}
-where \(\Sigma_e\) is an externally declared observation-noise covariance and
-\(Z\) removes the background directions so that \(\bar r\) carries no degrees of
-freedom absorbed by \(Q\).  For independent homoscedastic noise
-\(\Sigma_e=\sigma_e^2 I\), orthonormality of \(Z\) gives
-\(\bar\Sigma_e=\sigma_e^2 I\) and \(T_{\mathrm{res}}=\|\bar r\|_2^2/\sigma_e^2\).
-When \(\bar\Sigma_e\) is calibrated independently of this fitted residual and is
-positive definite, the adequacy statistic is
-\begin{equation}
-T_{\mathrm{res}}=\bar r^\top\bar\Sigma_e^{-1}\bar r.
-\label{eq:residual_adequacy_statistic}
-\end{equation}
-Its null distribution is not a plain \(\chi^2\), because \(\widehat{\mathbf c}\)
-is fitted from the same data; IASA therefore calibrates it by parametric
-bootstrap.  It simulates \(B_{\mathrm{res}}=1000\) synthetic observation sets from
-the fitted source/background model plus the declared noise model, refits the
-coefficients on each draw, and recomputes \(T_{\mathrm{res}}\) to form the null
-distribution.  At \(\alpha=0.05\) it flags inadequacy when the observed statistic
-exceeds the empirical \((1-\alpha)\)-quantile; the Monte Carlo \(p\)-value uses
-the standard add-one correction.
+IASA attaches uncertainty to reported contributions from an active-set/ridge
+covariance of the fitted coefficients and, when transport ensembles are supplied,
+from empirical quantiles across ensemble refits; transport uncertainty
+(\texttt{ensemble\_kind=transport}) and inventory-robustness scenarios
+(\texttt{ensemble\_kind=inventory}) are never pooled into one interval
+(Appendix~\ref{app:reporting_details}).
 
-If no externally calibrated noise model is supplied, IASA reports raw and
-projected residual norms and sensor-wise, time-wise, and autocorrelation
-summaries with \texttt{calibration\_status=uncalibrated}; it emits no pass/fail
-adequacy claim.  Rejection establishes a mismatch with the declared model but
-does not identify a missing source.  Non-rejection does not establish inventory
-completeness: in particular, an omitted source whose sensor-time signature lies
-in \(\operatorname{span}[H_\Phi^{\mathrm{lag}},Q]\) can be absorbed by fitted
-terms and remain residual-invisible.
+Residual magnitude alone is not calibrated evidence of misspecification.  When an
+externally calibrated observation-noise model \(\Sigma_e\) is available, IASA
+computes a background-orthogonal residual statistic \(T_{\mathrm{res}}\) whose
+null distribution---not a plain \(\chi^2\), since \(\widehat{\mathbf c}\) is
+fitted from the same data---is calibrated by a parametric bootstrap
+(\(B_{\mathrm{res}}=1000\) refits, \(\alpha=0.05\);
+Appendix~\ref{app:reporting_details}).  The test is one-sided: a rejection
+establishes a mismatch with the declared model but not its cause, whereas a
+non-rejection does not establish inventory completeness---an omitted source whose
+signature lies in \(\operatorname{span}[H_\Phi^{\mathrm{lag}},Q]\) is absorbed by
+fitted terms and stays residual-invisible.  If no calibrated noise model is
+supplied, IASA reports raw and projected residual summaries with
+\texttt{calibration\_status=uncalibrated} and emits no pass/fail claim.
+Prospective network adequacy over a distribution of historical or simulated wind
+windows, and acceptance criteria for the optional refinement, are described in
+Appendix~\ref{app:reporting_details}.
 
-\subsection{Wind-Distribution Diagnostics}
-\label{subsec:wind_distribution_diagnostics}
-
-Diagnostics for one realized wind window answer a retrospective question.
-Prospective network adequacy is assessed empirically over predeclared historical
-or simulated wind windows.  Across those response matrices, IASA reports the
-5th, 50th, and 95th percentiles of \(\sigma_J\), the probability of full
-numerical and effective rank, the probability that each coefficient is weak,
-the probability that each source pair is ambiguous, and the frequency of each
-conservative report component.  These are Monte Carlo or empirical
-distributional summaries under the sampled wind population, not a new
-identifiability theorem.
-
-\subsection{Acceptance Criteria for Refinement}
-\label{subsec:refinement_acceptance}
-
-If the future constrained refinement in
-Section~\ref{subsec:constrained_refinement} is used, it is accepted only if it
-improves fit without degrading separability.  Let
-\(\widetilde H_{\Phi,0}\) be the projected response before refinement and
-\(\widetilde H_{\Phi,\mathrm{ref}}\) after refinement.  We require
-\begin{equation}
-\sigma_J(\widetilde H_{\Phi,\mathrm{ref}})
-\ge
-(1-\eta_{\mathrm{id}})\sigma_J(\widetilde H_{\Phi,0})
-\label{eq:refinement_smin_check}
-\end{equation}
-and
-\begin{equation}
-\max_{\substack{i\ne j\\i,j\notin\mathcal W}}\rho_{ij}^{\mathrm{ref}}
-\le \tau_\rho^{\mathrm{ref}}.
-\label{eq:refinement_coherence_check}
-\end{equation}
-These checks prevent end-to-end tuning from improving sensor fit by making
-source--basis fingerprints less distinguishable.  If either response has fewer
-than \(J\) numerically nonzero singular values, its \(\sigma_J\) is taken to be
-zero (Section~\ref{subsec:identifiability_diagnostics}), so refinement cannot be
-accepted by exploiting a rank-deficient response.
-
-\subsection{Reporting Protocol}
-\label{subsec:reporting_protocol}
-
-The source ambiguity graph, its deterministic connected components, and the
-transitive over-merging of an \(A\)--\(B\)--\(C\) chain are defined in
-Section~\ref{subsec:source_merging}.  Operationally, those components are the
-conservative recommended report groups, each edge retains its triggering
-coefficient pair, and rank deficiency without an eligible pair yields a global
-unresolved warning rather than an invented edge.
-
-For each reported source group \(G_a\), IASA reports
-\begin{align}
-&\widehat{\boldsymbol\theta}_{G_a,1:T},
-\quad \mathrm{CI}(\widehat\theta_{G_a}),
-\quad \{v_{kb}:k\in G_a\},\nonumber\\
-&\max_{\substack{k\in G_a,\,k'\notin G_a\\
-                  (k,b),(k',b')\notin\mathcal W}}
-\rho_{(k,b),(k',b')}.
-\label{eq:reported_quantities}
-\end{align}
-A source contribution is marked reliable only when its constituent reported
-coefficients are above the visibility threshold, its uncertainty interval is
-sufficiently narrow, and its eligible coherence with other reported groups is
-below the ambiguity threshold.  Reports retain the basis names of every weak
-coefficient and the coefficient pair attaining each cross-source coherence
-maximum.  Coherence and ray distance involving weak fingerprints are displayed
-as ``N/A'' and excluded from extrema; the weak flags remain visible.  Otherwise
-IASA labels the source as weakly visible, ambiguous with another source group,
-or merged into a coarser identifiable group.
-
-IASA additionally reports the per-sensor contribution decomposition and source
-footprints of Section~\ref{subsec:per_sensor_footprints}, which show, for each
-monitor, the fitted source-group contributions and their spatial cells of
-origin.  These are spatial overlays of the same global fit: per-sensor source
-shares are aggregated to the identifiable report groups \(\mathcal G\) wherever
-the pooled diagnostics require grouping, so the spatial view never asserts a
-separation the network does not support.
+For each reported source group, IASA returns the group activity trajectory, its
+uncertainty interval, member visibilities, and the maximum eligible coherence
+with other groups; a contribution is marked reliable only when its coefficients
+are above the visibility threshold, its interval is sufficiently narrow, and its
+eligible coherence is below the ambiguity threshold, and is otherwise labeled
+weakly visible, ambiguous, or merged into a coarser group.  It additionally
+reports the per-sensor contribution decomposition and source footprints of
+Section~\ref{subsec:per_sensor_footprints} as spatial overlays of the same global
+fit, aggregated to the identifiable report groups wherever the pooled diagnostics
+require grouping.

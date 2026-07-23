@@ -435,3 +435,691 @@ task, including rank and singular-value stability, source visibility, pairwise
 coherence, background absorption, and conservative grouping, together with a
 real-world instantiation that reports the attribution resolution supported by the
 available sensors, inventories, and transport assumptions.
+
+\section{Transport Response Construction and Fit Details}
+\label{app:transport_response}
+
+This appendix gives the construction, background, and estimation details deferred
+from Section~\ref{sec:wind_conditioned_source_apportionment}.
+
+\paragraph{Wind imputer query and unit conversion.}
+The observed station vectors and masks are supplied to a coordinate-query wind
+imputer: given sparse station observations
+\(\{(\mathbf z_i,t,\mathbf u_{i,t},m_{i,t})\}\), it predicts transport vectors
+at arbitrary spatial query locations and times.  For the IASA response operator,
+we query the imputer on every response-grid cell \(\mathbf x_g\) and hour
+\(t\), producing
+\begin{equation}
+\widehat{\mathbf w}_t(\mathbf x_g)
+=
+\widehat f_{\omega}\!\left(\mathbf x_g,t;
+\{(\mathbf z_i,t',\mathbf u_{i,t'},m_{i,t'})\}\right),
+\; g=1,\ldots,n.
+\label{eq:fieldformer_wind_field}
+\end{equation}
+This yields a gridded wind field
+\(\widehat W\in\mathbb R^{T\times n\times 2}\), rather than a station-only or
+city-averaged sequence.  Real-data validation is performed by masking observed
+station vectors and measuring held-out station-time error; dense city-wide wind
+truth is not assumed.  Meteorological speed must be converted to grid
+displacement before puff advection.  For response timestep \(\Delta t_{\mathrm{s}}\)
+seconds and cell dimensions \(\Delta x_{\mathrm{m}},\Delta y_{\mathrm{m}}\), we use
+\begin{equation}
+v_x^{\mathrm{grid}}(\mathbf x_g,t)
+=
+\frac{\widehat U_x(\mathbf x_g,t)\Delta t_{\mathrm{s}}}{\Delta x_{\mathrm{m}}},
+\qquad
+v_y^{\mathrm{grid}}(\mathbf x_g,t)
+=
+\frac{\widehat V_y(\mathbf x_g,t)\Delta t_{\mathrm{s}}}{\Delta y_{\mathrm{m}}}.
+\label{eq:wind_unit_conversion}
+\end{equation}
+Every response artifact records these scales, the coordinate convention, the
+wind units, and the exact converted sequence.
+
+\paragraph{Wind-field ensembles.}
+The imputed gridded wind field is an estimated transport input, not ground truth.
+To propagate wind-imputation uncertainty, we construct wind-field ensembles
+\(\{\widehat{\mathbf w}^{(r)}_t(\mathbf x_g)\}_{r=1}^R\) using held-out-calibrated
+prediction error, station bootstrap resampling, checkpoint ensembles, or
+perturbations matched to validation residuals.  Each ensemble member is queried
+on the same response grid and converted to grid displacement before response
+construction.  The resulting response matrices are tagged as transport
+ensembles and are kept separate from inventory-robustness scenarios.
+
+\paragraph{Puff dynamics and dispersion.}
+We instantiate the response with a Gaussian puff approximation.  For a
+unit release from source cell \(i\) at location \(\mathbf r_i\) and release time
+\(\tau\), the puff center is initialized as \(\mathbf z_i(\tau)=\mathbf r_i\) and
+advected by the interpolated wind field,
+\(d\mathbf z_i(a)/da=\widehat{\mathbf w}_a(\mathbf z_i(a))\), \(a\in[\tau,t]\).
+Source cells have integer centers and domain extents
+\([-0.5,N_x-0.5]\times[-0.5,N_y-0.5]\).  With substep size \(\delta a\), the
+trajectory is discretized as
+\(\mathbf z_i^{r+1}=\mathbf z_i^r+\delta a\,\widehat{\mathbf w}_{a_r}(\mathbf z_i^r)\).
+The final substep is shortened so that the trajectory lands exactly at the
+requested observation time.  If the center exits \(\Omega\), the whole
+remaining puff is removed and never reflected, wrapped, clamped, or reinserted.
+Otherwise its contribution is spread with an anisotropic Gaussian kernel
+\begin{equation}
+K_\psi(\mathbf x;\mathbf z_i,\Sigma_i)
+=\frac{\exp\left(-\frac12\|\mathbf x-\mathbf z_i\|_{\Sigma_i^{-1}}^2\right)}
+{2\pi |\Sigma_i|^{1/2}},
+\label{eq:gaussian_kernel}
+\end{equation}
+where \(\psi\) denotes dispersion parameters.  A simple covariance model is
+\begin{equation}
+\Sigma_i(t,\tau)
+= R_i(t,\tau)
+\begin{bmatrix}
+\sigma_\parallel^2(t-\tau) & 0\\
+0 & \sigma_\perp^2(t-\tau)
+\end{bmatrix}
+R_i(t,\tau)^\top,
+\label{eq:dispersion_covariance}
+\end{equation}
+with \(R_i\) aligned to the mean wind direction along the trajectory.  When the
+mean wind norm is below the numerical threshold, the downwind direction is
+undefined; the implementation uses the positive-\(x\) axis as a deterministic
+tie-breaker for the anisotropic covariance orientation, recorded in the response
+metadata and affecting only near-calm releases.  The age in this covariance is
+lower-bounded by a positive minimum dispersion time, so same-time releases remain
+finite: \(\text{effective age} = \max(t-\tau, t_{\min})\).
+
+\paragraph{Sensor evaluation and loss bookkeeping.}
+Response-matrix entries are computed by evaluating the kernel directly at
+sensor coordinates:
+\begin{equation}
+\left[O G_{t,\tau}^{\partial}
+(\widehat{\mathbf w}_{\tau:t};\psi)\mathbf e_i\right]_s
+=\chi_i(t,\tau)K_\psi(\mathbf x_s;\mathbf z_i(t),\Sigma_i(t,\tau)).
+\label{eq:sensor_response}
+\end{equation}
+Here \(\chi_i(t,\tau)\) is an open-boundary survival indicator for a release
+from source cell \(i\) at release time \(\tau\): it is one while the advected
+kernel center remains inside the modeled domain and zero after the release has
+exited.  Boundary and truncation losses are recorded only as diagnostic
+quantities and are never used to renormalize the sensor response.  Boundary
+loss denotes the portion of the Gaussian kernel lying outside the modeled
+spatial domain, while truncation loss denotes the portion omitted by evaluating
+retained mass only over a finite kernel support; both are estimated separately
+by grid quadrature over the response grid.  These kernel losses are distinct
+from whole-release exit loss, where the advected release center leaves the open
+domain and no later sensor contribution is assigned to that release.  Because
+the response matrix evaluates concentration at sensor points rather than
+integrating over area-weighted grid cells, summing entries across sensors or
+repeated sensor-time observations does not estimate retained pollutant mass.
+
+\paragraph{Baseline policy and differentiability.}
+Response matrices are constructed for source-induced increments relative to a
+declared initial-condition baseline.  The baseline policy is fixed before
+source fitting, recorded with the response artifact, and applied consistently to
+the observations and response rows.  Application-specific choices, such as
+whether to subtract a zero-source transported initial field or to use a
+zero-initial-state response, are part of the experimental instantiation rather
+than the generic response definition.  The open-boundary lagged plume response is
+implemented in PyTorch; tensor operations retained in the graph can be
+differentiated, but discrete exit events and reporting logic are not assigned
+gradients.
+
+\paragraph{Background basis and implicit projection.}
+The normal background basis may contain a global constant, centered and scaled
+elapsed-time polynomials, local-clock daily sine/cosine harmonics,
+reference-coded day effects, standardized regional sensor-coordinate trends,
+reference-coded sensor offsets, and a row-aligned user basis.  It depends only
+on timestamps, day labels, sensor identity, and sensor coordinates, and its
+effective rank is capped at eight.  Once the primary \(Q\) is fixed, its
+coefficients are estimated implicitly by projection, or explicitly in the joint
+fit; each alternative source-independent basis reports the resulting visibility,
+absorption, rank, conditioning, and ambiguity components.  Letting
+\(Q=U\Sigma V^\top\) be a thin singular value decomposition and retaining
+columns \(U_r\) above the recorded rank tolerance, projection is applied
+implicitly,
+\begin{equation}
+P_Q^\perp X=X-U_r(U_r^\top X),
+\label{eq:implicit_background_projection}
+\end{equation}
+without constructing an \(N\times N\) matrix.  The row metadata for \(Y\),
+\(H_\Phi^{\mathrm{lag}}\), and \(Q\) must be identical: each row must refer to the
+same timestamp, sensor identity, and sensor index in the same order before
+projection is applied.
+
+\paragraph{Regularizers and joint fit.}
+The regularizer in Equation~\ref{eq:nnls_estimator} can be ridge stabilization
+\(R(\mathbf c)=\|\mathbf c\|_2^2\) or a weak prior around inventory-derived
+activity levels \(R(\mathbf c)=\|\mathbf c-\mathbf c_0\|_2^2\).  Equivalently, one
+may fit background and source coefficients jointly,
+\begin{equation}
+(\widehat{\mathbf c},\widehat{\boldsymbol\gamma})
+=\arg\min_{\mathbf c\ge 0,\boldsymbol\gamma}
+\|Y-H_{\Phi}^{\mathrm{lag}}\mathbf c-Q\boldsymbol\gamma\|_2^2
++\lambda R(\mathbf c).
+\label{eq:joint_fit}
+\end{equation}
+The projected formulation is used for identifiability because it exposes the
+part of each source--basis fingerprint that remains after background correction.
+
+\paragraph{Constrained end-to-end refinement.}
+IASA first constructs a fixed response matrix from the pretrained wind field and
+default dispersion parameters, fits source activities, and computes
+identifiability diagnostics for that declared response.  It then optionally
+performs a constrained local refinement of the wind field, dispersion
+parameters, source coefficients, and background coefficients, initialized at the
+fixed-response solution and allowed only to make small physically constrained
+corrections, so that improved sensor fit does not come from arbitrary changes to
+transport.  Let \(\phi\) denote the wind-imputer parameters and \(\psi\) the
+dispersion parameters of the puff response (such as \(\sigma_\parallel\),
+\(\sigma_\perp\), and the minimum dispersion age), with \(\phi_0\) and \(\psi_0\)
+their pretrained or default values.  We use \(R_{\mathrm{sm}}\) for a predeclared
+wind-field smoothness penalty (temporal or spatial squared differences) and
+\(\Psi_{\mathrm{phys}}\) for the physically admissible dispersion-parameter set.
+The refinement objective is
+\begin{align}
+\mathcal L_{\mathrm{refine}}
+=&\|Y-H_{\Phi}^{\mathrm{lag}}(\phi,\psi)\mathbf c-Q\boldsymbol\gamma\|_2^2
++\lambda_\theta R(\mathbf c) \nonumber\\
+&+\lambda_w\|\widehat{\mathbf w}_{1:T}^{\phi}-\widehat{\mathbf w}_{1:T}^{\phi_0}\|_2^2
++\lambda_\psi\|\psi-\psi_0\|_2^2 \nonumber\\
+&+\lambda_{\mathrm{sm}}R_{\mathrm{sm}}(\widehat{\mathbf w}^{\phi}),
+\label{eq:refinement_objective}
+\end{align}
+subject to \(\mathbf c\ge 0\), \(\psi\in\Psi_{\mathrm{phys}}\), and
+\(\|\widehat{\mathbf w}_{1:T}^{\phi}-\widehat{\mathbf w}_{1:T}^{\phi_0}\|_\infty
+\le \epsilon_w\).  The refined response is accepted only as a constrained local
+correction (acceptance criteria in Appendix~\ref{app:reporting_details}) and is
+reported with its own response diagnostics.  Without these restrictions, wind and
+plume parameters could fit sparse pollution sensors while weakening the physical
+and source-level interpretation of \(\widehat{\mathbf c}\) and the reconstructed
+activities.
+
+\section{Response-Matrix Perturbations}
+\label{app:operator_error_details}
+
+This appendix expands Section~\ref{subsec:operator_error}.  Write the projected
+response discrepancy as
+\(\Delta_H=\Delta_{\mathrm{tr}}+\Delta_{\mathrm{inv}}+\Delta_{\mathrm{int}}\),
+where \(\Delta_{\mathrm{tr}}\) is the transport term, \(\Delta_{\mathrm{inv}}\)
+the inventory term, and \(\Delta_{\mathrm{int}}\) their interaction.  The
+decomposition is used to keep uncertainty honest: \(\Delta_{\mathrm{tr}}\) is
+propagated through transport ensembles and may become an uncertainty interval,
+whereas \(\Delta_{\mathrm{inv}}\) is reported only as named robustness scenarios
+and is never pooled into an interval, and \(\Delta_{\mathrm{int}}\) is recorded
+rather than pooled separately.  Let \(\widetilde H_\Phi^\star\) be the true
+projected response and \(\widehat{\widetilde H}_\Phi\) the constructed one, with
+\(\|\widehat{\widetilde H}_\Phi-\widetilde H_\Phi^\star\|_2\le\delta_H\).  Then
+\(\widetilde Y=\widehat{\widetilde H}_\Phi\mathbf c
++[\widetilde E+(\widetilde H_\Phi^\star-\widehat{\widetilde H}_\Phi)\mathbf c]\),
+so response error acts like additional observation error.
+
+\begin{proposition}[Perturbation bound]
+\label{prop:operator_perturbation}
+Assume \(\widehat{\widetilde H}_\Phi\) has full column rank and
+\(\|\widehat{\widetilde H}_\Phi-\widetilde H_\Phi^\star\|_2\le\delta_H\).
+The unconstrained least-squares estimate using
+\(\widehat{\widetilde H}_\Phi\) satisfies
+\begin{equation}
+\|\widehat{\mathbf c}-\mathbf c\|_2
+\le
+\frac{\|\widetilde E\|_2+\delta_H\|\mathbf c\|_2}
+{\sigma_J(\widehat{\widetilde H}_\Phi)}.
+\label{eq:operator_error_bound}
+\end{equation}
+\end{proposition}
+
+A short proof, reusing the pseudoinverse bound of
+Proposition~\ref{prop:noise_robust}, appears in
+Appendix~\ref{app:identifiability_proofs}.
+The same norm bound applies to all three discrepancy terms, but their
+interpretations are not interchangeable.  Wind and dispersion ensembles
+quantify transport uncertainty and may support uncertainty intervals under the
+ensemble model.  Alternative inventory maps, locations, labels, or scales are
+inventory robustness scenarios, not confidence intervals.  They are reported
+separately, and source-specific attribution remains conditional on the supplied
+inventory.  Either error type is most damaging when the projected response is
+already ill-conditioned.
+
+\section{Per-Sensor Source Footprints}
+\label{app:footprint_details}
+
+This appendix expands Section~\ref{subsec:per_sensor_footprints}.  For an
+observed row \((s,t)\), the background-corrected fit decomposes exactly as
+\(\widetilde y_{s,t}=\sum_{k,b}\widetilde H_{\Phi,(s,t),(k,b)}\,\widehat c_{kb}\),
+so the contribution of source \(k\) to sensor \(s\) over the record is
+\(\widehat Y^{(s)}_k=\sum_t\sum_b
+H_{\Phi,(s,t),(k,b)}^{\mathrm{lag}}\widehat c_{kb}\).  The projected form isolates
+the identifiable part; the unprojected form gives the raw fitted sensor
+contribution before background removal.  The spatial origin of a sensor's signal
+is the pullback of its response row onto the source grid: for sensor \(s\) at time
+\(t\), \(F_{s,t}(i)=\sum_{\ell\in\mathcal L_t}
+[O G_{t,t-\ell}^{\partial}(\widehat{\mathbf w}_{t-\ell:t})]_{s,i}\ge 0\) and
+\(F_s(i)=\sum_t F_{s,t}(i)\), a nonnegative field over source cells \(i\)
+recording which upwind cells influence sensor \(s\).  Weighting by
+\(\phi_b(t-\ell)\), the inventory map \(\mathbf s_k\), and \(\widehat c_{kb}\)
+resolves the fitted contribution of each source group to each sensor by cell of
+origin.  This is the puff response of Section~\ref{subsec:plume_response} read
+backward from the sensor and requires no new transport operator.  Per-sensor
+attribution uses only the rows of \(\widetilde H_\Phi\) for that sensor: for the
+row submatrix \(\widetilde H_\Phi^{(s)}\),
+\(\widetilde H_\Phi^{(s)\top}\widetilde H_\Phi^{(s)}\preceq
+\widetilde H_\Phi^\top\widetilde H_\Phi\), so deleting rows cannot increase the
+smallest singular value or the rank and a single sensor is never more
+identifiable than the pooled network.  Footprints and per-sensor contributions
+are therefore reported as spatial overlays of the global fit; per-sensor source
+\emph{shares} are asserted only at the globally identifiable resolution,
+aggregating to a report group wherever the pooled diagnostics require one, which
+keeps the spatial view from implying separations the sensing system does not
+support.
+
+\section{Uncertainty, Adequacy, and Reporting Details}
+\label{app:reporting_details}
+
+This appendix expands the reporting components summarized in
+Section~\ref{subsec:model_adequacy}, and gives the IASA thresholds
+(Table~\ref{tab:thresholds}).
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{3pt}
+\caption{IASA thresholds, their meaning, and how they are set.  None is
+optimized on source-recovery error.}
+\label{tab:thresholds}
+\begin{tabular}{lll}
+\toprule
+Threshold & Meaning & How set \\
+\midrule
+\(\tau_{\mathrm{num}}\) & numerical rank tol.\ & \(\max(N,J)\epsilon_{\mathrm{mach}}\sigma_1\) \\
+\(\tau_\sigma\) & effective-rank floor & noise scale, e.g.\ \(\sigma_e\sqrt N\) \\
+\(\tau_v\) & visibility floor & \(\mathrm{SNR}_{\min}\,\sigma_e\) \\
+\(\tau_\rho\) & ambiguity coherence & predeclared, near \(1\) \\
+\(\tau_\rho^{\mathrm{ref}}\) & refinement coherence & default \(\tau_\rho^{\mathrm{ref}}=\tau_\rho\) \\
+\(\epsilon_w\) & wind-drift cap & physical wind tolerance \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Uncertainty reporting.}
+Let \(\widetilde r=\widetilde Y-\widetilde H_\Phi\widehat{\mathbf c}\) be the
+projected residual and
+\(\widehat\sigma^2=\|\widetilde r\|_2^2/\max(N-r_{\mathrm{eff}}(\tau_\sigma),1)\)
+a residual variance estimate.  For an unconstrained or active-set approximation,
+let \(\mathcal A_c=\{j:\widehat c_j>\tau_c\}\) and let
+\(\widetilde H_{\Phi,\mathcal A_c}\) contain the active columns.  The covariance
+of the active estimates is approximated by
+\begin{equation}
+\operatorname{Cov}(\widehat{\mathbf c}_{\mathcal A_c})
+=
+\widehat\sigma^2
+(\widetilde H_{\Phi,\mathcal A_c}^\top
+\widetilde H_{\Phi,\mathcal A_c}+\lambda I)^\dagger.
+\label{eq:active_covariance}
+\end{equation}
+The use of \(N-r_{\mathrm{eff}}(\tau_\sigma)\) is a heuristic degrees-of-freedom
+count that does not exactly account for the background rank \(r\) or the NNLS
+active-set constraints.  Equation~\ref{eq:active_covariance} is the standard
+active-set / ridge least-squares covariance approximation
+\citep{seber2003linear}: its diagonal entries give per-coefficient uncertainty
+and its off-diagonal entries expose coupled (jointly uncertain) estimates.  For
+each transport ensemble member from
+Section~\ref{subsec:wind_field_estimation}, IASA rebuilds
+\(\widetilde H_\Phi^{(b)}\), refits \(\widehat{\mathbf c}^{(b)}\), and reports
+empirical quantiles across members as transport uncertainty.  Every ensemble is
+tagged by provenance: wind and dispersion members have
+\texttt{ensemble\_kind=transport} and may form transport-uncertainty intervals,
+whereas alternative inventory maps, source locations, labels, or scales have
+\texttt{ensemble\_kind=inventory} and produce scenario-wise robustness tables.
+The two kinds are never pooled into one interval, and active-set intervals
+describe the fitted observation model without converting inventory scenarios into
+probabilistic uncertainty.
+
+\paragraph{Residual model-adequacy check.}
+Let \(Z\) be an orthonormal basis for the background-orthogonal observed-row
+space, and define the nondegenerate residual coordinates and externally supplied
+noise covariance
+\begin{equation}
+\bar r=Z^\top(Y-H_\Phi^{\mathrm{lag}}\widehat{\mathbf c}),
+\qquad
+\bar\Sigma_e=Z^\top\Sigma_e Z,
+\label{eq:adequacy_coordinates}
+\end{equation}
+where \(\Sigma_e\) is an externally declared observation-noise covariance and
+\(Z\) removes the background directions so that \(\bar r\) carries no degrees of
+freedom absorbed by \(Q\).  For independent homoscedastic noise
+\(\Sigma_e=\sigma_e^2 I\), orthonormality of \(Z\) gives
+\(\bar\Sigma_e=\sigma_e^2 I\) and \(T_{\mathrm{res}}=\|\bar r\|_2^2/\sigma_e^2\).
+When \(\bar\Sigma_e\) is calibrated independently of this fitted residual and is
+positive definite, the adequacy statistic is
+\begin{equation}
+T_{\mathrm{res}}=\bar r^\top\bar\Sigma_e^{-1}\bar r.
+\label{eq:residual_adequacy_statistic}
+\end{equation}
+Its null distribution is not a plain \(\chi^2\), because \(\widehat{\mathbf c}\)
+is fitted from the same data; IASA therefore calibrates it by parametric
+bootstrap.  It simulates \(B_{\mathrm{res}}=1000\) synthetic observation sets from
+the fitted source/background model plus the declared noise model, refits the
+coefficients on each draw, and recomputes \(T_{\mathrm{res}}\) to form the null
+distribution.  At \(\alpha=0.05\) it flags inadequacy when the observed statistic
+exceeds the empirical \((1-\alpha)\)-quantile; the Monte Carlo \(p\)-value uses
+the standard add-one correction.  If no externally calibrated noise model is
+supplied, IASA reports raw and projected residual norms and sensor-wise,
+time-wise, and autocorrelation summaries with
+\texttt{calibration\_status=uncalibrated} and emits no pass/fail adequacy claim.
+Rejection establishes a mismatch with the declared model but does not identify a
+missing source, and non-rejection does not establish inventory completeness: an
+omitted source whose sensor-time signature lies in
+\(\operatorname{span}[H_\Phi^{\mathrm{lag}},Q]\) can be absorbed by fitted terms
+and remain residual-invisible.
+
+\paragraph{Wind-distribution diagnostics.}
+Diagnostics for one realized wind window answer a retrospective question.
+Prospective network adequacy is assessed empirically over predeclared historical
+or simulated wind windows.  Across those response matrices, IASA reports the
+5th, 50th, and 95th percentiles of \(\sigma_J\), the probability of full
+numerical and effective rank, the probability that each coefficient is weak,
+the probability that each source pair is ambiguous, and the frequency of each
+conservative report component.  These are Monte Carlo or empirical
+distributional summaries under the sampled wind population, not a new
+identifiability theorem.
+
+\paragraph{Acceptance criteria for refinement.}
+If the optional constrained refinement of
+Appendix~\ref{app:transport_response} is used, it is accepted only if it improves
+fit without degrading separability.  Let \(\widetilde H_{\Phi,0}\) be the
+projected response before refinement and \(\widetilde H_{\Phi,\mathrm{ref}}\)
+after refinement.  We require
+\(\sigma_J(\widetilde H_{\Phi,\mathrm{ref}})\ge
+(1-\eta_{\mathrm{id}})\sigma_J(\widetilde H_{\Phi,0})\) and
+\(\max_{i\ne j,\,i,j\notin\mathcal W}\rho_{ij}^{\mathrm{ref}}\le
+\tau_\rho^{\mathrm{ref}}\).  These checks prevent end-to-end tuning from improving
+sensor fit by making source--basis fingerprints less distinguishable.  If either
+response has fewer than \(J\) numerically nonzero singular values, its
+\(\sigma_J\) is taken to be zero
+(Section~\ref{subsec:identifiability_diagnostics}), so refinement cannot be
+accepted by exploiting a rank-deficient response.
+
+\paragraph{Reporting protocol.}
+The source ambiguity graph, its deterministic connected components, and the
+transitive over-merging of an \(A\)--\(B\)--\(C\) chain are defined in
+Section~\ref{subsec:source_merging}.  Operationally, those components are the
+conservative recommended report groups, each edge retains its triggering
+coefficient pair, and rank deficiency without an eligible pair yields a global
+unresolved warning rather than an invented edge.  For each reported source group
+\(G_a\), IASA reports the activity trajectory
+\(\widehat{\boldsymbol\theta}_{G_a,1:T}\), its interval
+\(\mathrm{CI}(\widehat\theta_{G_a})\), member visibilities
+\(\{v_{kb}:k\in G_a\}\), and the maximum eligible cross-group coherence
+\(\max_{k\in G_a,\,k'\notin G_a,\,(k,b),(k',b')\notin\mathcal W}
+\rho_{(k,b),(k',b')}\).  A source contribution is marked reliable only when its
+constituent reported coefficients are above the visibility threshold, its
+uncertainty interval is sufficiently narrow, and its eligible coherence with
+other reported groups is below the ambiguity threshold.  Reports retain the basis
+names of every weak coefficient and the coefficient pair attaining each
+cross-source coherence maximum; coherence and ray distance involving weak
+fingerprints are displayed as ``N/A'' and excluded from extrema, while the weak
+flags remain visible.  Otherwise IASA labels the source as weakly visible,
+ambiguous with another source group, or merged into a coarser identifiable group.
+
+\section{New Delhi Forward-Model Details}
+\label{app:platform_details}
+
+This appendix expands the forward-model construction of
+Section~\ref{subsec:new_delhi_forward_models}.
+
+\paragraph{Kriged initial-condition baseline.}
+For observed New Delhi runs, the initial pollution field is estimated from the
+first available regulatory observations (the two Pusa monitors averaged) by a
+normalized Gaussian-kernel spatial interpolation on the response grid---a kriging
+surrogate that avoids an additional heavyweight geostatistics dependency.  Its
+zero-source transported trajectory, obtained by propagating this initial field as
+a single release through the same open-boundary puff operator (its Gaussian kernel
+is the advection--diffusion Green's function, so units are preserved), is
+subtracted from the sensor observations before fitting source activities.  Source
+coefficients are therefore fitted to the residual sensor-time signal after
+removing the contribution of the initialized background field and the low-rank
+temporal background basis.  Kernel interpolation from sparse first-hour
+observations is itself an ill-posed spatial estimate, so this baseline injects
+some uncertainty; the effect is limited by declaring and subtracting the baseline
+before fitting and by the low-rank background basis \(Q\), which absorbs residual
+broad structure.  Controlled operator-matched experiments may instead use a zero
+initial field when the synthetic data are generated from the same
+zero-initial-state response.
+
+\paragraph{Auxiliary advection--diffusion simulator.}
+The auxiliary advection--diffusion simulator uses first-order upwind advection, a
+five-point Laplacian, a two-stage Heun update, diffusivity \(3\times10^{-4}\), and
+edge-hold boundaries.  It provides a structural forward-model mismatch: data
+generated by this distinct transport operator are fit with the open-boundary puff
+response, testing the puff approximation against a different operator family.
+This mismatch also drives the residual-adequacy test of
+Section~\ref{subsec:model_adequacy}, letting us check its power against structural
+transport misspecification and not only against missing sources.
+
+\section{Additional Experiments}
+\label{app:additional_experiments}
+
+This appendix reports the six controlled experiments deferred from
+Section~\ref{sec:evaluation}: coherence and grouped reporting, transport error,
+inventory robustness, lag-window selection, temporal-basis recovery, and
+per-sensor footprints.
+
+\subsection{Experiment 2: Coherence and Grouped Reporting}
+\label{subsec:results_h2}
+
+We form increasingly coherent source pairs by shifting a copy of one inventory
+map by a controlled spatial offset, so that decreasing the shift drives coherence
+toward one.  Individual-source errors are compared with errors in the summed
+activity and fitted sensor contribution of each recommended connected component.
+Edge reports retain the triggering source--basis pair.
+
+Table~\ref{tab:results_h2} reports the coherence sweep. Shrinking the spatial
+offset drives maximum eligible coherence from $0.05$ to $0.96$ while $\sigma_J$
+falls from $21.8$ to $4.6$. At every tested offset the conservative merge rule
+kept the two sources in separate singleton components and both were recovered
+exactly (individual and grouped relative error $0$), so no grouped reporting was
+required and no cross-source trigger pair fired---the eligible ray distance and
+triggering pair are therefore undefined (null) rather than forced to a number.
+The reporting layer retains \emph{every} trigger edge without deduplication when
+a merge does fire (an A--B--C chain keeps both edges); no merge fired in this
+experiment.
+
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Experiment 2: coherence rises as the source offset shrinks, but the
+conservative rule merged no sources and recovery stayed exact.}
+\label{tab:results_h2}
+\begin{tabular}{rrrll}
+\toprule
+offset & max.\ coh. & $\sigma_J$ & merged & indiv./grp.\ err. \\
+\midrule
+8.0 & 0.048 & 21.77 & no & 0.0 / 0.0 \\
+6.0 & 0.862 & 10.48 & no & 0.0 / 0.0 \\
+4.0 & 0.905 & 8.40  & no & 0.0 / 0.0 \\
+2.0 & 0.945 & 5.43  & no & 0.0 / 0.0 \\
+1.0 & 0.958 & 4.64  & no & 0.0 / 0.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Experiment 5: Transport Error}
+\label{subsec:results_h5a}
+
+We use two kinds of transport error.  \emph{Parametric} perturbations vary wind
+speed, wind direction, and dispersion within the puff family; a \emph{structural}
+mismatch instead generates observations with the auxiliary edge-hold
+advection--diffusion PDE while fitting with the open-boundary puff response.  The
+operator error norm, coefficient/activity error, residual, and singular spectrum
+are reported together, and the parametric transport ensembles may support
+transport-uncertainty intervals.  The structural case additionally exercises the
+residual-adequacy test of Section~\ref{subsec:model_adequacy}: we report its
+rejection rate to show it has power against forward-model misspecification, not
+only against missing sources.
+
+Table~\ref{tab:results_h5a} reports the parametric family: coefficient error grows
+with the operator error norm along the wind-direction (to $0.86$ at $20^\circ$)
+and dispersion (to $0.89$ at $2\times$) axes, confirming that transport error
+propagates into attribution rather than being absorbed. The wind-speed axis is
+non-monotonic at these magnitudes (error $0.45$ then $0.27$ as the speed factor
+rises from $1.25$ to $1.5$), a reminder that a coarse operator-error norm does not
+fully order attribution error. The structural PDE mismatch (operator mismatch norm
+$0.44$) is the sharper test: it drives the mean coefficient relative error to
+$0.86$, and the refitted-bootstrap adequacy test rejects in $100\%$ of trials,
+confirming its power against forward-model misspecification.
+(Transport-interval coverage is supported by the parametric ensemble but not
+tabulated per row here.)
+
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Experiment 5: parametric transport error. Coefficient error rises with
+the operator error norm on the direction and dispersion axes (the speed axis is
+non-monotonic). Structural PDE mismatch: adequacy rejection rate $1.0$.}
+\label{tab:results_h5a}
+\begin{tabular}{llrrr}
+\toprule
+axis & value & op.\ err. & $\sigma_J$ & coef.\ err. \\
+\midrule
+direction ($^\circ$) & 0  & 0.00 & 0.87 & 0.00 \\
+direction ($^\circ$) & 5  & 0.29 & 3.37 & 0.62 \\
+direction ($^\circ$) & 10 & 0.60 & 7.07 & 0.80 \\
+direction ($^\circ$) & 20 & 0.87 & 7.98 & 0.86 \\
+speed ($\times$)     & 1.25 & 0.29 & 2.09 & 0.45 \\
+speed ($\times$)     & 1.50 & 0.53 & 4.57 & 0.27 \\
+dispersion ($\times$)& 1.50 & 0.19 & 1.42 & 0.50 \\
+dispersion ($\times$)& 2.00 & 0.35 & 1.76 & 0.89 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Experiment 6: Inventory Robustness}
+\label{subsec:results_h5b}
+
+We perturb inventory locations, spatial scales, category assignments, and map
+versions while holding transport fixed.  Each alternative inventory is a
+separate robustness scenario.  Its variation is not pooled with the transport
+error of Experiment~5 and is not reported as a confidence interval.
+
+Table~\ref{tab:results_h5b} reports the four scenarios (location shift, spatial
+rescale, alternative map version, category swap) on the real New Delhi brick-kiln
+and industry maps. The known coefficients $[1.0,0.6]$ are recovered
+exactly in every scenario, but the identifiability geometry moves with the inventory
+version: rescaling the map or substituting an alternative version nearly doubles
+$\sigma_J$ (to $47.0$ and $46.0$) relative to baseline ($21.6$), whereas a symmetric
+category swap leaves it unchanged. The attribution \emph{target} thus changes with
+the assumed inventory even when recovery is exact.
+
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Experiment 6: inventory robustness on the real maps. Recovery is exact in
+every scenario; $\sigma_J$ tracks the inventory version.}
+\label{tab:results_h5b}
+\begin{tabular}{lrr}
+\toprule
+scenario & $\sigma_J$ & coef.\ err. \\
+\midrule
+baseline        & 21.56 & 0.0 \\
+location shift   & 28.85 & 0.0 \\
+spatial rescale  & 47.00 & 0.0 \\
+alt.\ map version & 46.01 & 0.0 \\
+category swap     & 21.56 & 0.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Experiment 7: Lag-Window Selection}
+\label{subsec:results_lag_selection}
+
+Physical travel and residence times define the candidate grid.  We evaluate
+Equation~\ref{eq:lag_convergence}, choose the smallest lag satisfying
+\(\tau_L=10^{-3}\), and report rank, conditioning, and report-component
+stability across the grid without using fitted source coefficients for selection.
+
+Table~\ref{tab:results_lag} sweeps the physically-motivated candidate grid. As the
+lag window grows the response stabilizes and conditioning improves monotonically
+($\kappa$ falls from $569$ at $L{=}4$ to $5.1$ at $L{=}16$; $\sigma_J$ rises from
+$0.08$ to $9.07$), while the numerical rank ($2$) and the number of report
+components ($2$) stay fixed and recovery is exact throughout. The selection rule
+picks the smallest lag whose relative Frobenius change falls to
+$\tau_L=10^{-3}$---here $L=16$---using only response-matrix geometry; fitted source
+coefficients are not consulted and the row count is invariant across the grid.
+
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Experiment 7: lag-window selection. Conditioning improves with lag; the
+selected lag ($L=16$) is chosen from geometry alone, not fitted coefficients.}
+\label{tab:results_lag}
+\begin{tabular}{rrrrr}
+\toprule
+lag $L$ & $\sigma_J$ & $\kappa$ & \#comp. & coef.\ err. \\
+\midrule
+4  & 0.08 & 569.2 & 2 & 0.0 \\
+6  & 0.71 & 63.8  & 2 & 0.0 \\
+8  & 2.46 & 18.6  & 2 & 0.0 \\
+10 & 4.57 & 10.1  & 2 & 0.0 \\
+12 & 6.16 & 7.5   & 2 & 0.0 \\
+16 & 9.07 & 5.1   & 2 & 0.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Experiment 9: Temporal-Basis Recovery}
+\label{subsec:results_temporal_basis}
+
+Known traffic diurnal, brick-kiln intermittent, industry day/night, and mixed
+source-basis coefficients are reconstructed at increasing noise.  This study
+separates coefficient error from error in the reconstructed source activity
+trajectory.
+
+Table~\ref{tab:results_temporal} reports temporal-basis recovery over the diurnal,
+intermittent-block, and day/night bases at increasing noise (fixed $\sigma_J=0.14$).
+Separating the two error notions is the point: the reconstructed source-activity
+trajectory error is consistently smaller than the raw coefficient error (e.g.\
+$0.58$ versus $0.90$ at $20\%$ noise), because projecting the noisy coefficients
+through the temporal bases averages out part of the coefficient noise in the
+activity domain.  The activity-to-coefficient error ratio is near-constant
+(\(\approx0.57\)) across noise levels, indicating that this damping is a fixed
+geometric property of the temporal-basis map---which amplifies the coherent true
+signal more than the isotropic estimation noise---rather than a noise-dependent
+effect.
+
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Experiment 9: temporal-basis recovery (bases: diurnal, block, day/night).
+Activity-trajectory error stays below coefficient error at every noise level.}
+\label{tab:results_temporal}
+\begin{tabular}{rrr}
+\toprule
+noise & coef.\ err. & activity err. \\
+\midrule
+0.00 & 0.000 & 0.000 \\
+0.02 & 0.132 & 0.075 \\
+0.05 & 0.329 & 0.188 \\
+0.10 & 0.659 & 0.375 \\
+0.20 & 0.900 & 0.582 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Experiment 10: Per-Sensor Footprints}
+\label{subsec:results_footprints}
+
+On controlled trials with known source origins, we check that the per-sensor
+footprints of Section~\ref{subsec:per_sensor_footprints} localize the responsible
+upwind cells and that per-sensor contributions sum to the fitted sensor signal.
+On observed New Delhi data we report, per monitor, the fitted source-group
+contributions and their spatial cells of origin, aggregated to the identifiable
+report groups so no per-sensor separation exceeds the network's global
+resolution.
+
+On the controlled trial this localization is accurate: the footprint mass centroid
+lies $0.74$ cells from the true
+source origin, $100\%$ of the footprint mass falls within the $4$-cell localization
+radius, and the footprints are nonnegative. The exact per-sensor decomposition
+holds---per-sensor contributions sum to the fitted sensor signal to machine
+precision (contribution-sum error $0$)---and because a non-singleton report
+component is present, footprints are reported at the group granularity. The
+observed New Delhi per-monitor footprints appear with the apportionment results
+in Section~\ref{subsec:results_new_delhi_apportionment}.

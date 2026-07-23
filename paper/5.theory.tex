@@ -179,52 +179,21 @@ after projection.
 \subsection{Response-Matrix Perturbations}
 \label{subsec:operator_error}
 
-The constructed response matrix can be wrong for two scientifically different
-reasons.  Transport error includes wind interpolation, transport approximation,
-and dispersion parameters; inventory error includes missing, misplaced,
-misclassified, or incorrectly scaled proxy sources.  Write the projected
-response discrepancy as
+The constructed response can be wrong for two scientifically different reasons:
+transport error (wind interpolation, transport approximation, dispersion) and
+inventory error (missing, misplaced, misclassified, or incorrectly scaled
+sources).  Writing the projected discrepancy as
 \(\Delta_H=\Delta_{\mathrm{tr}}+\Delta_{\mathrm{inv}}+\Delta_{\mathrm{int}}\),
-where \(\Delta_{\mathrm{tr}}\) is the transport term, \(\Delta_{\mathrm{inv}}\)
-the inventory term, and \(\Delta_{\mathrm{int}}\) their interaction.  The
-decomposition is used to keep uncertainty honest: \(\Delta_{\mathrm{tr}}\) is
-propagated through transport ensembles and may become an uncertainty interval,
-whereas \(\Delta_{\mathrm{inv}}\) is reported only as named robustness scenarios
-and is never pooled into an interval, and \(\Delta_{\mathrm{int}}\) is recorded
-rather than pooled separately.  Let \(\widetilde H_\Phi^\star\) be the true
-projected response and \(\widehat{\widetilde H}_\Phi\) the constructed one, with
-\(\|\widehat{\widetilde H}_\Phi-\widetilde H_\Phi^\star\|_2\le\delta_H\).  Then
-\(\widetilde Y=\widehat{\widetilde H}_\Phi\mathbf c
-+[\widetilde E+(\widetilde H_\Phi^\star-\widehat{\widetilde H}_\Phi)\mathbf c]\),
-so response error acts like additional observation error.
-
-\begin{proposition}[Perturbation bound]
-\label{prop:operator_perturbation}
-Assume \(\widehat{\widetilde H}_\Phi\) has full column rank and
-\(\|\widehat{\widetilde H}_\Phi-\widetilde H_\Phi^\star\|_2\le\delta_H\).
-The unconstrained least-squares estimate using
-\(\widehat{\widetilde H}_\Phi\) satisfies
-\begin{equation}
-\|\widehat{\mathbf c}-\mathbf c\|_2
-\le
-\frac{\|\widetilde E\|_2+\delta_H\|\mathbf c\|_2}
-{\sigma_J(\widehat{\widetilde H}_\Phi)}.
-\label{eq:operator_error_bound}
-\end{equation}
-\end{proposition}
-
-A short proof, reusing the pseudoinverse bound of
-Proposition~\ref{prop:noise_robust}, appears in
-Appendix~\ref{app:identifiability_proofs}.
-
-The same norm bound applies to all three discrepancy terms, but their
-interpretations are not interchangeable.  Wind and dispersion ensembles
-quantify transport uncertainty and may support uncertainty intervals under the
-ensemble model.  Alternative inventory maps, locations, labels, or scales are
-inventory robustness scenarios, not confidence intervals.  They are reported
-separately, and source-specific attribution remains conditional on the supplied
-inventory.  Either error type is most damaging when the projected response is
-already ill-conditioned.
+response error acts like additional observation error: a perturbation
+\(\|\widehat{\widetilde H}_\Phi-\widetilde H_\Phi^\star\|_2\le\delta_H\) inflates
+the least-squares error bound to
+\((\|\widetilde E\|_2+\delta_H\|\mathbf c\|_2)/
+\sigma_J(\widehat{\widetilde H}_\Phi)\) (Proposition and proof in
+Appendix~\ref{app:operator_error_details}), so either error is most damaging when
+the projected response is already ill-conditioned.  Crucially, the transport term
+\(\Delta_{\mathrm{tr}}\) may be propagated through ensembles into uncertainty
+intervals, whereas the inventory term \(\Delta_{\mathrm{inv}}\) is reported only
+as named robustness scenarios that are never pooled into an interval.
 
 \subsection{Identifiable Source Resolution}
 \label{subsec:source_merging}
@@ -293,44 +262,18 @@ Symbol & Name & Interpretation & Action \\
 \label{subsec:per_sensor_footprints}
 
 The diagnostics above certify which coefficients are separable in the pooled
-sensor-time space.  Policy questions are often also spatial: at a given monitor,
-which upwind regions and which inventory groups produced the attributed signal?
-Because the response is linear in \(\mathbf c\), the fitted solution already
-answers this without a new model.
-
-\paragraph{Per-sensor contribution decomposition.}
-For an observed row \((s,t)\), the background-corrected fit decomposes exactly as
-\(\widetilde y_{s,t}=\sum_{k,b}\widetilde H_{\Phi,(s,t),(k,b)}\,\widehat c_{kb}\),
-so the contribution of source \(k\) to sensor \(s\) over the record is
-\(\widehat Y^{(s)}_k=\sum_t\sum_b
-H_{\Phi,(s,t),(k,b)}^{\mathrm{lag}}\widehat c_{kb}\).  The projected form isolates
-the identifiable part; the unprojected form gives the raw fitted sensor
-contribution before background removal.
-
-\paragraph{Sensor footprint.}
-The spatial origin of a sensor's signal is the pullback of its response row onto
-the source grid.  For sensor \(s\) at time \(t\),
-\(F_{s,t}(i)=\sum_{\ell\in\mathcal L_t}
-[O G_{t,t-\ell}^{\partial}(\widehat{\mathbf w}_{t-\ell:t})]_{s,i}\ge 0\) and
-\(F_s(i)=\sum_t F_{s,t}(i)\), a nonnegative field over source cells \(i\)
-recording which upwind cells influence sensor \(s\).  Weighting by
-\(\phi_b(t-\ell)\), the inventory map \(\mathbf s_k\), and \(\widehat c_{kb}\)
-resolves the fitted contribution of each source group to each sensor by cell of
-origin.  This is the puff response of Section~\ref{subsec:plume_response} read
-backward from the sensor and requires no new transport operator.
-
-\paragraph{Identifiability is inherited, not created.}
-Per-sensor attribution uses only the rows of \(\widetilde H_\Phi\) for that
-sensor.  Let \(\widetilde H_\Phi^{(s)}\) be that row submatrix.  Since
-\(\widetilde H_\Phi^{(s)\top}\widetilde H_\Phi^{(s)}\preceq
-\widetilde H_\Phi^\top\widetilde H_\Phi\), deleting rows cannot increase the
-smallest singular value or the rank, so
+sensor-time space; policy questions are often also spatial.  Because the response
+is linear in \(\mathbf c\), the fitted solution already localizes each monitor's
+signal without a new model: per-sensor contributions decompose exactly, and the
+sensor footprint is the pullback of the response row onto the source grid---the
+puff response of Section~\ref{subsec:plume_response} read backward from the
+sensor, requiring no new operator (Appendix~\ref{app:footprint_details}).
+Identifiability is inherited, not created: for the row submatrix
+\(\widetilde H_\Phi^{(s)}\) of a single sensor,
 \(\sigma_J(\widetilde H_\Phi^{(s)})\le\sigma_J(\widetilde H_\Phi)\) and
 \(\operatorname{rank}(\widetilde H_\Phi^{(s)})\le
-\operatorname{rank}(\widetilde H_\Phi)\):
-a single sensor is never more identifiable than the pooled network.
-Footprints and per-sensor contributions are therefore reported as spatial
-overlays of the global fit; per-sensor source \emph{shares} are asserted only at
-the globally identifiable resolution, aggregating to a report group wherever the
-pooled diagnostics require one.  This keeps the spatial view from implying
-separations the sensing system does not support.
+\operatorname{rank}(\widetilde H_\Phi)\), so a single sensor is never more
+identifiable than the pooled network.  Footprints are therefore reported as
+spatial overlays of the global fit, with per-sensor source \emph{shares} asserted
+only at the globally identifiable resolution, aggregating to a report group
+wherever the pooled diagnostics require one.

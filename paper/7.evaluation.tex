@@ -3,70 +3,65 @@
 
 We instantiate the framework on a single New Delhi platform so that the
 controlled and observed-data studies share one regulatory sensor geometry, one
-PM\(_{2.5}\) and wind record, and one set of proxy inventories.  This section
-defines that platform once; Section~\ref{sec:evaluation} then varies wind, noise,
-backgrounds, source ambiguity, activity bases, and forward-model error within it.
+PM\(_{2.5}\) and wind record, and one set of proxy inventories;
+Section~\ref{sec:evaluation} then varies wind, noise, backgrounds, source
+ambiguity, activity bases, and forward-model error within it.
 
 \subsection{Government Observations and Sensor Network}
 \label{subsec:new_delhi_observations}
 
-We use hourly government observations \citep{cpcb,cpcb_portal} with columns
+We use hourly government observations \citep{cpcb,cpcb_portal} (columns
 \texttt{monitor\_id}, \texttt{timestamp\_round}, \texttt{AT}, \texttt{RH},
-\texttt{WD}, \texttt{WS}, \texttt{pm10}, and \texttt{pm25}.  The record spans
-21,960 hourly timestamps from 1 May 2018 through 31 October 2020 in Indian
-Standard Time; after station processing the study has 32 sensors.  Approximately 74.9\% of wind-direction entries,
-72.8\% of wind-speed entries, and 90.5\% of PM\(_{2.5}\) entries are observed.
-The saved data retain station identifiers, coordinates, timestamps, source
-column names, and a valid-value mask in which \texttt{True} means that the
-government record is present; an explicit missing mask stores its complement.
-
-The two Pusa monitors are not treated as coincident independent sensors.
+\texttt{WD}, \texttt{WS}, \texttt{pm10}, \texttt{pm25}) spanning 21,960 hourly
+timestamps from 1 May 2018 through 31 October 2020 in Indian Standard Time;
+approximately 74.9\% of wind-direction, 72.8\% of wind-speed, and 90.5\% of
+PM\(_{2.5}\) entries are observed, and a valid-value mask (\texttt{True} where the
+record is present) is retained alongside station coordinates and timestamps.  The
+two Pusa monitors are not treated as coincident independent sensors:
 \texttt{Pusa\_IMD} and \texttt{Pusa\_DPCC} are averaged by timestamp into
-\texttt{Pusa\_averaged}; its coordinates are the mean of their coordinates and
-each variable is averaged over the available readings at that hour.  This
-averaging produces the final 32-sensor layout.
-
-PM\(_{2.5}\) is never imputed.  Its flattened valid-value mask defines
-\(M_{\mathcal O}\) in Equation~\ref{eq:observation_selection}; the same ordered
-sensor--time rows are retained in \(Y\), \(H_\Phi^{\mathrm{lag}}\), \(Q\), and
-their metadata.
+\texttt{Pusa\_averaged} (mean coordinates, per-variable hourly averaging), giving
+the final 32-sensor layout.  PM\(_{2.5}\) is never imputed: its flattened
+valid-value mask defines \(M_{\mathcal O}\) in
+Equation~\ref{eq:observation_selection}, and the same ordered sensor--time rows
+are retained in \(Y\), \(H_\Phi^{\mathrm{lag}}\), \(Q\), and their metadata.
 
 \subsection{Wind Preparation}
 \label{subsec:new_delhi_wind}
+
 The observed \(WD/WS\) values are converted using
-Equation~\ref{eq:wind_direction_conversion} before entering the coordinate-query
-wind imputation pipeline.  The saved wind product retains raw station values, masks,
-station coordinates, held-out validation splits, model configuration, checkpoint
-metadata, and the gridded query field used by the response operator.  The New Delhi
-runs use the gridded kernel-imputed wind field; a learned imputer was
-trained and evaluated but not adopted
-(Section~\ref{subsec:results_wind_imputation}).
+Equation~\ref{eq:wind_direction_conversion} and completed on the response grid by
+the kernel coordinate-query imputer of
+Section~\ref{subsec:wind_field_estimation}; a learned imputer was trained and
+evaluated but not adopted (Section~\ref{subsec:results_wind_imputation}).  The
+saved wind product retains raw station values, masks, station coordinates,
+held-out validation splits, checkpoint metadata, and the gridded query field used
+by the response operator.
 
 \subsection{Inventories and Proxy Temporal Activities}
 \label{subsec:new_delhi_inventories}
 
-The study uses four source groups: brick kilns, industries, population density,
-and traffic (Table~\ref{tab:new_delhi_inventories}).  Each has one spatial proxy
+The study uses four source groups---brick kilns, industries, population density,
+and traffic (Table~\ref{tab:new_delhi_inventories})---each with one spatial proxy
 map and its own admissible set of temporal-basis components.  Brick-kiln and
 industry proxies follow the regional emissions inventory
 \citep{GUTTIKUNDA2013101}, population density uses the gridded population product
 \citep{ColumbiaUniversity2018}, and the traffic map is derived from road map data
-\citep{google_maps}.  Every \(80\times80\) map is cropped to the chosen New Delhi
-study window (rows \(21{:}61\), columns \(16{:}56\)) covering the regulatory
-network, giving a \(40\times40\) map, then divided by its own cropped 99th
-percentile; the crop is recorded as experiment metadata and can be changed
-without altering the model.
-
-Traffic is modeled as a single road-network source with a diurnal temporal
-structure rather than as separate inventories per time slot.  The nearest-slot
-maps at 00:00, 06:00, 12:00, and 18:00 define traffic-specific temporal-basis
-components, so one road map carries a time-varying activity.  This uses the
-shared temporal dictionary \(\Phi\) of Section~\ref{sec:problem_setup}: the
-fixed-zero mask \(\mathcal F_0\) frees each group's coefficients only on its own
-admissible components and holds the others at zero.  Because one spatial map
-carries the diurnal amplitude, this assumes the congestion \emph{spatial} pattern
-is time-invariant and only its amplitude varies across the day; time-varying
-spatial congestion is not represented.
+\citep{google_maps}.  Every \(80\times80\) map is cropped to the New Delhi study
+window (rows \(21{:}61\), columns \(16{:}56\)) covering the regulatory network,
+giving a \(40\times40\) map, then divided by its own cropped 99th percentile.
+Traffic is modeled as a single road-network source whose nearest-slot maps at
+00:00, 06:00, 12:00, and 18:00 define traffic-specific temporal-basis components
+under the shared dictionary \(\Phi\) and the fixed-zero mask \(\mathcal F_0\), so
+one road map carries a time-varying activity (assuming the congestion
+\emph{spatial} pattern is time-invariant and only its amplitude varies).
+Brick-kiln activity uses deterministic alternating 12-hour blocks, industry a
+continuous operating fraction with higher daytime (07:00--19:00) activity, and
+population a baseline with smooth cooking peaks---deterministic study assumptions,
+not observed emissions truth.  Because each map uses independent proxy
+normalization, fitted coefficients and contributions are in normalized proxy
+units, not physical emission totals or shares; no learned free residual source
+map is used, and unexplained broad signal belongs to the background model or
+residual diagnostics.
 
 \begin{table}[t]
 \centering
@@ -88,85 +83,40 @@ Traffic & road-network map & diurnal slots 00/06/12/18 \\
 \end{tabularx}
 \end{table}
 
-Brick-kiln activity uses deterministic alternating 12-hour blocks as a controlled
-proxy for intermittent firing; the industry profile combines a continuous
-operating fraction with higher daytime activity from 07:00 to 19:00; and
-population-related activity combines a baseline with smooth cooking peaks.  These
-are deterministic study assumptions, not observed emissions truth.  If a traffic
-time-slot map is empty in the selected crop, its basis component simply has no
-support there and is reported as unsupported rather than assigned an estimate.
-Because each map uses independent proxy normalization, fitted coefficients and
-contributions are in normalized proxy units, not physical emission totals or
-shares.  No learned free residual source map is used; unexplained broad signal
-belongs to the background model or residual diagnostics.
-
 \subsection{Forward Models, Sensor Observations, and Backgrounds}
 \label{subsec:new_delhi_forward_models}
 
-Both forward paths use the New Delhi-derived \(40\times40\) domain and
-regulatory sensor coordinates.  The response matrix is built from the
-open-boundary Gaussian puff operator of
-Section~\ref{subsec:plume_response}, evaluating kernels directly at sensors.
-The same operator is the matched generator for controlled recovery experiments
+Both forward paths use the New Delhi-derived \(40\times40\) domain and regulatory
+sensor coordinates, with the open-boundary Gaussian puff operator of
+Section~\ref{subsec:plume_response} evaluated directly at sensors.  The same
+operator is the matched generator for controlled recovery experiments
 (Experiments~1--4) and the inference operator for observed PM\(_{2.5}\); only the
-initial-condition baseline differs by mode.  Controlled operator-matched runs use
-a zero-source, zero-initial-state baseline, while observed runs subtract a
-declared zero-source transported initial-condition baseline, as described next.
-
-For observed New Delhi runs, the initial pollution field is estimated from the
-first available regulatory observations (the two Pusa monitors averaged) by a
-normalized Gaussian-kernel spatial interpolation on the response grid---a kriging
-surrogate that avoids an additional heavyweight geostatistics dependency.  Its
-zero-source transported trajectory, obtained by propagating this initial field as
-a single release through the same open-boundary puff operator (its Gaussian kernel
-is the advection--diffusion Green's function, so units are preserved), is subtracted
-from the sensor observations before fitting source activities.  Source coefficients
-are therefore fitted to the residual sensor-time signal after removing the
-contribution of the initialized background field and the low-rank temporal
-background basis.  Kernel interpolation from sparse first-hour observations is
-itself an ill-posed spatial estimate, so this baseline injects some uncertainty; the
-effect is limited by declaring and subtracting the baseline before fitting and by
-the low-rank background basis \(Q\), which absorbs residual broad structure.
-Controlled operator-matched experiments may instead use a zero initial field when
-the synthetic data are generated from the same zero-initial-state response.
-
-An auxiliary advection--diffusion simulator uses first-order upwind advection,
-a five-point Laplacian, a two-stage Heun update, diffusivity
-\(3\times10^{-4}\), and edge-hold boundaries.  It provides a \emph{structural}
-forward-model mismatch: data generated by this distinct
-transport operator are fit with the open-boundary puff response, testing the puff
-approximation against a different operator family.  This mismatch also drives the residual-adequacy test of
-Section~\ref{subsec:model_adequacy}, letting us check its power against structural
-transport misspecification and not only against missing sources.  
-
-% The simulator
-% is never silently substituted for the open-boundary response; it is a labeled
-% Experiment~5 generator, and the kriged initial conditions it uses are subtracted
-% through their matched zero-source trajectory before source fitting.
-
-Normal backgrounds follow Section~\ref{subsec:background_construction} (effective
-rank at most eight); the base controlled background is the rank-four member (a
-global constant, centered linear trend, and first daily sine and cosine).
-Redundant-column and labeled source-like stress variants are used in
-Section~\ref{sec:evaluation}.
+initial-condition baseline differs by mode---a zero-source, zero-initial-state
+baseline for controlled operator-matched runs, and a subtracted zero-source
+transported kriged-initial-condition baseline for observed runs.  An auxiliary
+edge-hold advection--diffusion simulator provides a \emph{structural}
+forward-model mismatch (data generated by a distinct transport operator, fit with
+the puff response) that also drives the residual-adequacy test of
+Section~\ref{subsec:model_adequacy} (Experiment~5).  Normal backgrounds follow
+Section~\ref{subsec:background_construction}, with the base controlled background
+the rank-four member; the kriged-baseline construction and simulator settings are
+given in Appendix~\ref{app:platform_details}.
 
 \subsection{Controlled and Observed-Data Study Modes}
 \label{subsec:new_delhi_study_modes}
 
 The controlled mode preserves New Delhi sensor geometry and transport while
-assigning known nonnegative source--basis coefficients.  It uses synthetic or
-real gridded wind, controlled observation noise, source splits, sensor-layout
-variants, and optional operator mismatch.  Where the study is explicitly about
-inventory geometry (Experiments~2 and~6) the real New Delhi inventory maps are
-used; the remaining controlled experiments use compact synthetic source cells for
+assigning known nonnegative source--basis coefficients, using synthetic or real
+gridded wind, controlled observation noise, source splits, sensor-layout variants,
+and optional operator mismatch.  Where the study is explicitly about inventory
+geometry (Experiments~2 and~6) the real New Delhi inventory maps are used; the
+remaining controlled experiments use compact synthetic source cells for
 tractability, since their conclusions concern conditioning, coherence, and
-recovery rather than the specific inventory footprints.  Because its coefficients
-are known, it supports recovery and interval-coverage metrics.
-
-The observed-data mode combines real PM\(_{2.5}\), its observation mask, the
-gridded kernel-imputed New Delhi wind field, the named normalized inventories, and
-the declared proxy temporal bases.  It has no ground-truth source activities.
-Accordingly, it reports residuals, response geometry, uncertainty, weak and
-ambiguous coefficients, normalized proxy contributions, and recommended report
-groups rather than synthetic recovery error.  The observed study is run over four
-consecutive one-week windows, each fitted and reported independently.
+recovery rather than specific inventory footprints.  Because its coefficients are
+known, it supports recovery and interval-coverage metrics.  The observed-data mode
+combines real PM\(_{2.5}\), its observation mask, the gridded kernel-imputed wind
+field, the named normalized inventories, and the declared proxy temporal bases; it
+has no ground-truth source activities and is run over four consecutive one-week
+windows, each fitted and reported independently, reporting residuals, response
+geometry, uncertainty, weak and ambiguous coefficients, normalized proxy
+contributions, and recommended report groups rather than synthetic recovery error.
