@@ -1,20 +1,3 @@
-\section{Evaluation}
-\label{sec:evaluation}
-
-The evaluation uses the New Delhi platform in
-Section~\ref{sec:new_delhi_platform} and asks whether the geometry of
-\(\widetilde H_\Phi\) predicts which coefficient, activity, and grouped-source
-claims are defensible.  A shared base configuration is changed along one
-controlled axis at a time; this avoids conflating wind, source geometry,
-background flexibility, noise, and forward-model error.  All runs use the
-$40\times40$ New Delhi platform resolution; unless stated otherwise the controlled
-experiments use a 72-hour transport window and the observed study uses four
-consecutive one-week windows.
-
-Real imputed wind is used as a controlled transport input when coefficients are
-synthetically known.  The observed-PM\(_{2.5}\) mode is a separate evaluation
-and is never assigned synthetic source-recovery metrics.
-
 \subsection{Metrics and Reporting}
 \label{subsec:evaluation_metrics}
 
@@ -40,8 +23,8 @@ physical-emission share.
 \paragraph{Controlled results.}
 The controlled trials have known source--basis coefficients and therefore recovery
 and coverage metrics.  Figure~\ref{fig:identifiability} consolidates the three
-experiments that establish the central claim---response-matrix geometry, not noise
-alone, sets the recovery ceiling---and Experiment~8 below tests residual adequacy.
+experiments that establish the central claim (response-matrix geometry, not noise
+alone, sets the recovery ceiling), and Experiment~8 below tests residual adequacy.
 Six further controlled experiments (coherence and grouped reporting, transport
 error, inventory robustness, lag-window selection, temporal-basis recovery, and
 per-sensor footprints) are reported in Appendix~\ref{app:additional_experiments}.
@@ -53,7 +36,7 @@ per-sensor footprints) are reported in Appendix~\ref{app:additional_experiments}
 Experiment~1: coefficient relative error grows linearly with observation noise,
 and the better-conditioned \emph{close} geometry ($\sigma_J=9.60$, $\kappa=2.26$)
 recovers proportionally more accurately than the \emph{separated} geometry
-($\sigma_J=3.27$, $\kappa=8.89$)---$0.11$ versus $0.26$ at $20\%$ noise; both
+($\sigma_J=3.27$, $\kappa=8.89$): $0.11$ versus $0.26$ at $20\%$ noise; both
 designs are full rank ($=2$). \textbf{(b)} Experiment~4: $\sigma_J$ (log) versus
 maximum eligible coherence across six wind providers $\times$ three sensor
 layouts (marker size $\propto$ coefficient error). Wind diversity lowers
@@ -63,7 +46,7 @@ producing the only nonzero errors (single/random: coherence $1.00$, error
 $0.57$). \textbf{(c)} Experiment~3: four predeclared backgrounds; the redundant
 basis is byte-identical to the primary (same span), while the labeled
 source-like \emph{stress} basis drives absorption to $1$ and $\sigma_J$ and
-minimum visibility to $0$---a too-flexible background can erase the attributed
+minimum visibility to $0$: a too-flexible background can erase the attributed
 signal.}
 \label{fig:identifiability}
 \end{figure*}
@@ -83,7 +66,7 @@ with the injected noise. The better-conditioned \emph{close} geometry
 ($\sigma_J=9.60$, $\kappa=2.26$) recovers proportionally more accurately than the
 \emph{separated} geometry ($\sigma_J=3.27$, $\kappa=8.89$): at 20\% noise the
 coefficient relative error is $0.11$ versus $0.26$. This is our central
-claim---response-matrix geometry, not noise alone, sets the recovery ceiling.
+claim: response-matrix geometry, not noise alone, sets the recovery ceiling.
 (Reconstructed-activity error and interval coverage are reported for the
 temporal-basis and adequacy studies, Experiments~9 and~8; Experiment~1 isolates
 the coefficient-error/conditioning relationship.)  The projected sensor residual
@@ -106,8 +89,8 @@ or from its source-recovery score.
 Figure~\ref{fig:identifiability}(c) compares the four predeclared bases (all fixed before
 fitting: \texttt{declared\_before\_fit} is true throughout). The redundant basis
 is byte-identical to the primary in every reported quantity, confirming that
-duplicate columns spanning the same subspace leave the projection---and therefore
-visibility, absorption, and recovery---unchanged. The labeled source-like
+duplicate columns spanning the same subspace leave the projection, and therefore
+visibility, absorption, and recovery, unchanged. The labeled source-like
 \emph{stress} basis is the cautionary case: it drives $\sigma_J$ to $0$, absorption
 to $1$, and minimum visibility to $0$, i.e.\ it absorbs the source-driven signal
 and destroys identifiability, even though the fitted residual is essentially
@@ -162,11 +145,11 @@ parametric bootstrap ($\alpha=0.05$, $1000$ replicates, $100$ trials) is
 well-calibrated: with no omission the rejection rate is $0.05$. It has full power
 against a residual-visible omitted source whose signature lies largely outside
 $\operatorname{span}[H_\Phi^{\mathrm{lag}},Q]$ (out-of-span fraction $0.91$;
-rejection rate $1.0$). Crucially, an \emph{aligned} omission---a genuinely omitted
+rejection rate $1.0$). Crucially, an \emph{aligned} omission (a genuinely omitted
 source whose signature is a nonnegative combination of the fitted columns and the
-background---is absorbed and not detected (rejection $0.05$). The test is therefore
-one-sided: a rejection is evidence of model inadequacy---though not of its
-cause---whereas a non-rejection cannot certify adequacy, since an aligned omission
+background) is absorbed and not detected (rejection $0.05$). The test is therefore
+one-sided: a rejection is evidence of model inadequacy (though not of its
+cause), whereas a non-rejection cannot certify adequacy, since an aligned omission
 is absorbed and passes undetected.
 
 \paragraph{Observed New Delhi results.}
@@ -229,9 +212,9 @@ group carrying diurnal slot temporal bases under the fixed-zero admissibility
 mask, so there is no per-slot \texttt{traffic\_06} inventory to estimate; a group
 whose admissible temporal components are all fixed-zero in a window would be marked
 \texttt{unsupported} rather than assigned a substantive share (none were in these
-weeks). The apportionment swings substantially week to week---population-dominated
+weeks). The apportionment swings substantially week to week: population-dominated
 in weeks 1--3 (shares $1.00$, $0.81$, $0.94$), then brick-kiln-dominated in week 4
-($0.93$)---which is precisely why the windows are reported separately rather than as
+($0.93$), which is precisely why the windows are reported separately rather than as
 one aggregate New Delhi estimate.  Per-monitor fitted group contributions and
 their cells of origin (29/28 monitors per week) are not tabulated individually.
 

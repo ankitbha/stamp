@@ -1,7 +1,6 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2023.2.18)  22 JUL 2026 22:59
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2023.2.18)  23 JUL 2026 09:15
 entering extended mode
  restricted \write18 enabled.
- file:line:error style messages enabled.
  %&-line parsing enabled.
 **main.tex
 (./main.tex
@@ -775,27 +774,21 @@ File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
 )) (./1.intro.tex
 LaTeX Font Info:    Font shape `T1/ntxtlf/m/it' will be
 (Font)              scaled to size 10.0pt on input line 6.
-
-[1{/scratch/ab9738/stamp/.vscode/texmf-var/fonts/map/pdftex/updmap/pdftex.map}
-
-
-
-]
 LaTeX Font Info:    Trying to load font information for TS1+ntxtlf on input lin
-e 63.
+e 44.
+
 (/scratch/ab9738/stamp/.vscode/texmf/tex/latex/newtx/ts1ntxtlf.fd
 File: ts1ntxtlf.fd 2015/01/18 v1.0 fd file for TS1/ntxtlf
 )
 LaTeX Font Info:    Font shape `TS1/ntxtlf/m/n' will be
-(Font)              scaled to size 10.0pt on input line 63.
-)
-(./2.related.tex) (./3.setup.tex [2]) (./4.method.tex
-LaTeX Font Info:    Font shape `T1/ntxtlf/m/n' will be
-(Font)              scaled to size 10.95pt on input line 9.
-LaTeX Font Info:    Font shape `T1/ntxtlf/b/n' will be
-(Font)              scaled to size 10.95pt on input line 9.
+(Font)              scaled to size 10.0pt on input line 44.
+ [1{/scratch/ab9738/stamp/.vscode/texmf-var/fonts/map/pdftex/updmap/pdftex.map}
 
-Overfull \hbox (23.09012pt too wide) detected at line 18
+
+
+])
+(./2.related.tex) (./3.setup.tex [2]) (./4.method.tex
+Overfull \hbox (23.09012pt too wide) detected at line 16
 []\OML/cmm/m/it/10 U[] \OT1/cmr/m/n/10 = \OMS/cmsy/m/n/10 ^^@\OML/cmm/m/it/10 W
 S []\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 WD^^Y=\OT1/cmr/m/n/10 180)\OML/cmm/m/it/1
 0 ;  V[] \OT1/cmr/m/n/10 = \OMS/cmsy/m/n/10 ^^@\OML/cmm/m/it/10 WS []\OT1/cmr/m
@@ -804,17 +797,28 @@ S []\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 WD^^Y=\OT1/cmr/m/n/10 180)\OML/cmm/m/it/1
 
 [3]) (./5.theory.tex
 LaTeX Font Info:    Font shape `T1/ntxtlf/m/n' will be
+(Font)              scaled to size 10.95pt on input line 14.
+LaTeX Font Info:    Font shape `T1/ntxtlf/b/n' will be
+(Font)              scaled to size 10.95pt on input line 14.
+LaTeX Font Info:    Font shape `T1/ntxtlf/m/n' will be
 (Font)              scaled to size 7.0pt on input line 25.
 LaTeX Font Info:    Font shape `T1/ntxtlf/m/n' will be
 (Font)              scaled to size 5.0pt on input line 25.
- [4]
+
 Underfull \hbox (badness 1137) in paragraph at lines 40--50
 []\T1/ntxtlf/m/n/10 (+20) The proof (rank-nullity in both di-rec-tions, with a
  []
 
-[5]) (./6.algorithm.tex [6]
+[4]
+Underfull \hbox (badness 1072) in paragraph at lines 178--193
+ \T1/ntxtlf/b/n/10 (+20) Response-matrix per-tur-ba-tions. \T1/ntxtlf/m/n/10 (+
+20) The con-structed re-
+ []
+
+[5]) (./6.algorithm.tex
 LaTeX Font Info:    Font shape `T1/ntxtlf/b/n' will be
 (Font)              scaled to size 9.0pt on input line 50.
+ [6]
 LaTeX Font Info:    Trying to load font information for T1+pcr on input line 11
 8.
 
@@ -826,100 +830,98 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
 ) (./7.evaluation.tex
-[7]) (./8.evaluation.tex [8]
-<figures/fig1_identifiability.pdf, id=57, 491.95105pt x 141.85327pt>
+[7]) (./8.evaluation.tex
+<figures/fig1_identifiability.pdf, id=54, 491.95105pt x 141.85327pt>
 File: figures/fig1_identifiability.pdf Graphic file (type pdf)
 <use figures/fig1_identifiability.pdf>
-Package pdftex.def Info: figures/fig1_identifiability.pdf  used on input line 5
-1.
+Package pdftex.def Info: figures/fig1_identifiability.pdf  used on input line 3
+4.
 (pdftex.def)             Requested size: 505.89pt x 145.87454pt.
- [9]
-<figures/fig2_observed.pdf, id=61, 492.46983pt x 159.85458pt>
+ [8] [9 <./figures/fig1_identifiability.pdf>]
+<figures/fig2_observed.pdf, id=122, 492.46983pt x 159.85458pt>
 File: figures/fig2_observed.pdf Graphic file (type pdf)
 <use figures/fig2_observed.pdf>
-Package pdftex.def Info: figures/fig2_observed.pdf  used on input line 193.
+Package pdftex.def Info: figures/fig2_observed.pdf  used on input line 176.
 (pdftex.def)             Requested size: 505.89pt x 164.22029pt.
- [10 <./figures/fig1_identifiability.pdf>])
-(./8.conclusion.tex
-Underfull \vbox (badness 1342) has occurred while \output is active []
-
- [11 <./figures/fig2_observed.pdf>]) (./main.bbl
+)
+(./8.conclusion.tex) [10] (./main.bbl
 Underfull \hbox (badness 10000) in paragraph at lines 81--85
 \T1/ntxtlf/m/n/10 (+20) com / ccr / \ # /caaqm -[] dashboard -[] all / caaqm -[
 ] landing / caaqm -[]
  []
 
-[12]) (./9.appendix.tex
+[11 <./figures/fig2_observed.pdf>]) (./9.appendix.tex
 Underfull \hbox (badness 7759) in paragraph at lines 23--23
 []|\T1/ntxtlf/m/n/9 (+20) background-projected fin-ger-
  []
 
-[13] [14]
-Underfull \hbox (badness 10000) in paragraph at lines 300--304
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+[12] [13]
+Underfull \hbox (badness 10000) in paragraph at lines 333--337
 []\T1/ntxtlf/m/n/10 (+20) Uncertainty ar-ti-facts dis-tin-guish
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 300--304
+Underfull \hbox (badness 10000) in paragraph at lines 333--337
 \T1/pcr/m/n/10 ensemble_kind=transport \T1/ntxtlf/m/n/10 (+20) from
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 300--304
+Underfull \hbox (badness 10000) in paragraph at lines 333--337
 \T1/pcr/m/n/10 ensemble_kind=inventory\T1/ntxtlf/m/n/10 (+20) . Only the for-me
 r
  []
 
-[15]
-Overfull \hbox (18.23817pt too wide) detected at line 476
+[14] [15]
+Overfull \hbox (18.23817pt too wide) detected at line 509
 []\OML/cmm/m/it/10 v[]\OT1/cmr/m/n/10 (\OT1/cmr/bx/n/10 x[]\OML/cmm/m/it/10 ; t
 \OT1/cmr/m/n/10 ) = []\OML/cmm/m/it/10 ;  v[]\OT1/cmr/m/n/10 (\OT1/cmr/bx/n/10 
 x[]\OML/cmm/m/it/10 ; t\OT1/cmr/m/n/10 ) = []\OML/cmm/m/it/10 :
  []
 
-[16] [17] [18] [19] [20]
-Underfull \vbox (badness 3009) has occurred while \output is active []
+[16] [17] [18] [19] [20]) [21
 
-) [21]
-(./main.aux) ) 
+] (./main.aux) ) 
 Here is how much of TeX's memory you used:
- 20692 strings out of 480247
- 401789 string characters out of 5896151
- 698023 words of memory out of 5000000
+ 20694 strings out of 480247
+ 401823 string characters out of 5896151
+ 702846 words of memory out of 5000000
  37956 multiletter control sequences out of 15000+600000
- 526785 words of font info for 199 fonts, out of 8000000 for 9000
+ 526866 words of font info for 200 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  99i,12n,117p,2207b,445s stack positions out of 5000i,500n,10000p,200000b,80000s
-{/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}{/usr/
-share/texmf/fonts/enc/dvips/tex-gyre/q-ts1.enc}{/scratch/ab9738/stamp/.vscode/t
-exmf/fonts/enc/dvips/newtx/ntx-ec-tlf.enc}</usr/share/texlive/texmf-dist/fonts/
-type1/public/amsfonts/cm/cmbx10.pfb></usr/share/texlive/texmf-dist/fonts/type1/
-public/amsfonts/cm/cmbx7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/
-amsfonts/cm/cmbx9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfont
-s/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cmex
-tra/cmex9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmm
-i10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb
-></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/
-share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/t
-exlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></usr/share/texlive/
-texmf-dist/fonts/type1/public/amsfonts/cm/cmmib10.pfb></usr/share/texlive/texmf
--dist/fonts/type1/public/amsfonts/cmextra/cmmib7.pfb></usr/share/texlive/texmf-
-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fo
-nts/type1/public/amsfonts/cm/cmr5.pfb></usr/share/texlive/texmf-dist/fonts/type
-1/public/amsfonts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public
-/amsfonts/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfont
-s/cm/cmr9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cms
-y10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy5.pfb
-></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></usr/
-share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/t
-exlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></usr/share/texlive/
-texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/share/texlive/t
-exmf-dist/fonts/type1/public/amsfonts/symbols/msbm7.pfb></usr/share/texmf/fonts
-/type1/public/tex-gyre/qtmr.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/
-courier/ucrr8a.pfb></scratch/ab9738/stamp/.vscode/texmf/fonts/type1/public/newt
-x/ztmb.pfb></scratch/ab9738/stamp/.vscode/texmf/fonts/type1/public/newtx/ztmr.p
-fb></scratch/ab9738/stamp/.vscode/texmf/fonts/type1/public/newtx/ztmri.pfb>
-Output written on main.pdf (21 pages, 597211 bytes).
+{/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}{/us
+r/share/texmf/fonts/enc/dvips/tex-gyre/q-ts1.enc}{/scratch/ab9738/stamp/.vscode
+/texmf/fonts/enc/dvips/newtx/ntx-ec-tlf.enc}</usr/share/texlive/texmf-dist/font
+s/type1/public/amsfonts/cm/cmbx10.pfb></usr/share/texlive/texmf-dist/fonts/type
+1/public/amsfonts/cm/cmbx7.pfb></usr/share/texlive/texmf-dist/fonts/type1/publi
+c/amsfonts/cm/cmbx9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfo
+nts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm
+extra/cmex9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/c
+mmi10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.p
+fb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></us
+r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share
+/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></usr/share/texliv
+e/texmf-dist/fonts/type1/public/amsfonts/cm/cmmib10.pfb></usr/share/texlive/tex
+mf-dist/fonts/type1/public/amsfonts/cmextra/cmmib7.pfb></usr/share/texlive/texm
+f-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/
+fonts/type1/public/amsfonts/cm/cmr5.pfb></usr/share/texlive/texmf-dist/fonts/ty
+pe1/public/amsfonts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/publ
+ic/amsfonts/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfo
+nts/cm/cmr9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/c
+msy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy5.p
+fb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></us
+r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share
+/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></usr/share/texliv
+e/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/share/texlive
+/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm7.pfb></usr/share/texmf/fon
+ts/type1/public/tex-gyre/qtmr.pfb></usr/share/texlive/texmf-dist/fonts/type1/ur
+w/courier/ucrr8a.pfb></scratch/ab9738/stamp/.vscode/texmf/fonts/type1/public/ne
+wtx/ztmb.pfb></scratch/ab9738/stamp/.vscode/texmf/fonts/type1/public/newtx/ztmr
+.pfb></scratch/ab9738/stamp/.vscode/texmf/fonts/type1/public/newtx/ztmri.pfb>
+Output written on main.pdf (21 pages, 595601 bytes).
 PDF statistics:
  337 PDF objects out of 1000 (max. 8388607)
  159 compressed objects within 2 object streams

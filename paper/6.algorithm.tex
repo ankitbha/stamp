@@ -39,8 +39,8 @@ thresholds, and the fixed-zero mask are predeclared (line~1), the response is
 built, projected, and fitted (lines~2--5), and only afterwards are the
 identifiability diagnostics computed and conservative groups reported
 (lines~6--8).  Because no threshold or column set is chosen after inspecting the
-fitted coefficients---the lag itself is selected from response-matrix geometry,
-not from \(\widehat{\mathbf c}\)---the reported identifiability cannot be made
+fitted coefficients (the lag itself is selected from response-matrix geometry,
+not from \(\widehat{\mathbf c}\)), the reported identifiability cannot be made
 artificially favorable by post-fit tuning.
 
 \begin{algorithm}[t]
@@ -122,12 +122,12 @@ from empirical quantiles across ensemble refits; transport uncertainty
 Residual magnitude alone is not calibrated evidence of misspecification.  When an
 externally calibrated observation-noise model \(\Sigma_e\) is available, IASA
 computes a background-orthogonal residual statistic \(T_{\mathrm{res}}\) whose
-null distribution---not a plain \(\chi^2\), since \(\widehat{\mathbf c}\) is
-fitted from the same data---is calibrated by a parametric bootstrap
+null distribution (not a plain \(\chi^2\), since \(\widehat{\mathbf c}\) is
+fitted from the same data) is calibrated by a parametric bootstrap
 (\(B_{\mathrm{res}}=1000\) refits, \(\alpha=0.05\);
 Appendix~\ref{app:reporting_details}).  The test is one-sided: a rejection
 establishes a mismatch with the declared model but not its cause, whereas a
-non-rejection does not establish inventory completeness---an omitted source whose
+non-rejection does not establish inventory completeness: an omitted source whose
 signature lies in \(\operatorname{span}[H_\Phi^{\mathrm{lag}},Q]\) is absorbed by
 fitted terms and stays residual-invisible.  If no calibrated noise model is
 supplied, IASA reports raw and projected residual summaries with

@@ -161,9 +161,7 @@ distance is a diagnostic geometrically equivalent to coherence under this
 normalization, not an independent identifiability criterion.  Like coherence, it
 is ``N/A'' for pairs involving \(\mathcal W\) and excluded from distance extrema.
 
-\subsection{Background Absorption}
-\label{subsec:background_absorption}
-
+\paragraph{Background absorption.}\label{subsec:background_absorption}
 Background correction can improve robustness by removing broad temporal
 variation, but it can also remove source-driven signal.  Let \(P_Q=QQ^\dagger\).
 For coefficient fingerprint \(j=(k,b)\), define the background absorption
@@ -176,9 +174,7 @@ background space, and the projected visibility \(v_j\) will be small even if
 the raw fingerprint is large.  This is why identifiability must be assessed
 after projection.
 
-\subsection{Response-Matrix Perturbations}
-\label{subsec:operator_error}
-
+\paragraph{Response-matrix perturbations.}\label{subsec:operator_error}
 The constructed response can be wrong for two scientifically different reasons:
 transport error (wind interpolation, transport approximation, dispersion) and
 inventory error (missing, misplaced, misclassified, or incorrectly scaled
@@ -223,49 +219,16 @@ group activity and fitted sensor contribution are the sums
 \mathbf h_{kb}^{\mathrm{lag}}\widehat c_{kb}\).
 Matrix diagnostics remain coefficient level; these group summaries express the
 coarser claims supported by the fit without inventing a scalar source
-fingerprint.
+fingerprint.  Table~\ref{tab:diagnostics} in
+Appendix~\ref{app:temporal_basis_notation} summarizes the scalar diagnostics and
+the set- and graph-valued reporting outputs.
 
-\begin{table}[t]
-\centering
-\small
-\setlength{\tabcolsep}{3pt}
-\caption{Identifiability diagnostics and reporting outputs produced with source
-activity estimates.  The lower block lists the set- and graph-valued outputs that
-accompany the scalar diagnostics.}
-\label{tab:diagnostics}
-\begin{tabularx}{\columnwidth}{l
-  >{\raggedright\arraybackslash}X
-  >{\raggedright\arraybackslash}X
-  >{\raggedright\arraybackslash}X}
-\toprule
-Symbol & Name & Interpretation & Action \\
-\midrule
-\(r_{\mathrm{num}}(\widetilde H_\Phi)\) & numerical rank & exact separability & require rank \(J\) \\
-\(\sigma_J(\widetilde H_\Phi)\) & padded min.\ singular value & noise robustness & flag zero/small \\
-\(\kappa(\widetilde H_\Phi)\) & condition number & error amplification & \(\infty\) if deficient \\
-\(r_{\mathrm{eff}}\) & effective rank & noise-level resolution & reduce grouping \\
-\(v_j\) & coefficient visibility & measurable effect & flag weak \\
-\(a_j\) & background absorption & signal lost to \(Q\) & warn after projection \\
-\(\rho_{ij}\) & pairwise coherence & pairwise ambiguity & merge coherent \\
-\(d^{\mathrm{ray}}_{ij}\) & ray distance & ray separation & N/A if weak \\
-\midrule
-\(\mathcal W\) & weak set & undetectable coefficients & flag, no edges \\
-\(\mathcal A\) & ambiguous-pair set & confusable pairs & source edges \\
-\(\mathcal E_{\mathrm{src}}\) & source ambiguity graph & source-level ambiguity & retain triggers \\
-\(\mathcal G\) & connected report groups & identifiable resolution & report grouped \\
---- & global unresolved warning & deficient, no edge & warn globally \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\subsection{Per-Sensor Source Footprints and Spatial Attribution}
-\label{subsec:per_sensor_footprints}
-
+\paragraph{Per-sensor source footprints and spatial attribution.}\label{subsec:per_sensor_footprints}
 The diagnostics above certify which coefficients are separable in the pooled
 sensor-time space; policy questions are often also spatial.  Because the response
 is linear in \(\mathbf c\), the fitted solution already localizes each monitor's
 signal without a new model: per-sensor contributions decompose exactly, and the
-sensor footprint is the pullback of the response row onto the source grid---the
+sensor footprint is the pullback of the response row onto the source grid: the
 puff response of Section~\ref{subsec:plume_response} read backward from the
 sensor, requiring no new operator (Appendix~\ref{app:footprint_details}).
 Identifiability is inherited, not created: for the row submatrix

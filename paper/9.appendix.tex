@@ -40,6 +40,39 @@ for pairs involving a coefficient with \(v_j\le\tau_v\); tables display these
 entries as N/A, exclude them from pairwise extrema, and report the weak
 coefficient separately.
 
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{3pt}
+\caption{Identifiability diagnostics and reporting outputs produced with source
+activity estimates.  The lower block lists the set- and graph-valued outputs that
+accompany the scalar diagnostics.}
+\label{tab:diagnostics}
+\begin{tabularx}{\columnwidth}{l
+  >{\raggedright\arraybackslash}X
+  >{\raggedright\arraybackslash}X
+  >{\raggedright\arraybackslash}X}
+\toprule
+Symbol & Name & Interpretation & Action \\
+\midrule
+\(r_{\mathrm{num}}(\widetilde H_\Phi)\) & numerical rank & exact separability & require rank \(J\) \\
+\(\sigma_J(\widetilde H_\Phi)\) & padded min.\ singular value & noise robustness & flag zero/small \\
+\(\kappa(\widetilde H_\Phi)\) & condition number & error amplification & \(\infty\) if deficient \\
+\(r_{\mathrm{eff}}\) & effective rank & noise-level resolution & reduce grouping \\
+\(v_j\) & coefficient visibility & measurable effect & flag weak \\
+\(a_j\) & background absorption & signal lost to \(Q\) & warn after projection \\
+\(\rho_{ij}\) & pairwise coherence & pairwise ambiguity & merge coherent \\
+\(d^{\mathrm{ray}}_{ij}\) & ray distance & ray separation & N/A if weak \\
+\midrule
+\(\mathcal W\) & weak set & undetectable coefficients & flag, no edges \\
+\(\mathcal A\) & ambiguous-pair set & confusable pairs & source edges \\
+\(\mathcal E_{\mathrm{src}}\) & source ambiguity graph & source-level ambiguity & retain triggers \\
+\(\mathcal G\) & connected report groups & identifiable resolution & report grouped \\
+n/a & global unresolved warning & deficient, no edge & warn globally \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 \section{Detailed Identifiability Proofs}
 \label{app:identifiability_proofs}
 
@@ -235,27 +268,27 @@ responses use identical rows and columns; the default convergence threshold is
 Before paper experiments, the implementation must pass six small deterministic
 gates built from public APIs:
 \begin{enumerate}[leftmargin=*]
-    \item \textbf{S1---response.}  On a \(16\times16\) grid with four compact
+    \item \textbf{S1: response.}  On a \(16\times16\) grid with four compact
     sources, four sensors, impulse/constant bases, and seed 123, verify response
     shape, downwind arrival, open-boundary exit, no wraparound, dispersion
     anisotropy, mass accounting, metadata, and exact repeatability.
-    \item \textbf{S2---projection.}  Use the S1 response with a rank-four normal
+    \item \textbf{S2: projection.}  Use the S1 response with a rank-four normal
     background to verify exact ordering, background removal, orthogonality,
     idempotence, redundant-column invariance, and the labeled source-like stress
     behavior.
-    \item \textbf{S3---diagnostics.}  Verify orthogonal, duplicate, and weak
+    \item \textbf{S3: diagnostics.}  Verify orthogonal, duplicate, and weak
     matrices, including padded zeros, \(\sigma_J\), infinite deficient
     condition status, weak-pair N/A values, and a matched multi-source eastward
     versus two-direction wind comparison.
-    \item \textbf{S4---fit.}  Recover known nonnegative coefficients in
+    \item \textbf{S4: fit.}  Recover known nonnegative coefficients in
     noiseless/noisy well-conditioned cases, verify projected-FISTA KKT
     convergence, preserve exact nonnegativity, and recover the duplicate-pair
     sum when the individual split is nonunique.
-    \item \textbf{S5---report groups.}  Verify the duplicate-source connected
+    \item \textbf{S5: report groups.}  Verify the duplicate-source connected
     component, an \(A\)--\(B\)--\(C\) chain with both trigger edges retained,
     separated-source non-edge, independent weak flag, conservative-group flag,
     and summed group contribution.
-    \item \textbf{S6---end to end.}  Build sources, wind, response, background,
+    \item \textbf{S6: end to end.}  Build sources, wind, response, background,
     masked observations, diagnostics, fit, uncertainty, and report groups with
     one command and write a compact provenance-complete summary.
 \end{enumerate}
@@ -859,16 +892,38 @@ fingerprints are displayed as ``N/A'' and excluded from extrema, while the weak
 flags remain visible.  Otherwise IASA labels the source as weakly visible,
 ambiguous with another source group, or merged into a coarser identifiable group.
 
-\section{New Delhi Forward-Model Details}
+\section{New Delhi Platform Details}
 \label{app:platform_details}
 
-This appendix expands the forward-model construction of
-Section~\ref{subsec:new_delhi_forward_models}.
+This appendix expands the platform construction of
+Section~\ref{sec:new_delhi_platform}: the source inventories
+(Table~\ref{tab:new_delhi_inventories}), the kriged initial-condition baseline,
+and the auxiliary simulator.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{New Delhi source groups, spatial proxies, and temporal-basis components.}
+\label{tab:new_delhi_inventories}
+\begin{tabularx}{\columnwidth}{l
+  >{\raggedright\arraybackslash}X
+  >{\raggedright\arraybackslash}X}
+\toprule
+Source group & Spatial proxy & Temporal-basis components \\
+\midrule
+Brick kilns & regional kiln map & alternating 12-hour blocks \\
+Industries & regional industry map & continuous + daytime (07--19) \\
+Population density & gridded population & peaks 07:00, 13:00, 19:00 \\
+Traffic & road-network map & diurnal slots 00/06/12/18 \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \paragraph{Kriged initial-condition baseline.}
 For observed New Delhi runs, the initial pollution field is estimated from the
 first available regulatory observations (the two Pusa monitors averaged) by a
-normalized Gaussian-kernel spatial interpolation on the response grid---a kriging
+normalized Gaussian-kernel spatial interpolation on the response grid, a kriging
 surrogate that avoids an additional heavyweight geostatistics dependency.  Its
 zero-source transported trajectory, obtained by propagating this initial field as
 a single release through the same open-boundary puff operator (its Gaussian kernel
@@ -916,7 +971,7 @@ offset drives maximum eligible coherence from $0.05$ to $0.96$ while $\sigma_J$
 falls from $21.8$ to $4.6$. At every tested offset the conservative merge rule
 kept the two sources in separate singleton components and both were recovered
 exactly (individual and grouped relative error $0$), so no grouped reporting was
-required and no cross-source trigger pair fired---the eligible ray distance and
+required and no cross-source trigger pair fired; the eligible ray distance and
 triggering pair are therefore undefined (null) rather than forced to a number.
 The reporting layer retains \emph{every} trigger edge without deduplication when
 a merge does fire (an A--B--C chain keeps both edges); no merge fired in this
@@ -1041,7 +1096,7 @@ lag window grows the response stabilizes and conditioning improves monotonically
 $0.08$ to $9.07$), while the numerical rank ($2$) and the number of report
 components ($2$) stay fixed and recovery is exact throughout. The selection rule
 picks the smallest lag whose relative Frobenius change falls to
-$\tau_L=10^{-3}$---here $L=16$---using only response-matrix geometry; fitted source
+$\tau_L=10^{-3}$ (here $L=16$), using only response-matrix geometry; fitted source
 coefficients are not consulted and the row count is invariant across the grid.
 
 \begin{table}[t]
@@ -1080,8 +1135,8 @@ $0.58$ versus $0.90$ at $20\%$ noise), because projecting the noisy coefficients
 through the temporal bases averages out part of the coefficient noise in the
 activity domain.  The activity-to-coefficient error ratio is near-constant
 (\(\approx0.57\)) across noise levels, indicating that this damping is a fixed
-geometric property of the temporal-basis map---which amplifies the coherent true
-signal more than the isotropic estimation noise---rather than a noise-dependent
+geometric property of the temporal-basis map (which amplifies the coherent true
+signal more than the isotropic estimation noise) rather than a noise-dependent
 effect.
 
 \begin{table}[t]
@@ -1118,8 +1173,8 @@ On the controlled trial this localization is accurate: the footprint mass centro
 lies $0.74$ cells from the true
 source origin, $100\%$ of the footprint mass falls within the $4$-cell localization
 radius, and the footprints are nonnegative. The exact per-sensor decomposition
-holds---per-sensor contributions sum to the fitted sensor signal to machine
-precision (contribution-sum error $0$)---and because a non-singleton report
+holds: per-sensor contributions sum to the fitted sensor signal to machine
+precision (contribution-sum error $0$), and because a non-singleton report
 component is present, footprints are reported at the group granularity. The
 observed New Delhi per-monitor footprints appear with the apportionment results
 in Section~\ref{subsec:results_new_delhi_apportionment}.

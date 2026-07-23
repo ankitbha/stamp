@@ -1,15 +1,26 @@
-\section{New Delhi Case Study and Experimental Platform}
+\section{Evaluation}
+\label{sec:evaluation}
+
+We evaluate on a single New Delhi platform so that the controlled and
+observed-data studies share one regulatory sensor geometry, one PM\(_{2.5}\) and
+wind record, and one set of proxy inventories, and we ask whether the geometry of
+\(\widetilde H_\Phi\) predicts which coefficient, activity, and grouped-source
+claims are defensible.  A shared base configuration is varied along one controlled
+axis at a time, avoiding conflation of wind, source geometry, background
+flexibility, noise, and forward-model error; all runs use the \(40\times40\)
+resolution, and unless stated otherwise the controlled experiments use a 72-hour
+transport window and the observed study four consecutive one-week windows.  Real
+imputed wind is a controlled transport input when coefficients are synthetically
+known; the observed-PM\(_{2.5}\) mode is a separate evaluation and is never
+assigned synthetic source-recovery metrics.
+
+\subsection{New Delhi Case Study and Experimental Platform}
 \label{sec:new_delhi_platform}
 
-We instantiate the framework on a single New Delhi platform so that the
-controlled and observed-data studies share one regulatory sensor geometry, one
-PM\(_{2.5}\) and wind record, and one set of proxy inventories;
-Section~\ref{sec:evaluation} then varies wind, noise, backgrounds, source
-ambiguity, activity bases, and forward-model error within it.
+We define the platform once; the studies that follow vary wind, noise,
+backgrounds, source ambiguity, activity bases, and forward-model error within it.
 
-\subsection{Government Observations and Sensor Network}
-\label{subsec:new_delhi_observations}
-
+\paragraph{Government observations and sensor network.}\label{subsec:new_delhi_observations}
 We use hourly government observations \citep{cpcb,cpcb_portal} (columns
 \texttt{monitor\_id}, \texttt{timestamp\_round}, \texttt{AT}, \texttt{RH},
 \texttt{WD}, \texttt{WS}, \texttt{pm10}, \texttt{pm25}) spanning 21,960 hourly
@@ -25,73 +36,46 @@ valid-value mask defines \(M_{\mathcal O}\) in
 Equation~\ref{eq:observation_selection}, and the same ordered sensor--time rows
 are retained in \(Y\), \(H_\Phi^{\mathrm{lag}}\), \(Q\), and their metadata.
 
-\subsection{Wind Preparation}
-\label{subsec:new_delhi_wind}
-
+\paragraph{Wind preparation.}\label{subsec:new_delhi_wind}
 The observed \(WD/WS\) values are converted using
 Equation~\ref{eq:wind_direction_conversion} and completed on the response grid by
-the kernel coordinate-query imputer of
-Section~\ref{subsec:wind_field_estimation}; a learned imputer was trained and
-evaluated but not adopted (Section~\ref{subsec:results_wind_imputation}).  The
-saved wind product retains raw station values, masks, station coordinates,
-held-out validation splits, checkpoint metadata, and the gridded query field used
-by the response operator.
+the kernel coordinate-query imputer of Section~\ref{subsec:wind_field_estimation};
+a learned imputer was trained and evaluated but not adopted
+(Section~\ref{subsec:results_wind_imputation}).  The saved wind product retains
+raw station values, masks, station coordinates, held-out validation splits,
+checkpoint metadata, and the gridded query field used by the response operator.
 
-\subsection{Inventories and Proxy Temporal Activities}
-\label{subsec:new_delhi_inventories}
+\paragraph{Inventories and proxy temporal activities.}\label{subsec:new_delhi_inventories}
+The study uses four source groups (brick kilns, industries, population density,
+and traffic; Table~\ref{tab:new_delhi_inventories} in
+Appendix~\ref{app:platform_details}), each with one spatial proxy map and its own
+admissible set of temporal-basis components.  Brick-kiln and industry proxies
+follow the regional emissions inventory \citep{GUTTIKUNDA2013101}, population
+density uses the gridded population product \citep{ColumbiaUniversity2018}, and the
+traffic map is derived from road map data \citep{google_maps}.  Every
+\(80\times80\) map is cropped to the New Delhi study window (rows \(21{:}61\),
+columns \(16{:}56\)) covering the regulatory network, giving a \(40\times40\) map,
+then divided by its own cropped 99th percentile.  Traffic is modeled as a single
+road-network source whose nearest-slot maps at 00:00, 06:00, 12:00, and 18:00
+define traffic-specific temporal-basis components under the shared dictionary
+\(\Phi\) and the fixed-zero mask \(\mathcal F_0\), so one road map carries a
+time-varying activity (assuming the congestion \emph{spatial} pattern is
+time-invariant and only its amplitude varies).  Brick-kiln activity uses
+deterministic alternating 12-hour blocks, industry a continuous operating fraction
+with higher daytime (07:00--19:00) activity, and population a baseline with smooth
+cooking peaks; these are deterministic study assumptions, not observed emissions
+truth.  Because each map uses independent proxy normalization, fitted coefficients
+and contributions are in normalized proxy units, not physical emission totals or
+shares; no learned free residual source map is used, and unexplained broad signal
+belongs to the background model or residual diagnostics.
 
-The study uses four source groups---brick kilns, industries, population density,
-and traffic (Table~\ref{tab:new_delhi_inventories})---each with one spatial proxy
-map and its own admissible set of temporal-basis components.  Brick-kiln and
-industry proxies follow the regional emissions inventory
-\citep{GUTTIKUNDA2013101}, population density uses the gridded population product
-\citep{ColumbiaUniversity2018}, and the traffic map is derived from road map data
-\citep{google_maps}.  Every \(80\times80\) map is cropped to the New Delhi study
-window (rows \(21{:}61\), columns \(16{:}56\)) covering the regulatory network,
-giving a \(40\times40\) map, then divided by its own cropped 99th percentile.
-Traffic is modeled as a single road-network source whose nearest-slot maps at
-00:00, 06:00, 12:00, and 18:00 define traffic-specific temporal-basis components
-under the shared dictionary \(\Phi\) and the fixed-zero mask \(\mathcal F_0\), so
-one road map carries a time-varying activity (assuming the congestion
-\emph{spatial} pattern is time-invariant and only its amplitude varies).
-Brick-kiln activity uses deterministic alternating 12-hour blocks, industry a
-continuous operating fraction with higher daytime (07:00--19:00) activity, and
-population a baseline with smooth cooking peaks---deterministic study assumptions,
-not observed emissions truth.  Because each map uses independent proxy
-normalization, fitted coefficients and contributions are in normalized proxy
-units, not physical emission totals or shares; no learned free residual source
-map is used, and unexplained broad signal belongs to the background model or
-residual diagnostics.
-
-\begin{table}[t]
-\centering
-\small
-\setlength{\tabcolsep}{4pt}
-\caption{New Delhi source groups, spatial proxies, and temporal-basis components.}
-\label{tab:new_delhi_inventories}
-\begin{tabularx}{\columnwidth}{l
-  >{\raggedright\arraybackslash}X
-  >{\raggedright\arraybackslash}X}
-\toprule
-Source group & Spatial proxy & Temporal-basis components \\
-\midrule
-Brick kilns & regional kiln map & alternating 12-hour blocks \\
-Industries & regional industry map & continuous + daytime (07--19) \\
-Population density & gridded population & peaks 07:00, 13:00, 19:00 \\
-Traffic & road-network map & diurnal slots 00/06/12/18 \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\subsection{Forward Models, Sensor Observations, and Backgrounds}
-\label{subsec:new_delhi_forward_models}
-
+\paragraph{Forward models, sensor observations, and backgrounds.}\label{subsec:new_delhi_forward_models}
 Both forward paths use the New Delhi-derived \(40\times40\) domain and regulatory
 sensor coordinates, with the open-boundary Gaussian puff operator of
 Section~\ref{subsec:plume_response} evaluated directly at sensors.  The same
 operator is the matched generator for controlled recovery experiments
 (Experiments~1--4) and the inference operator for observed PM\(_{2.5}\); only the
-initial-condition baseline differs by mode---a zero-source, zero-initial-state
+initial-condition baseline differs by mode: a zero-source, zero-initial-state
 baseline for controlled operator-matched runs, and a subtracted zero-source
 transported kriged-initial-condition baseline for observed runs.  An auxiliary
 edge-hold advection--diffusion simulator provides a \emph{structural}
@@ -102,9 +86,7 @@ Section~\ref{subsec:background_construction}, with the base controlled backgroun
 the rank-four member; the kriged-baseline construction and simulator settings are
 given in Appendix~\ref{app:platform_details}.
 
-\subsection{Controlled and Observed-Data Study Modes}
-\label{subsec:new_delhi_study_modes}
-
+\paragraph{Controlled and observed-data study modes.}\label{subsec:new_delhi_study_modes}
 The controlled mode preserves New Delhi sensor geometry and transport while
 assigning known nonnegative source--basis coefficients, using synthetic or real
 gridded wind, controlled observation noise, source splits, sensor-layout variants,
