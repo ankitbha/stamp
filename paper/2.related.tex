@@ -1,17 +1,33 @@
 \section{Related Work}
+\label{sec:related_work}
 
-
-\paragraph{Air-pollution source apportionment.}
-Source apportionment has a long history in air-quality science, with receptor-oriented methods estimating source contributions from ambient chemical or physical measurements and source-oriented methods propagating emissions inventories through atmospheric transport models. Classical receptor frameworks include chemical mass balance and factor-analytic approaches such as positive matrix factorization \citep{watson2002receptor,paatero1994positive,hopke2016review}. Reviews and harmonization efforts have clarified best practices for receptor models, source-oriented models, and their combined use, while also documenting practical sensitivity to source profiles, factor interpretation, chemical resolution, and model comparability \citep{viana2008source,belis2013critical,belis2019european,mircea2020european,hopke2020global}. These sensitivities arise because ambient measurements provide only indirect mixtures of source contributions: source profiles may be incomplete or locally unavailable, tracers and proxy inventories can be collinear, factor decompositions may admit multiple plausible interpretations, and transport or inventory assumptions can map distinct source configurations to similar observations. This ambiguity is especially visible in settings such as India, where studies can produce divergent source-contribution estimates for the same city because of limited local profiles, collinear tracers, and methodological differences \citep{pant2012critical}; global reviews further show that policy-relevant source categories such as traffic, industry, dust, and domestic combustion are routinely reported from heterogeneous apportionment studies \citep{karagulian2015contributions}. Our work is complementary to this literature: rather than proposing another receptor model or emissions inventory, we analyze when known or proxy source maps are distinguishable from sparse concentration sensors after wind-conditioned transport, finite lags, background correction, and noise.
-
-
-\paragraph{Inverse modeling and physics-constrained learning.}
-Estimating latent states or parameters from partial observations is central to inverse problems and data assimilation \citep{tarantola2005inverse,engl1996regularization}. Classical approaches such as Kalman filtering, ensemble Kalman filters, and variational data assimilation use dynamical models together with priors, covariance assumptions, and observation models to infer hidden quantities from measurements \citep{wang2023kalman,carrassi2018data}. More recent physics-informed and operator-learning methods, including PINNs and neural operators, incorporate governing equations or physics-motivated structure into flexible learning systems for parameter estimation and system identification \citep{raissi2019physics,li2024physics,li2020fourier,bhardwaj2025fieldformer}. These methods motivate our use of a transport-structured, PyTorch-based constrained fitting backend, but they do not by themselves resolve the identifiability question. In sparse sensing regimes, the map from latent source activities, transport parameters, and background components to sensor observations can be many-to-one: different parameterizations may fit the same measurements after optimization. Our focus is therefore complementary to calibration and physics-constrained learning methods. Rather than asking only how to fit the projected sensor data, we characterize when the fitted source--basis coefficients are identifiable from the projected lagged response matrix and when the result should be weakened, qualified, or grouped.
-
-
-\paragraph{Sensor-space spatio-temporal learning.}
-Graph neural networks, transformers, and sequence models have been widely used to model spatio-temporal processes from sensor data, including traffic, environmental, and air-quality time series \citep{li2017diffusion,yu2017spatio,wu2019graph,chen2023group,iyer2022modeling,bhardwaj2025comprehensive,bhardwaj2025fieldformer}. These methods are relevant to our setting because they operate in the same sparse-sensor observational regime. However, their usual objective is forecasting, interpolation, or representation learning over sensor measurements rather than attribution to physically meaningful source inventories. A sensor-space model can predict observed concentrations well while leaving unresolved whether distinct source groups would produce distinguishable wind-conditioned fingerprints at the deployed sensors. Our work is therefore complementary: instead of learning an unconstrained predictive representation of the sensor field, we analyze the identifiability of declared source--basis contributions under a specified transport, background, lag, and noise model.
-
-
-\paragraph{Observability and system identification.}
-The question of whether latent quantities can be recovered from observations is closely related to classical notions of observability in control theory \citep{chen1984linear}. For linear dynamical systems, observability characterizes whether the internal state can be uniquely determined from output trajectories. Extensions to nonlinear systems and PDEs have been studied in system identification and inverse-problem literature \citep{ljung1987theory,banks2012estimation,colton1990inverse}, often under assumptions of sufficient measurement richness. We bring this perspective to inventory-based air-pollution source apportionment under sparse spatial sensing. Rather than asking whether a full latent state or physical model is observable, we ask whether declared source--basis contributions have distinct projected sensor-time fingerprints after wind-conditioned transport, finite lags, background correction, and noise. This leads to diagnostics tailored to the apportionment task, including rank and singular-value stability, source visibility, pairwise coherence, background absorption, and conservative grouping, together with a real-world instantiation that reports the attribution resolution supported by the available sensors, inventories, and transport assumptions.
+Source apportionment has a long history in air-quality science, spanning
+receptor-oriented methods---chemical mass balance and factor-analytic approaches
+such as positive matrix factorization
+\citep{watson2002receptor,paatero1994positive,hopke2016review}---and
+source-oriented models that propagate emissions inventories through transport,
+with reviews and harmonization efforts documenting their practical sensitivity to
+source profiles, tracer collinearity, factor interpretation, and inventory
+assumptions
+\citep{viana2008source,belis2013critical,belis2019european,mircea2020european,hopke2020global};
+this ambiguity is acute in settings such as India, where the same city yields
+divergent source-contribution estimates and policy-relevant categories are
+reported heterogeneously \citep{pant2012critical,karagulian2015contributions}.
+Estimating latent quantities from partial observations is the province of inverse
+problems and data assimilation
+\citep{tarantola2005inverse,engl1996regularization,wang2023kalman,carrassi2018data}
+and, more recently, physics-informed and operator-learning methods
+\citep{raissi2019physics,li2024physics,li2020fourier,bhardwaj2025fieldformer},
+which motivate our transport-structured, PyTorch-based constrained backend but do
+not by themselves resolve identifiability in a many-to-one sparse-sensing map.
+Graph, transformer, and sequence models address the same sparse-sensor regime
+\citep{li2017diffusion,yu2017spatio,wu2019graph,chen2023group,iyer2022modeling,bhardwaj2025comprehensive},
+but target forecasting, interpolation, or representation learning rather than
+attribution to physically meaningful inventories.  Finally, our separability
+question is a form of the observability studied in control theory and system
+identification \citep{chen1984linear,ljung1987theory,banks2012estimation,colton1990inverse}.
+Unlike this prior work, we analyze when declared or proxy source groups are
+\emph{distinguishable} from sparse concentration sensors after wind-conditioned
+transport, finite lags, background correction, and noise, and report the
+attribution resolution the sensing system supports; Appendix~\ref{app:extended_related_work}
+expands each strand.

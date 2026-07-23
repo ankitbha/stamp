@@ -62,32 +62,30 @@ alongside identifiability diagnostics and ambiguity certificates.
 We make the following contributions:
 \begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
     \item We formulate sparse-sensor, inventory-based source apportionment as a
-    lagged wind-conditioned inverse problem over nonnegative source--temporal-
-    basis coefficients.
-    \item We identify the projected lagged response matrix
-    \(\widetilde H_\Phi=P_Q^\perp H_{\Phi}^{\mathrm{lag}}\) as the central
-    object governing coefficient separability after transport, sparse
+    lagged wind-conditioned inverse problem over nonnegative
+    source--temporal-basis coefficients, and identify the projected lagged
+    response matrix \(\widetilde H_\Phi=P_Q^\perp H_{\Phi}^{\mathrm{lag}}\) as the
+    central object governing coefficient separability after transport, sparse
     observation, lag, and background correction.
     \item We derive diagnostics for exact and noise-robust identifiability,
     including rank, smallest singular value, condition number, effective rank,
     coefficient visibility, background absorption, pairwise fingerprint
     coherence, and ray distance.
-    \item We propose an identifiability-aware apportionment procedure that fits
-    nonnegative source--basis coefficients, reconstructs source activity
-    trajectories, reports uncertainty, flags weakly visible coefficients, and
-    recommends connected report groups when eligible coefficient fingerprints
-    are indistinguishable under the current sensing system.
-    \item We add a per-sensor spatial attribution that back-traces the transport
-    response to show which upwind regions and source groups drive each monitor,
-    reported as an overlay that inherits the global identifiable resolution
-    rather than asserting finer per-sensor separations.
-    \item We instantiate the framework on a New Delhi platform comprising
-    government PM\(_{2.5}\) and wind records, regulatory sensor locations,
-    kernel coordinate-query gridded wind imputation, and four normalized proxy
-    source groups with declared temporal activity bases.
-    \item We define controlled and observed-data evaluations of conditioning,
-    source ambiguity, background stress, wind diversity, temporal-basis
-    recovery, response error, uncertainty, and residual structure.
+    \item We propose an identifiability-aware apportionment (IASA) procedure that
+    fits nonnegative source--basis coefficients, reconstructs source activity
+    trajectories, reports uncertainty, flags weakly visible coefficients,
+    recommends connected report groups when eligible fingerprints are
+    indistinguishable, and adds a per-sensor spatial attribution that back-traces
+    the transport response to upwind regions and source groups while inheriting
+    the global identifiable resolution rather than asserting finer per-sensor
+    separations.
+    \item We instantiate the framework on a New Delhi platform (government
+    PM\(_{2.5}\) and wind records, regulatory sensor locations, kernel
+    coordinate-query gridded wind imputation, and four normalized proxy source
+    groups with declared temporal activity bases) and define controlled and
+    observed-data evaluations of conditioning, source ambiguity, background
+    stress, wind diversity, temporal-basis recovery, response error, uncertainty,
+    and residual structure.
 \end{itemize}
 
 The broader message is that sparse-sensor source apportionment is limited by
