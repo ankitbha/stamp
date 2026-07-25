@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2023.2.18)  25 JUL 2026 18:47
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2023.2.18)  25 JUL 2026 18:57
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -828,13 +828,13 @@ File: figures/fig_observed.pdf Graphic file (type pdf)
 Package pdftex.def Info: figures/fig_observed.pdf  used on input line 157.
 (pdftex.def)             Requested size: 239.39438pt x 115.47345pt.
 )
-(./8.conclusion.tex) [7 <./figures/fig_observed.pdf>] (./main.bbl
-Underfull \hbox (badness 10000) in paragraph at lines 83--87
+(./8.conclusion.tex) [7 <./figures/fig_observed.pdf>]
+Underfull \hbox (badness 10000) in paragraph at lines 214--218
 \T1/ntxtlf/m/n/10 (+20) com / ccr / # / caaqm -[] dashboard -[] all / caaqm -[]
  landing / caaqm -[]
  []
 
-[8]) (./9.appendix.tex [9]
+[8] (./9.appendix.tex [9]
 Underfull \hbox (badness 7759) in paragraph at lines 309--309
 []|\T1/ntxtlf/m/n/9 (+20) background-projected fin-ger-
  []
@@ -875,10 +875,10 @@ r
 
 ) [19] (./main.aux) ) 
 Here is how much of TeX's memory you used:
- 20682 strings out of 480247
- 401409 string characters out of 5896151
+ 20677 strings out of 480247
+ 401359 string characters out of 5896151
  714797 words of memory out of 5000000
- 37957 multiletter control sequences out of 15000+600000
+ 37955 multiletter control sequences out of 15000+600000
  528260 words of font info for 201 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  99i,12n,117p,1405b,482s stack positions out of 5000i,500n,10000p,200000b,80000s
