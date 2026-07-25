@@ -50,8 +50,15 @@ Carrassi, A.; Bocquet, M.; Bertino, L.; and Evensen, G. 2018.
   and perspectives.
 \newblock \emph{Wiley Interdisciplinary Reviews: Climate Change}, 9(5): e535.
 
-\bibitem[{Chen and Chen(1984)}]{chen1984linear}
-Chen, C.-T.; and Chen, C.-T. 1984.
+\bibitem[{{Center for International Earth Science Information Network (CIESIN),
+  Columbia University}(2018)}]{ColumbiaUniversity2018}
+{Center for International Earth Science Information Network (CIESIN), Columbia
+  University}. 2018.
+\newblock Gridded Population of the World, Version 4 (GPWv4): Population
+  Density, Revision 11.
+
+\bibitem[{Chen(1984)}]{chen1984linear}
+Chen, C.-T. 1984.
 \newblock \emph{Linear system theory and design}, volume 301.
 \newblock Holt, Rinehart and Winston New York.
 
@@ -67,11 +74,6 @@ Colton, D.~L.; Ewing, R.~E.; Rundell, W.; et~al. 1990.
 \newblock \emph{Inverse problems in partial differential equations}, volume~42.
 \newblock Siam.
 
-\bibitem[{Columbia~University(2018)}]{ColumbiaUniversity2018}
-Columbia~University, C. f. I. E. S. I. N. .~C. 2018.
-\newblock Gridded Population of the World, Version 4 (GPWv4): Population
-  Density, Revision 11.
-
 \bibitem[{CPCB(2023)}]{cpcb}
 CPCB. 2023.
 \newblock Air Quality Data.
@@ -81,7 +83,7 @@ CPCB. 2023.
 CPCB. 2025.
 \newblock CPCB Data Portal.
 \newblock
-  \url{https://app.cpcbccr.com/ccr/\#/caaqm-dashboard-all/caaqm-landing/caaqm-comparison-data}.
+  \url{https://app.cpcbccr.com/ccr/#/caaqm-dashboard-all/caaqm-landing/caaqm-comparison-data}.
 
 \bibitem[{Engl, Hanke, and Neubauer(1996)}]{engl1996regularization}
 Engl, H.~W.; Hanke, M.; and Neubauer, A. 1996.
@@ -150,17 +152,18 @@ Li, Z.; Zheng, H.; Kovachki, N.; Jin, D.; Chen, H.; Liu, B.; Azizzadenesheli,
   equations.
 \newblock \emph{ACM/IMS Journal of Data Science}, 1(3): 1--27.
 
-\bibitem[{Ljung et~al.(1987)}]{ljung1987theory}
-Ljung, L.; et~al. 1987.
-\newblock Theory for the user.
-\newblock \emph{System identification}.
+\bibitem[{Ljung(1987)}]{ljung1987theory}
+Ljung, L. 1987.
+\newblock \emph{System Identification: Theory for the User}.
+\newblock Prentice Hall.
 
-\bibitem[{Mircea et~al.(2020)Mircea, Calori, Pirovano, BELIS
+\bibitem[{Mircea et~al.(2020)Mircea, Calori, Pirovano, Belis
   et~al.}]{mircea2020european}
-Mircea, M.; Calori, G.; Pirovano, G.; BELIS, C.; et~al. 2020.
+Mircea, M.; Calori, G.; Pirovano, G.; Belis, C.; et~al. 2020.
 \newblock European guide on air pollution source apportionment for particulate
   matter with source oriented models and their combined use with receptor
   models.
+\newblock \emph{Publications Office of the European Union, LU}.
 
 \bibitem[{Paatero and Tapper(1994)}]{paatero1994positive}
 Paatero, P.; and Tapper, U. 1994.

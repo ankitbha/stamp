@@ -18,13 +18,16 @@ inventory-attributed sensor signal, not a physical-emission share.
 \label{subsec:controlled_results}
 
 The controlled trials have known source--basis coefficients and therefore recovery
-and coverage metrics.  Figure~\ref{fig:results}(a--c) consolidates the three
-experiments that establish the central claim (response-matrix geometry, not noise
-alone, sets the recovery ceiling), and the adequacy study below tests residual
-adequacy.  Six further controlled experiments (coherence and grouped reporting,
-transport error, inventory robustness, lag-window selection, temporal-basis
-recovery, and per-sensor footprints) are reported in
-Appendix~\ref{app:additional_experiments}.
+and coverage metrics.  The controlled geometries are deliberately small (mostly
+\(K=2\) source groups) so that conditioning, coherence, and background absorption
+can each be varied in isolation and read directly off \(\widetilde H_\Phi\); the
+observed study then exercises the full four-group, seven-coefficient pipeline on
+real data.  Figure~\ref{fig:results}(a--c) consolidates the three experiments that
+establish the central claim (response-matrix geometry, not noise alone, sets the
+recovery ceiling), and the adequacy study below tests residual adequacy.  Six
+further controlled experiments (coherence and grouped reporting, transport error,
+inventory robustness, lag-window selection, temporal-basis recovery, and per-sensor
+footprints) are reported in Appendix~\ref{app:additional_experiments}.
 
 \begin{figure*}[t]
 \centering
@@ -106,20 +109,21 @@ error.
 
 \noindent\textbf{New Delhi Wind-Imputation Validation.}
 \label{subsec:results_wind_imputation}
-The wind field used throughout is the kernel coordinate-query imputer of
-Section~\ref{subsec:new_delhi_wind}.  A learned wind model was also evaluated, but
-the sparse regulatory network provides too little spatial support: it did not beat
-a non-spatial city-mean baseline on held-out station--time vectors and was not
-adopted.  The kernel interpolator is used because, unlike the city mean, it is
-spatially resolved as the response operator requires.  Dense real wind truth is
-unavailable, so gridded-field accuracy is instead assessed through the controlled
+The learned wind model did not beat a non-spatial city-mean baseline on held-out
+station--time vectors, so the spatially resolved kernel imputer of
+Section~\ref{subsec:new_delhi_wind} is used throughout (the city mean lacks the
+spatial resolution the response operator requires).  Dense wind truth is
+unavailable, so gridded-field accuracy is assessed only through the controlled
 synthetic-wind experiments, where the true wind is known.
 
 \noindent\textbf{New Delhi Identifiability and Report Groups.}
 \label{subsec:results_new_delhi_identifiability}
 The observed study runs as four consecutive one-week windows (2018-05-01 through
 2018-05-28), each a self-contained fit reported on its own terms; results are not
-aggregated across windows.  Every week is full numerical rank ($7$ free
+aggregated across windows.  This window is chosen for its near-complete early-record
+sensor coverage and because late May is the pre-monsoon period when brick-kiln and
+biomass activity around Delhi is seasonally high; it is a demonstration window, not
+a claim about the full 2018--2020 record.  Every week is full numerical rank ($7$ free
 coefficients after the fixed-zero mask), finite-conditioned, with low maximum
 eligible coherence ($0.32$--$0.50$), an empty weak set, no cross-source ambiguous
 pairs, and four singleton report components (Figure~\ref{fig:results}(d)).  Each

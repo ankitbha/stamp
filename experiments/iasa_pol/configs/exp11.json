@@ -1,0 +1,16 @@
+{
+  "experiment": "exp11",
+  "params": {
+    "n_sensors": 6,
+    "noise_frac": 0.05,
+    "beta_scale": 2.0
+  },
+  "platform": {
+    "T": 72,
+    "grid_shape": [
+      40,
+      40
+    ],
+    "lag_window_steps": 12
+  }
+}

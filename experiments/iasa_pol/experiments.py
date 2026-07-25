@@ -36,6 +36,8 @@ from model.iasa.projection import project_response_and_observations
 from model.iasa.response import build_lagged_response_matrix
 from model.iasa.wind import WindSequence, constant_direction
 
+from baselines.receptor import cmb_nnls, plain_nnls, pmf_nmf
+
 from experiments.iasa_pol import edge_hold_pde
 from experiments.iasa_pol.nd_platform import (
     Platform,
@@ -1346,6 +1348,250 @@ def _observed_pm25_rows(wind_data, response, seed, *, station_index=None):
 
 
 # --------------------------------------------------------------------------- #
+# Experiment 11 -- baseline comparison (identifiability layer ablated)
+# --------------------------------------------------------------------------- #
+def _shares_from_coef(H_lag: np.ndarray, c: np.ndarray, column_index) -> tuple[dict[int, float], list[int]]:
+    """Apportionment share per source group = L1 magnitude of that group's fitted
+    sensor signal, normalized (the paper's observed-apportionment definition)."""
+    H = np.asarray(H_lag, dtype=np.float64)
+    c = np.asarray(c, dtype=np.float64).reshape(-1)
+    groups = sorted({int(ci["source_index"]) for ci in column_index})
+    mags = []
+    for g in groups:
+        cols = [j for j, ci in enumerate(column_index) if int(ci["source_index"]) == g]
+        mags.append(float(np.sum(np.abs(H[:, cols] @ c[cols]))))
+    tot = float(sum(mags)) or 1.0
+    return {g: m / tot for g, m in zip(groups, mags)}, groups
+
+
+def _share_l2(a: dict[int, float], b: dict[int, float], groups) -> float:
+    return float(np.linalg.norm([a[g] - b[g] for g in groups]))
+
+
+def _coef_rel_error(c_hat, c_true) -> float:
+    c_hat = np.asarray(c_hat, dtype=np.float64).reshape(-1)
+    c_true = np.asarray(c_true, dtype=np.float64).reshape(-1)
+    return float(np.linalg.norm(c_hat - c_true) / max(np.linalg.norm(c_true), 1e-12))
+
+
+def _source_totals(c, column_index) -> dict[int, float]:
+    """Per-source activity total (sum of that source's basis coefficients)."""
+    c = np.asarray(c, dtype=np.float64).reshape(-1)
+    groups = sorted({int(ci["source_index"]) for ci in column_index})
+    return {g: float(sum(c[j] for j, ci in enumerate(column_index)
+                         if int(ci["source_index"]) == g)) for g in groups}
+
+
+def _grouped_coef_error(c_hat, c_true, column_index, merge_pair) -> float | None:
+    """Relative error of the merged pair's summed activity -- the quantity IASA
+    actually reports when it recommends grouping. Identifiable even when the
+    individual split is not."""
+    if merge_pair is None:
+        return None
+    a, b = merge_pair
+    th = _source_totals(c_hat, column_index)
+    tt = _source_totals(c_true, column_index)
+    got = th.get(a, 0.0) + th.get(b, 0.0)
+    want = tt.get(a, 0.0) + tt.get(b, 0.0)
+    return float(abs(got - want) / max(abs(want), 1e-12))
+
+
+def _baseline_scenario(bundle, *, merge_pair, scenario: str, seed: int) -> dict[str, Any]:
+    """Run IASA + B1/B2/B3 on one already-built forward bundle and score them on a
+    common footing (coefficient error, apportionment-share error, residual, and
+    whether an identifiability flag was raised)."""
+    proj = bundle["_projection"]
+    H_tilde = to_numpy(proj.H_tilde).astype(np.float64)
+    Y_tilde = to_numpy(proj.Y_tilde).astype(np.float64)
+    H_lag = np.asarray(bundle["_H_lag"], dtype=np.float64)
+    Y = np.asarray(bundle["_Y"], dtype=np.float64)
+    column_index = bundle["_response"].column_index
+    row_index = bundle["_response"].row_index
+    c_true = np.asarray(bundle["c_true"], dtype=np.float64)
+    sigma_e = float(bundle["sigma_e"]) or None
+
+    true_shares, groups = _shares_from_coef(H_lag, c_true, column_index)
+
+    def _grouped_share_error(shares: dict[int, float]) -> float | None:
+        if merge_pair is None:
+            return None
+        a, b = merge_pair
+        got = shares.get(a, 0.0) + shares.get(b, 0.0)
+        want = true_shares.get(a, 0.0) + true_shares.get(b, 0.0)
+        return float(abs(got - want))
+
+    # --- IASA (from the bundle: same fit, plus diagnostics / grouping). ---
+    iasa_c = np.asarray(bundle["c_hat"], dtype=np.float64)
+    iasa_shares, _ = _shares_from_coef(H_lag, iasa_c, column_index)
+    components = bundle["report_components"]
+    diag = bundle["diagnostics"]
+    meta = proj.metadata
+    vis = meta.get("H_visibility_ratio_by_column", [])
+    absorp = meta.get("H_absorption_ratio_by_column", [])
+    min_vis = float(min(vis)) if len(vis) else None
+    max_absorp = float(max(absorp)) if len(absorp) else None
+    max_coh = float(diag["max_eligible_coherence"])
+    sigma_J = float(diag["sigma_J"])
+    iasa_merged = any(len(comp) > 1 for comp in components)
+    iasa_weak = len(diag["weak_set"]) > 0
+    # IASA's identifiability layer raises a flag through ANY of its declared
+    # responses: a conservative merge, a weak (low-visibility) coefficient, the
+    # source signal absorbed by background, or a collapsed spectrum / coherent pair.
+    tau_v = 0.1
+    iasa_flag = bool(
+        iasa_merged or iasa_weak
+        or (min_vis is not None and min_vis <= tau_v)
+        or (max_absorp is not None and max_absorp >= 0.9)
+        or (sigma_J <= 1e-6)
+        or (max_coh >= 0.99)
+    )
+    methods: list[dict[str, Any]] = [{
+        "method": "IASA",
+        "coefficient_relative_error": _coef_rel_error(iasa_c, c_true),
+        "share_l2_error": _share_l2(iasa_shares, true_shares, groups),
+        "grouped_share_error": _grouped_share_error(iasa_shares),
+        "residual_norm": float(bundle["accuracy"]["residual_norm"]),
+        # IASA's identifiability layer: does it flag / merge?
+        "identifiability_flag": iasa_flag,
+        "merged": bool(iasa_merged),
+        "weak_set": list(diag["weak_set"]),
+        "min_visibility": min_vis,
+        "max_absorption": max_absorp,
+        "max_coherence": max_coh,
+        "sigma_J": sigma_J,
+        "grouped_coef_error": _grouped_coef_error(iasa_c, c_true, column_index, merge_pair),
+        "report_components": components,
+        # IASA reports the grouped (identifiable) quantity where it merges,
+        # otherwise the individual coefficients.
+        "reported_coef_error": (_grouped_coef_error(iasa_c, c_true, column_index, merge_pair)
+                                if iasa_merged else _coef_rel_error(iasa_c, c_true)),
+    }]
+
+    # --- B1 plain NNLS (projected system, no identifiability layer). ---
+    b1 = plain_nnls(H_tilde, Y_tilde, sigma=sigma_e)
+    b1_shares, _ = _shares_from_coef(H_lag, b1["c_hat"], column_index)
+    methods.append({
+        "method": b1["method"],
+        "coefficient_relative_error": _coef_rel_error(b1["c_hat"], c_true),
+        "share_l2_error": _share_l2(b1_shares, true_shares, groups),
+        "grouped_share_error": _grouped_share_error(b1_shares),
+        "residual_norm": b1["residual_norm"],
+        "grouped_coef_error": _grouped_coef_error(b1["c_hat"], c_true, column_index, merge_pair),
+        "identifiability_flag": b1["identifiability_flag"],
+        "mean_reported_coef_std": float(np.mean(b1["coef_std"])),
+        # A naive method reports the full split, never grouped.
+        "reported_coef_error": _coef_rel_error(b1["c_hat"], c_true),
+    })
+
+    # --- B3 CMB NNLS (raw, unprojected response). ---
+    b3 = cmb_nnls(H_lag, Y, sigma=sigma_e)
+    b3_shares, _ = _shares_from_coef(H_lag, b3["c_hat"], column_index)
+    methods.append({
+        "method": b3["method"],
+        "coefficient_relative_error": _coef_rel_error(b3["c_hat"], c_true),
+        "share_l2_error": _share_l2(b3_shares, true_shares, groups),
+        "grouped_share_error": _grouped_share_error(b3_shares),
+        "residual_norm": b3["residual_norm"],
+        "grouped_coef_error": _grouped_coef_error(b3["c_hat"], c_true, column_index, merge_pair),
+        "identifiability_flag": b3["identifiability_flag"],
+        "mean_reported_coef_std": float(np.mean(b3["coef_std"])),
+        "reported_coef_error": _coef_rel_error(b3["c_hat"], c_true),
+    })
+
+    # --- B2 PMF/NMF (receptor factorization; shares only). ---
+    b2 = pmf_nmf(Y, row_index, H_lag, c_true, column_index, seed=seed)
+    b2_shares = {int(k): float(v) for k, v in b2["shares_hat"].items()}
+    methods.append({
+        "method": b2["method"],
+        "coefficient_relative_error": None,  # NMF is not in coefficient units
+        "share_l2_error": _share_l2(b2_shares, true_shares, groups),
+        "grouped_share_error": _grouped_share_error(b2_shares),
+        "residual_norm": None,
+        "grouped_coef_error": None,
+        "reconstruction_relative_error": b2["reconstruction_relative_error"],
+        "identifiability_flag": b2["identifiability_flag"],
+        "assignment_correlation": b2["assignment_correlation"],
+        "reported_coef_error": None,
+    })
+
+    return {
+        "scenario": scenario,
+        "true_shares": {str(g): true_shares[g] for g in groups},
+        "merge_pair": None if merge_pair is None else list(merge_pair),
+        "methods": methods,
+    }
+
+
+def _scenario_flat_rows(scenario: dict[str, Any]) -> list[dict[str, Any]]:
+    """One flat row per (scenario, method) for summarize_results.py / CSV."""
+    out = []
+    for m in scenario["methods"]:
+        out.append({
+            "scenario": scenario["scenario"],
+            "method": m["method"],
+            "coefficient_relative_error": m.get("coefficient_relative_error"),
+            "grouped_coef_error": m.get("grouped_coef_error"),
+            "reported_coef_error": m.get("reported_coef_error"),
+            "share_l2_error": m.get("share_l2_error"),
+            "residual_norm": m.get("residual_norm"),
+            "identifiability_flag": m.get("identifiability_flag"),
+        })
+    return out
+
+
+def experiment_11(platform: Platform, cfg: dict[str, Any], seed: int) -> dict[str, Any]:
+    """Baseline comparison: on scenarios where IASA correctly merges (coherent
+    pair) or flags (source-like background), show B1/B2/B3 confidently report a
+    non-identifiable split with no warning. Ablation (B1) + external methods (B2
+    PMF, B3 CMB)."""
+    gs = platform.grid_shape
+    T = platform.config.T
+    noise_frac = float(cfg.get("noise_frac", 0.05))
+    scenarios: list[dict[str, Any]] = []
+    last_bundle = None
+
+    # --- S-A: wind/geometry collapse. A single steady wind + a seeded random
+    # sensor layout drives the two nearby sources to maximal fingerprint coherence
+    # (max_coh -> 1, sigma_J -> 0): the fine split is genuinely non-identifiable.
+    # (Mirrors the exp04 single/random collapse cell.) ---
+    basis_a = default_basis("constant", T)
+    maps_a = np.stack([compact_source(gs, (gs[0] * 0.4, gs[1] * 0.5)),
+                       compact_source(gs, (gs[0] * 0.5, gs[1] * 0.5))], axis=0)
+    wind_a = make_wind("single", T, seed=seed, grid_shape=gs)
+    observer_a = sensor_layout("random", gs, n=int(cfg.get("n_sensors", 6)),
+                               seed=seed, regulatory=platform.observer)
+    b_a = forward(platform, maps_a, ["src_a", "src_b"], basis_a, observer_a, wind_a,
+                  c_true=np.asarray([1.0, 0.7], dtype=np.float64),
+                  noise_frac=noise_frac, seed=seed)
+    last_bundle = b_a
+    scenarios.append(_baseline_scenario(b_a, merge_pair=(0, 1),
+                                        scenario="wind_geometry_collapse", seed=seed))
+
+    # --- S-B: source-like background stress. A background column declared before
+    # fitting is proportional to a source fingerprint, so the projection absorbs
+    # the source signal (min visibility -> 0, max absorption -> 1, sigma_J -> 0).
+    # (Mirrors the exp03 stress cell.) ---
+    basis_b = default_basis("impulse_constant", T)
+    maps_b = np.stack([compact_source(gs, (gs[0] * 0.3, gs[1] * 0.5)),
+                       compact_source(gs, (gs[0] * 0.7, gs[1] * 0.5))], axis=0)
+    c_true_b = synthetic_coefficients(2, len(basis_b.names), seed=seed)
+    b_b = forward(platform, maps_b, ["src_a", "src_b"], basis_b, platform.observer,
+                  _diverse_wind(T), c_true=c_true_b, background_mode="stress",
+                  noise_frac=noise_frac, beta_scale=float(cfg.get("beta_scale", 2.0)),
+                  seed=seed)
+    scenarios.append(_baseline_scenario(b_b, merge_pair=None,
+                                        scenario="background_stress", seed=seed))
+
+    rows = [r for sc in scenarios for r in _scenario_flat_rows(sc)]
+    return {
+        "experiment": "exp11_baseline_comparison", "hypothesis": "baselines",
+        "rows": rows,
+        "scenarios": scenarios,
+        "arrays": _arrays_from_bundle(last_bundle),
+    }
+
+
+# --------------------------------------------------------------------------- #
 # Dispatch
 # --------------------------------------------------------------------------- #
 EXPERIMENTS = {
@@ -1359,6 +1605,7 @@ EXPERIMENTS = {
     "exp08": experiment_8,
     "exp09": experiment_9,
     "exp10": experiment_10,
+    "exp11": experiment_11,
     "observed": observed_new_delhi,
 }
 

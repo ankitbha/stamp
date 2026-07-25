@@ -58,5 +58,13 @@
     "runs": [
       "exp10_seed0"
     ]
+  },
+  "exp11_baseline_comparison": {
+    "n_rows": 24,
+    "runs": [
+      "exp11_seed0",
+      "exp11_seed1",
+      "exp11_seed2"
+    ]
   }
 }
