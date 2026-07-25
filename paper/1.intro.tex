@@ -10,18 +10,18 @@ inventories, transport models, and sparse measurements.
 This is especially hard in sparse sensor networks: a model may fit sensor
 trajectories accurately yet fail to identify the underlying contributions.  The
 reason is geometric.  After wind transport and sparse observation, two distinct
-source groups can induce nearly identical sensor-time signatures, so a strong
+source groups can induce nearly identical sensor-time signatures.  A strong
 distant source and a weaker nearby one become observationally equivalent after
 attenuation, travel time, background correction, and noise.
 Fine-grained attribution is then not merely uncertain; it is not identifiable
 from the sensing system.
 
-We study this in the inventory-based setting: rather than recovering an arbitrary
+We study this in the inventory-based setting.  Rather than recovering an arbitrary
 source field, we assume a finite set of known or proxy source maps that restrict
-attribution to a low-dimensional, interpretable model, and represent each source's
-time variation as a nonnegative combination of a few temporal basis functions.  The
-unknowns are then source--basis coefficients, from which activity trajectories and
-contributions are reconstructed.  These restrictions alone do not
+attribution to a low-dimensional, interpretable model.  Each source's
+time variation is represented as a nonnegative combination of a few temporal basis
+functions.  The unknowns are then source--basis coefficients, from which activity
+trajectories and contributions are reconstructed.  These restrictions alone do not
 make the problem identifiable: coefficient fingerprints can still be weakly
 visible, absorbed by background components, or mutually coherent after transport.
 
@@ -30,14 +30,14 @@ realization, transport operator, inventory, sensor layout, and lag window, each
 source--basis pair induces a finite-horizon sensor-space fingerprint; stacking
 them gives \(H_{\Phi}^{\mathrm{lag}}\).  After projecting out a low-dimensional
 background basis \(Q\), the inverse problem is governed by
-\(\widetilde H_\Phi = P_Q^\perp H_{\Phi}^{\mathrm{lag}}\), whose rank, singular
+\(\widetilde H_\Phi = P_Q^\perp H_{\Phi}^{\mathrm{lag}}\).  Its rank, singular
 values, coefficient visibility, background absorption, pairwise coherence, and ray
 distance determine which contributions can be separated and which should be
 reported only after merging or qualification.  The goal is therefore not the most
-detailed contribution vector the inventory permits, but a conservative resolution
-defensible under the available sensors, wind, background, and noise, conditional on
-the declared source model, with estimates reported alongside identifiability
-diagnostics and ambiguity certificates.
+detailed contribution vector the inventory permits.  It is a conservative
+resolution, one defensible under the available sensors, wind, background, and
+noise, and conditional on the declared source model.  Estimates are reported
+alongside identifiability diagnostics and ambiguity certificates.
 
 We make the following contributions:
 \begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
@@ -58,13 +58,12 @@ We make the following contributions:
     trajectories, reports uncertainty, flags weakly visible coefficients,
     recommends connected report groups when eligible fingerprints are
     indistinguishable, and adds a per-sensor spatial attribution that back-traces
-    the transport response to upwind regions, inheriting the global identifiable
-    resolution rather than asserting finer per-sensor separations.
+    the transport response to upwind regions.
     \item We instantiate the framework on a New Delhi platform (government
     PM\(_{2.5}\) and wind records, regulatory sensor locations, kernel
     coordinate-query gridded wind imputation, and four normalized proxy source
     groups with declared temporal activity bases) and define controlled and
     observed-data evaluations of conditioning, source ambiguity, background
     stress, wind diversity, temporal-basis recovery, response error, uncertainty,
-    and residual structure.
+    and residual structure. Across controlled degeneracies, IASA flags every non-identifiable case and recovers apportionment to within \(0.01\) share error, outperforming the baselines: NNLS, CMB, and PMF.
 \end{itemize}

@@ -9,16 +9,16 @@ source-oriented models that propagate emissions inventories through transport,
 with reviews and harmonization efforts documenting their practical sensitivity to
 source profiles, tracer collinearity, factor interpretation, and inventory
 assumptions
-\citep{viana2008source,belis2013critical,belis2019european,mircea2020european,hopke2020global};
-this ambiguity is acute in settings such as India, where the same city yields
+\citep{viana2008source,belis2013critical,belis2019european,mircea2020european,hopke2020global}.
+This ambiguity is acute in settings such as India, where the same city yields
 divergent source-contribution estimates and heterogeneously reported categories
 \citep{pant2012critical,karagulian2015contributions}.
 Estimating latent quantities from partial observations belongs to inverse
 problems and data assimilation
 \citep{tarantola2005inverse,engl1996regularization,wang2023kalman,carrassi2018data}
 and, more recently, physics-informed and operator-learning methods
-\citep{raissi2019physics,li2024physics,li2020fourier,bhardwaj2025fieldformer},
-which motivate our transport-structured constrained backend but do not themselves
+\citep{raissi2019physics,li2024physics,li2020fourier,bhardwaj2025fieldformer}.
+These motivate our transport-structured constrained backend but do not themselves
 resolve identifiability in a many-to-one sparse-sensing map.
 Graph, transformer, and sequence models address the same sparse-sensor regime
 \citep{li2017diffusion,yu2017spatio,wu2019graph,chen2023group,iyer2022modeling,bhardwaj2025comprehensive},
@@ -29,5 +29,5 @@ identification \citep{chen1984linear,ljung1987theory,banks2012estimation,colton1
 Unlike this prior work, we analyze when declared or proxy source groups are
 \emph{distinguishable} from sparse concentration sensors after wind-conditioned
 transport, finite lags, background correction, and noise, and report the
-attribution resolution the sensing system supports; Appendix~\ref{app:extended_related_work}
-expands each strand.
+attribution resolution the sensing system supports.  See Appendix~\ref{app:extended_related_work}
+for details.

@@ -16,6 +16,7 @@ import os
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import numpy as np
 
 plt.rcParams.update({
@@ -47,7 +48,7 @@ def panel_exp1(ax):  # conditioning sets the recovery ceiling (tab:results_h1)
     ax.legend(loc="upper left", frameon=False, fontsize=5, handletextpad=0.3,
               labelspacing=0.2, borderpad=0.1, handlelength=1.4)
     ax.set_xlabel("obs. noise"); ax.set_ylabel("coef. rel. error")
-    ax.set_title("(b) Exp 1: conditioning")
+    ax.set_title("(b) Exp: conditioning")
     ax.set_xlim(-0.01, 0.235); ax.set_xticks([0.0, 0.1, 0.2])
 
 
@@ -70,9 +71,21 @@ def panel_exp4(ax):  # wind x layout: sigma_J vs coherence (tab:results_h4)
                    marker=markers[lay], edgecolor="k", linewidth=0.3, alpha=0.85, zorder=3)
     ax.set_yscale("log")
     ax.set_xlabel("max coherence"); ax.set_ylabel(r"$\sigma_J$ (log)")
-    ax.set_title(r"(c) Exp 4: wind$\times$layout"); ax.set_xticks([0.0, 0.5, 1.0])
+    ax.set_title(r"(c) Exp: wind$\times$layout"); ax.set_xticks([0.0, 0.5, 1.0])
     ax.annotate("single/\nrandom", xy=(1.0, 1e-3), xytext=(0.34, 0.02),
                 fontsize=4.6, arrowprops=dict(arrowstyle="->", lw=0.4))
+    # (c) has no in-panel legend room; place one combined key in the strip below it.
+    # Column 1 = layout (marker), columns 2-3 = wind provider (colour), column-major.
+    layout_handles = [Line2D([], [], marker=m, color="0.35", ls="none", ms=4,
+                             markeredgecolor="k", markeredgewidth=0.3, label=l)
+                      for l, m in [("regulatory", "o"), ("random", "s"), ("downwind", "^")]]
+    wind_handles = [Line2D([], [], marker="s", color=cmap[w], ls="none", ms=4,
+                           markeredgecolor="k", markeredgewidth=0.3, label=w)
+                    for w in winds]
+    ax.legend(handles=layout_handles + wind_handles, loc="upper center",
+              bbox_to_anchor=(0.42, -0.28), ncol=3, frameon=False, fontsize=4.4,
+              columnspacing=0.8, handletextpad=0.15, labelspacing=0.3,
+              title="marker: layout   colour: wind", title_fontsize=4.4)
 
 
 def panel_exp3(ax):  # background stress (tab:results_h3)
@@ -85,7 +98,7 @@ def panel_exp3(ax):  # background stress (tab:results_h3)
     ax.bar(x, absorp, w, label="absorp.", color="#e67e22")
     ax.bar(x + w, sigmaJ, w, label=r"$\sigma_J$", color="#8e44ad")
     ax.set_xticks(x); ax.set_xticklabels(bgs, rotation=25, ha="right")
-    ax.set_title("(d) Exp 3: bg. stress"); ax.set_ylabel("value")
+    ax.set_title("(d) Exp: bg. stress"); ax.set_ylabel("value")
     ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.32), ncol=3,
               frameon=False, fontsize=4.8, columnspacing=0.6, handletextpad=0.2, handlelength=1.0)
 
@@ -98,7 +111,7 @@ def panel_exp5(ax):  # transport error: coef err vs operator-error norm (tab:res
     ax.plot(*speed, "s", color="#2471a3", ms=3.5, label="speed")
     ax.plot(*dispersion, "^", color="#16a085", ms=3.5, label="dispersion")
     ax.set_xlabel("operator err. norm"); ax.set_ylabel("coef. rel. error")
-    ax.set_title("(e) Exp 5: transport err.")
+    ax.set_title("(e) Exp: transport err.")
     ax.legend(loc="lower right", frameon=False, fontsize=4.6, handletextpad=0.2,
               borderpad=0.1, labelspacing=0.2)
 
@@ -109,7 +122,7 @@ def panel_exp7(ax):  # lag-window selection (tab:results_lag)
     kappa = [569.2, 63.8, 18.6, 10.1, 7.5, 5.1]
     l1 = ax.plot(L, sigmaJ, "o-", color="#2c3e50", lw=1.2, ms=3, label=r"$\sigma_J$")
     ax.set_xlabel("lag window $L$"); ax.set_ylabel(r"$\sigma_J$")
-    ax.set_title("(f) Exp 7: lag selection")
+    ax.set_title("(f) Exp: lag selection")
     axr = ax.twinx()
     l2 = axr.plot(L, kappa, "D--", color="#c0392b", lw=1.0, ms=3, label=r"$\kappa$ (log)")
     axr.set_yscale("log"); axr.set_ylabel(r"$\kappa$ (log)", color="#c0392b")
@@ -130,7 +143,7 @@ def panel_exp9(ax):  # temporal-basis recovery (tab:results_temporal)
     ax.plot(noise, coef, "o-", color="#c0392b", lw=1.2, ms=3, label="coef.")
     ax.plot(noise, activity, "s-", color="#27ae60", lw=1.2, ms=3, label="activity")
     ax.set_xlabel("obs. noise"); ax.set_ylabel("rel. error")
-    ax.set_title("(g) Exp 9: temporal basis")
+    ax.set_title("(g) Exp: temporal basis")
     ax.legend(loc="upper left", frameon=False, fontsize=4.8, handletextpad=0.3, labelspacing=0.2)
 
 
@@ -140,7 +153,7 @@ def panel_exp6(ax):  # inventory robustness: sigma_J tracks version (tab:results
     x = np.arange(len(scen))
     ax.bar(x, sigmaJ, 0.6, color="#5d6d7e", edgecolor="k", linewidth=0.3)
     ax.set_xticks(x); ax.set_xticklabels(scen, rotation=0)
-    ax.set_ylabel(r"$\sigma_J$"); ax.set_title("(h) Exp 6: inventory robust.")
+    ax.set_ylabel(r"$\sigma_J$"); ax.set_title("(h) Exp: inventory robust.")
     ax.text(0.5, 0.45, "coef. err $=0$ (exact)", transform=ax.transAxes,
             fontsize=5, ha="center", va="center", color="k",
             bbox=dict(boxstyle="round,pad=0.12", fc="white", ec="none", alpha=0.8))
@@ -160,7 +173,7 @@ def panel_baselines(ax):  # Exp 11: IASA vs baselines (evaluation/.../exp11_seed
     ax.set_yscale("log"); ax.set_ylim(floor, 3.0)
     ax.set_xticks(x); ax.set_xticklabels(methods)
     ax.set_ylabel("apportion. err (log)")
-    ax.set_title("(a) Exp 11: baselines")
+    ax.set_title("(a) Exp: baselines")
     # identifiability flag row under the method labels
     for xi, fl in zip(x, flag):
         ax.annotate("flag\n" + (r"$\checkmark$" if fl else r"$\times$"),
@@ -186,7 +199,7 @@ def panel_obs_geometry(ax):  # observed weeks 1-4 geometry (tab:results_nd_ident
     ln = axr.plot(x, coh, "D--", color="#c0392b", ms=3, lw=1.0, label="max coh.")
     axr.set_ylim(0, 1); axr.tick_params(axis="y", colors="#c0392b"); axr.grid(False)
     ax.legend([b1, b2, ln[0]], [r"$\sigma_1$", r"$\sigma_J$", "coh."],
-              loc="upper center", bbox_to_anchor=(0.5, -0.52), ncol=3,
+              loc="upper center", bbox_to_anchor=(0.5, -0.40), ncol=3,
               frameon=False, columnspacing=0.8, handletextpad=0.3)
 
 
@@ -203,7 +216,7 @@ def panel_obs_apportion(ax):  # observed apportionment (tab:results_nd_appt)
     ax.set_xticks(x); ax.set_xticklabels([str(k) for k in weeks]); ax.set_xlabel("week")
     ax.set_ylabel("frac. of signal"); ax.set_ylim(0, 1.0)
     ax.set_title("(b) Obs. apportion.")
-    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.52), ncol=2, frameon=False,
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.40), ncol=2, frameon=False,
               columnspacing=0.6, handletextpad=0.3, labelspacing=0.2)
 
 
@@ -225,7 +238,7 @@ def fig_controlled():
 def fig_observed():
     # Single-column, two observed New Delhi panels side by side.
     fig, (axA, axB) = plt.subplots(
-        1, 2, figsize=(3.35, 1.97),
+        1, 2, figsize=(3.35, 1.58),
         gridspec_kw=dict(wspace=1.05, left=0.13, right=0.89, top=0.88, bottom=0.42))
     panel_obs_geometry(axA); panel_obs_apportion(axB)
     out = os.path.join(HERE, "fig_observed.pdf")

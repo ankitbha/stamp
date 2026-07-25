@@ -3,10 +3,11 @@
 
 We evaluate on a single New Delhi platform so the controlled and observed studies
 share one regulatory sensor geometry, one PM\(_{2.5}\) and wind record, and one set
-of proxy inventories, and ask whether the geometry of \(\widetilde H_\Phi\) predicts
-which coefficient, activity, and grouped-source claims are defensible.  A shared base configuration is varied along one controlled
-axis at a time, avoiding conflation of wind, source geometry, background
-flexibility, noise, and forward-model error; all runs use the \(40\times40\)
+of proxy inventories.  We ask whether the geometry of \(\widetilde H_\Phi\) predicts
+which coefficient, activity, and grouped-source claims are defensible.  A shared
+base configuration is varied along one controlled axis at a time, avoiding
+conflation of wind, source geometry, background flexibility, noise, and
+forward-model error.  All runs use the \(40\times40\)
 resolution, with a 72-hour transport window for the controlled experiments and
 four consecutive one-week windows for the observed study.  Real imputed wind is a
 controlled transport input when coefficients are synthetically known; the
@@ -16,12 +17,12 @@ source-recovery metrics.
 \noindent\textbf{New Delhi Experimental Platform.}
 The platform is built from hourly government PM\(_{2.5}\) and wind records
 \citep{cpcb,cpcb_portal} spanning 1 May 2018--31 October 2020 over a 32-sensor
-regulatory network; PM\(_{2.5}\) is never imputed, and its valid-value mask defines
+regulatory network.  PM\(_{2.5}\) is never imputed, and its valid-value mask defines
 \(M_{\mathcal O}\) in Equation~\ref{eq:observation_selection}, with the same
 ordered sensor--time rows retained in \(Y\), \(H_\Phi^{\mathrm{lag}}\), \(Q\), and
 metadata.  Observed wind is converted (Equation~\ref{eq:wind_direction_conversion})
 and completed on the response grid by the kernel coordinate-query imputer of
-Section~\ref{subsec:wind_field_estimation}\label{subsec:new_delhi_wind}; a learned
+Section~\ref{subsec:wind_field_estimation}\label{subsec:new_delhi_wind}.  A learned
 imputer was trained but not adopted (Section~\ref{subsec:results_wind_imputation}).
 Four source groups (brick kilns, industries, population density, traffic) each
 carry one normalized spatial proxy map and its own admissible temporal-basis
@@ -30,7 +31,7 @@ Appendix~\ref{app:platform_details}), so fitted coefficients are in normalized
 proxy units, not physical emission shares.  Both forward paths use the
 open-boundary Gaussian puff operator of Section~\ref{subsec:plume_response}
 evaluated at sensors, the matched generator for controlled recovery and the
-inference operator for observed PM\(_{2.5}\); an auxiliary advection--diffusion
+inference operator for observed PM\(_{2.5}\).  An auxiliary advection--diffusion
 simulator supplies a structural forward-model mismatch for the adequacy study
 (Section~\ref{sec:identifiability_aware_method}), and normal backgrounds follow
 Section~\ref{subsec:background_construction}.

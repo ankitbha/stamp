@@ -115,7 +115,7 @@ and \(B\)--\(C\) group all three even when \(A\) and \(C\) are distinguishable),
 so the edge table retains both triggering pairs and their diagnostic values to
 keep this visible.
 
-The coefficient fit is not silently replaced by a grouped refit; for reporting,
+The coefficient fit is not silently replaced by a grouped refit.  For reporting,
 group activity and fitted sensor contribution are the member sums
 \(\widehat\theta_{G_a}(t)=\sum_{k\in G_a}\widehat\theta_k(t)\) and
 \(\widehat Y_{G_a}=\sum_{k\in G_a}\sum_b
@@ -212,16 +212,16 @@ nonnegativity constraint, solved with projected FISTA \citep{beck2009fast}
 \noindent\textbf{Model Adequacy, Uncertainty, and Reporting.}
 IASA attaches uncertainty to reported contributions from an active-set/ridge
 covariance of the fitted coefficients and, when transport ensembles are supplied,
-from empirical quantiles across ensemble refits; transport uncertainty and
+from empirical quantiles across ensemble refits.  Transport uncertainty and
 inventory-robustness scenarios are never pooled into one interval.  Residual
-magnitude alone is not calibrated evidence of misspecification: when an externally
+magnitude alone is not calibrated evidence of misspecification.  When an externally
 calibrated observation-noise model is available, IASA computes a
 background-orthogonal residual statistic whose null distribution (not a plain
 \(\chi^2\), since \(\widehat{\mathbf c}\) is fitted from the same data) is
-calibrated by a parametric bootstrap (\(1000\) refits, \(\alpha=0.05\)); otherwise
+calibrated by a parametric bootstrap (\(1000\) refits, \(\alpha=0.05\)).  Otherwise
 it reports raw and projected residual summaries with
 \texttt{calibration\_status=uncalibrated} and emits no pass/fail claim.  The test
-is one-sided: a rejection establishes a mismatch with the declared model but not
+is one-sided.  A rejection establishes a mismatch with the declared model but not
 its cause, whereas a non-rejection does not establish inventory completeness, since
 an omitted source whose signature lies in
 \(\operatorname{span}[H_\Phi^{\mathrm{lag}},Q]\) is absorbed by fitted terms and

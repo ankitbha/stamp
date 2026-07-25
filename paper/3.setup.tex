@@ -3,9 +3,9 @@
 
 We formalize source apportionment as a finite-dimensional inverse problem in which
 known source inventories are transported to a sparse sensor network under a
-wind-conditioned lagged operator, defining the observation model, inventory
+wind-conditioned lagged operator.  This defines the observation model, inventory
 parameterization, response construction, background correction, and the projected
-response matrix \(\widetilde H_\Phi\) used throughout; transport, background, and fit
+response matrix \(\widetilde H_\Phi\) used throughout.  Transport, background, and fit
 details are deferred to Appendix~\ref{app:transport_response}.
 
 \noindent\textbf{City-scale transport model.}
@@ -42,8 +42,7 @@ follow one trajectory: each source has its own nonnegative weights, and
 source-specific knowledge is imposed by masking inadmissible coefficients.  We do
 not learn \(\Phi\) from the same sparse observations, since jointly estimating
 \(\Phi\) and \(C\) would add bilinear non-identifiability beyond the source
-distinguishability analyzed here; signed temporal harmonics belong to the separate
-background basis \(Q\).  We vectorize \(C\) in source-major, basis-minor order as
+distinguishability analyzed here.  We vectorize \(C\) in source-major, basis-minor order as
 \(\mathbf c=\operatorname{vec}_{\mathrm{src}}(C)\in\mathbb R_+^J\), \(J=KB\); the
 constant-activity model is the special case \(B=1\), \(\phi_1(t)=1\).
 
@@ -58,8 +57,7 @@ the direction pollution moves; we convert direction \(\mathit{WD}\) and speed
 \end{equation}
 and complete them on the response grid with a normalized Gaussian-kernel
 coordinate-query imputer to obtain a gridded transport field
-\(\widehat{\mathbf w}_t(\mathbf x_g)\); a learned imputer was trained but not
-adopted (Section~\ref{subsec:results_wind_imputation}), and the same interface
+\(\widehat{\mathbf w}_t(\mathbf x_g)\); and the same interface
 supplies synthetic controlled winds and transport ensembles kept separate from
 inventory scenarios.  Emissions released at \(t-\ell\) affect sensors at \(t\)
 only after transport by the intervening wind.  Let
@@ -102,7 +100,7 @@ Observed concentrations include components not explained by the local inventory
 \(Y = H_{\Phi}^{\mathrm{lag}}\mathbf c + Q\boldsymbol\gamma + E\) with a
 low-dimensional basis \(Q\in \mathbb R^{mT\times r}\) specified before fitting from
 source-independent metadata only (timestamps, day labels, sensor identity, and
-coordinates; effective rank capped at eight, the rank-four member for New Delhi),
+coordinates; effective rank capped at eight, the rank-four for New Delhi observations),
 so apportionment is not confounded by background correction; columns built from
 inventories, fingerprints, or fitted signals are excluded and permitted only in
 labeled stress tests (Appendix~\ref{app:transport_response}).  Real records need
@@ -116,7 +114,7 @@ H_{\Phi,\mathcal O}^{\mathrm{lag}}
 Q_{\mathcal O}=M_{\mathcal O}Q,
 \label{eq:observation_selection}
 \end{equation}
-with an alignment mismatch treated as an error rather than a silent reordering;
+with an alignment mismatch treated as an error;
 wind may be imputed, PM\(_{2.5}\) is not, and \(M_{\mathcal O}=I\) for complete
 controlled data.  Dropping the \(\mathcal O\) subscript, let
 \(P_Q^\perp = I - QQ^\dagger\) project onto the orthogonal complement of the
