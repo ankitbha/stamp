@@ -1,11 +1,12 @@
 \section{Problem Setup}
 \label{sec:problem_setup}
 
-We formalize source apportionment as a finite-dimensional inverse problem in
-which known source inventories are transported to a sparse sensor network under
-a wind-conditioned lagged operator, defining the observation model, inventory
-parameterization, background correction, and projected response matrix used
-throughout.
+We formalize source apportionment as a finite-dimensional inverse problem in which
+known source inventories are transported to a sparse sensor network under a
+wind-conditioned lagged operator, defining the observation model, inventory
+parameterization, response construction, background correction, and the projected
+response matrix \(\widetilde H_\Phi\) used throughout; transport, background, and fit
+details are deferred to Appendix~\ref{app:transport_response}.
 
 \noindent\textbf{City-scale transport model.}
 Let \(u(\mathbf x,t)\) be the pollutant concentration field on
@@ -21,46 +22,57 @@ Discretize the concentration field on \(n\) grid cells, so that
 \(X_{\mathrm{sens}}=\{\mathbf x_1,\ldots,\mathbf x_m\}\) be the fixed sensor
 locations with \(m\ll n\).  The observation operator
 \(O:\mathbb R^n\to \mathbb R^m\) samples or interpolates the latent field at
-these locations, \(\mathbf y_t = O\mathbf u_t + \boldsymbol\epsilon_t\) with
-\(\mathbf y_t\in \mathbb R^m\); stacking over \(t=1,\ldots,T\) gives
+these locations, \(\mathbf y_t = O\mathbf u_t + \boldsymbol\epsilon_t\); stacking
+over \(t=1,\ldots,T\) gives
 \(Y = [\mathbf y_1^\top,\ldots,\mathbf y_T^\top]^\top \in \mathbb R^{mT}\).
 Because \(m\) is small relative to the field dimension, many latent fields and
-source configurations can be consistent with the same sensor~trajectory.
+source configurations fit the same sensor~trajectory.
 
 \noindent\textbf{Inventory-based source parameterization.}
 We assume a set of \(K\) known or proxy source maps,
-\(S = [\mathbf s_1\;\mathbf s_2\;\cdots\;\mathbf s_K]\in \mathbb R^{q\times K}\),
+\(S = [\mathbf s_1\;\cdots\;\mathbf s_K]\in \mathbb R^{q\times K}\),
 where \(\mathbf s_k\in\mathbb R^q\) is the spatial pattern of source group
-\(k\) (the source grid dimension \(q\) may differ from \(n\)).  Time-varying
-source activity uses a fixed, predeclared nonnegative temporal dictionary
+\(k\).  Time-varying source activity uses a fixed, predeclared nonnegative
+temporal dictionary
 \(\Phi=[\boldsymbol\phi_1\;\cdots\;\boldsymbol\phi_B]\in\mathbb R_+^{T\times B}\)
-and coefficients \(C=[c_{kb}]\in\mathbb R_+^{K\times B}\).
-The activity of source \(k\) at time \(t\) is
-\(\theta_k(t)=\sum_{b=1}^{B}c_{kb}\phi_b(t)\ge0\).
-The basis \(\Phi\) is a shared dictionary of admissible temporal patterns
-(calendar, diurnal, seasonal, regulatory, or inventory-derived), not a claim that
-all sources follow one trajectory: each source has its own nonnegative weights
-\(c_{kb}\), and source-specific prior knowledge is imposed by masking inadmissible
-coefficients.  We do not learn \(\Phi\) from the same sparse observations used for
-apportionment, since jointly estimating \(\Phi\) and \(C\) would add bilinear
-non-identifiability beyond the source distinguishability analyzed here.  Activity
-bases are nonnegative; signed temporal harmonics belong to the separate background
-basis \(Q\).  We vectorize \(C\) in source-major, basis-minor order as
+and coefficients \(C=[c_{kb}]\in\mathbb R_+^{K\times B}\), so the activity of
+source \(k\) is \(\theta_k(t)=\sum_{b=1}^{B}c_{kb}\phi_b(t)\ge0\).  The basis is a
+shared dictionary of admissible temporal patterns, not a claim that all sources
+follow one trajectory: each source has its own nonnegative weights, and
+source-specific knowledge is imposed by masking inadmissible coefficients.  We do
+not learn \(\Phi\) from the same sparse observations, since jointly estimating
+\(\Phi\) and \(C\) would add bilinear non-identifiability beyond the source
+distinguishability analyzed here; signed temporal harmonics belong to the separate
+background basis \(Q\).  We vectorize \(C\) in source-major, basis-minor order as
 \(\mathbf c=\operatorname{vec}_{\mathrm{src}}(C)\in\mathbb R_+^J\), \(J=KB\); the
-constant-activity model is the special case \(B=1\), \(\phi_1(t)=1\),
-\(c_{k1}=\theta_k\).
+constant-activity model is the special case \(B=1\), \(\phi_1(t)=1\).
 
-\noindent\textbf{Lagged wind-conditioned response.}
-Emissions released at time \(t-\ell\) may affect sensors at time \(t\) only
-after being transported by the intervening wind field.  Let
-\(G_{t,t-\ell}^{\partial}(w_{t-\ell:t})\in \mathbb R^{n\times q}\)
-map emissions released on the source grid at time \(t-\ell\) to the
-concentration grid at time \(t\).  The superscript \(\partial\) denotes an
-open-boundary operator: mass transported outside \(\Omega\) leaves the modeled
-domain rather than being reflected or wrapped around.  For a maximum lag \(L\),
-define \(\mathcal L_t = \{0,1,\ldots,\min(L,t-1)\}\).
-For source \(k\) and basis component \(b\), the corresponding unit-coefficient
-sensor fingerprint at time \(t\) is
+\noindent\textbf{Wind-conditioned lagged response.}\label{subsec:wind_field_estimation}
+Government wind direction records where wind comes from, whereas transport needs
+the direction pollution moves; we convert direction \(\mathit{WD}\) and speed
+\(\mathit{WS}\) to transport vectors
+\begin{equation}
+(U_x,V_y)=-\mathit{WS}\,(\sin\alpha,\cos\alpha),\;\;
+\alpha=\mathit{WD}\,\pi/180,
+\label{eq:wind_direction_conversion}
+\end{equation}
+and complete them on the response grid with a normalized Gaussian-kernel
+coordinate-query imputer to obtain a gridded transport field
+\(\widehat{\mathbf w}_t(\mathbf x_g)\); a learned imputer was trained but not
+adopted (Section~\ref{subsec:results_wind_imputation}), and the same interface
+supplies synthetic controlled winds and transport ensembles kept separate from
+inventory scenarios.  Emissions released at \(t-\ell\) affect sensors at \(t\)
+only after transport by the intervening wind.  Let
+\(G_{t,t-\ell}^{\partial}(w_{t-\ell:t})\in \mathbb R^{n\times q}\) map emissions
+released on the source grid at \(t-\ell\) to the concentration grid at \(t\); the
+superscript \(\partial\) denotes an open-boundary operator (mass leaving
+\(\Omega\) is removed, not reflected or wrapped).\label{subsec:plume_response} It
+is realized by a Gaussian puff approximation evaluated at sensor coordinates that
+preserves nonnegativity and is mass non-increasing inside the domain, with
+dispersion, exit bookkeeping, and the pre-fit initial-condition baseline given in
+Appendix~\ref{app:transport_response}.  For a maximum lag \(L\),
+\(\mathcal L_t=\{0,\ldots,\min(L,t-1)\}\), the unit-coefficient sensor fingerprint
+of source \(k\) and basis component \(b\) at time \(t\) is
 \begin{equation}
 \mathbf h_{t,kb}^{\mathrm{lag}}
 = \sum_{\ell\in\mathcal L_t}
@@ -68,19 +80,12 @@ sensor fingerprint at time \(t\) is
 \in \mathbb R^m.
 \label{eq:constructed_response}
 \end{equation}
-Stacking over time and arranging columns in source-major, basis-minor order
-gives \(H_{\Phi}^{\mathrm{lag}}
-=[\mathbf h_{11}^{\mathrm{lag}}\;\cdots\;\mathbf h_{1B}^{\mathrm{lag}}\;\cdots\;
-\mathbf h_{KB}^{\mathrm{lag}}]\in \mathbb R^{mT\times J}\), \(J=KB\),
-where each \(\mathbf h_{kb}^{\mathrm{lag}}\in\mathbb R^{mT}\) is the
-finite-horizon unit-coefficient sensor fingerprint, the sensor-time pattern
-produced by one unit of coefficient \(c_{kb}\).  When \(B=1\), these columns
-reduce to the fingerprints of the constant-activity model.
-
-The lag window changes these fingerprints and the contributing release times but
-adds no sensor--time rows.  It is chosen before fitting: physical travel- and
-residence-time bounds define an increasing candidate grid, and for adjacent
-candidates \(L\) and \(L+\Delta\) with the same rows and columns we set
+Stacking over time in source-major, basis-minor order gives
+\(H_{\Phi}^{\mathrm{lag}}\in \mathbb R^{mT\times J}\), \(J=KB\), each column the
+finite-horizon sensor-time pattern produced by one unit of a coefficient.  The lag
+window adds no sensor--time rows and is chosen before fitting from physical travel-
+and residence-time bounds: for adjacent candidates \(L\), \(L+\Delta\) with the
+same rows and columns,
 \begin{equation}
 \eta_L=
 \frac{\|H_{\Phi}^{\mathrm{lag}}(L+\Delta)
@@ -88,64 +93,68 @@ candidates \(L\) and \(L+\Delta\) with the same rows and columns we set
 {\max\{\|H_{\Phi}^{\mathrm{lag}}(L+\Delta)\|_F,\epsilon\}},
 \label{eq:lag_convergence}
 \end{equation}
-with \(\|\cdot\|_F\) the Frobenius norm.  The primary lag is the smallest
-candidate with \(\eta_L\le\tau_L\) (default \(\tau_L=10^{-3}\)); the fitted
-\(\mathbf c\) is never used to select \(L\).
+and the primary lag is the smallest candidate with \(\eta_L\le\tau_L\) (default
+\(10^{-3}\)); the fitted \(\mathbf c\) never selects \(L\).
 
-\noindent\textbf{Background and temporal correction.}
-Observed concentrations include components not explained by the local inventory:
-regional background, smooth temporal trends, and sensor-specific offsets.  We
-represent these with a low-dimensional basis \(Q\in \mathbb R^{mT\times r}\),
-\(\boldsymbol\gamma\in \mathbb R^r\), and write
-\begin{equation}
-Y = H_{\Phi}^{\mathrm{lag}}\mathbf c + Q\boldsymbol\gamma + E.
-\label{eq:model_with_background}
-\end{equation}
-The low-dimensionality ensures that source apportionment is not confounded by
-background correction.
-
-Real concentration records need not be complete.  Let \(\mathcal O\) be the
-ordered set of observed sensor--time PM\(_{2.5}\) rows and let
-\(M_{\mathcal O}\in\{0,1\}^{N\times mT}\), \(N=|\mathcal O|\), select them.
-The observation mask is applied identically to every row-aligned object:
+\noindent\textbf{Background correction and projection.}\label{subsec:background_construction}
+Observed concentrations include components not explained by the local inventory
+(regional background, smooth trends, sensor offsets), giving
+\(Y = H_{\Phi}^{\mathrm{lag}}\mathbf c + Q\boldsymbol\gamma + E\) with a
+low-dimensional basis \(Q\in \mathbb R^{mT\times r}\) specified before fitting from
+source-independent metadata only (timestamps, day labels, sensor identity, and
+coordinates; effective rank capped at eight, the rank-four member for New Delhi),
+so apportionment is not confounded by background correction; columns built from
+inventories, fingerprints, or fitted signals are excluded and permitted only in
+labeled stress tests (Appendix~\ref{app:transport_response}).  Real records need
+not be complete: let \(\mathcal O\) be the ordered observed sensor--time
+PM\(_{2.5}\) rows and \(M_{\mathcal O}\in\{0,1\}^{N\times mT}\) select them, applied
+identically to every row-aligned object,
 \begin{equation}
 Y_{\mathcal O}=M_{\mathcal O}Y,\quad
 H_{\Phi,\mathcal O}^{\mathrm{lag}}
 =M_{\mathcal O}H_{\Phi}^{\mathrm{lag}},\quad
-Q_{\mathcal O}=M_{\mathcal O}Q.
+Q_{\mathcal O}=M_{\mathcal O}Q,
 \label{eq:observation_selection}
 \end{equation}
-Row metadata are filtered by the same ordered index set, and an alignment
-mismatch is an error rather than a silent reordering.  Wind may be imputed, missing
-PM\(_{2.5}\) values are not.  For complete controlled
-observations, \(M_{\mathcal O}=I\) and \(N=mT\).  Below we drop the
-\(\mathcal O\) subscript and use \(Y\in\mathbb R^N\),
-\(H_{\Phi}^{\mathrm{lag}}\in\mathbb R^{N\times J}\), and
-\(Q\in\mathbb R^{N\times r}\) for these aligned~arrays.
-
-Let \(P_Q^\perp = I - QQ^\dagger\) be the projection onto the orthogonal
-complement of the background space, with \(Q^\dagger\) the Moore--Penrose
-pseudoinverse.  The corrected inverse problem is
+with an alignment mismatch treated as an error rather than a silent reordering;
+wind may be imputed, PM\(_{2.5}\) is not, and \(M_{\mathcal O}=I\) for complete
+controlled data.  Dropping the \(\mathcal O\) subscript, let
+\(P_Q^\perp = I - QQ^\dagger\) project onto the orthogonal complement of the
+background space (applied implicitly through a thin SVD of \(Q\)); the corrected
+inverse problem is
 \begin{equation}
 \widetilde Y = \widetilde H_\Phi\mathbf c + \widetilde E,
 \qquad
 \widetilde Y=P_Q^\perp Y,
 \qquad
-\widetilde H_\Phi=P_Q^\perp H_{\Phi}^{\mathrm{lag}}.
+\widetilde H_\Phi=P_Q^\perp H_{\Phi}^{\mathrm{lag}},
 \label{eq:projected_model}
 \end{equation}
-All identifiability diagnostics in this paper are computed from
-\(\widetilde H_\Phi\), not from the raw inventory matrix or the
+so each projected fingerprint
+\(\widetilde{\mathbf h}_{kb}=P_Q^\perp\mathbf h_{kb}^{\mathrm{lag}}\) encodes the
+observable effect of one source--basis coefficient after transport, lag, sparse
+sensing, and background correction.  All identifiability diagnostics in this paper
+are computed from \(\widetilde H_\Phi\), not the raw inventory or the
 \mbox{unprojected response}.
 
-\noindent\textbf{Projected source--basis fingerprints.}
-Writing
-\(H_{\Phi}^{\mathrm{lag}}
-=[\mathbf h_{11}^{\mathrm{lag}}\;\cdots\;\mathbf h_{KB}^{\mathrm{lag}}]\) and
-\(\widetilde H_\Phi
-=[\widetilde{\mathbf h}_{11}\;\cdots\;\widetilde{\mathbf h}_{KB}]\),
-we have \(\widetilde{\mathbf h}_{kb}=P_Q^\perp\mathbf h_{kb}^{\mathrm{lag}}\).
-Each encodes the observable effect of one source--basis coefficient after wind
-transport, lag, sparse sensing, and background correction; apportionment at the
-chosen resolution is well posed only to the extent that these fingerprints are
-visible and separable.
+\noindent\textbf{Source activity fit.}
+Scientific knowledge may declare a set \(\mathcal F_0\) of coefficients identically
+zero before the response is diagnosed or fitted; with
+\(\mathcal I=\{1,\ldots,J\}\setminus\mathcal F_0\), the fit is computed on
+\(\widetilde H_{\Phi,\mathcal I}\) and zeros are restored afterward (default
+\(\mathcal F_0=\varnothing\)).  Coefficients are never deleted after fitting merely
+for being small, which would change the diagnosed problem after seeing the data.
+Source--basis coefficients are estimated by nonnegative regularized least squares
+\begin{equation}
+\widehat{\mathbf c}
+=\arg\min_{\mathbf c\ge 0}
+\|\widetilde Y-\widetilde H_\Phi\mathbf c\|_2^2
++\lambda R(\mathbf c),
+\label{eq:nnls_estimator}
+\end{equation}
+with \(R\) a ridge or weak inventory-prior penalty, reshaped into activity
+trajectories \(\widehat\theta_k(t)=\sum_{b}\widehat c_{kb}\phi_b(t)\).  The
+regularizer choices, an equivalent joint source/background fit, and an optional
+constrained end-to-end refinement of wind, dispersion, and coefficients, accepted
+only if it does not degrade identifiability, are given in
+Appendix~\ref{app:transport_response}.

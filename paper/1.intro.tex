@@ -4,25 +4,24 @@
 Urban air pollution is driven by local emissions, meteorological transport,
 regional background, and sensor noise.  For policy the central question is often
 not only \emph{where} pollution is high but \emph{which} source groups (traffic,
-industry, brick kilns, population-related activity) produced the observed
-concentrations, estimated from source inventories, transport models, and sparse
-measurements.
+industry, brick kilns, population-related activity) produced it, given source
+inventories, transport models, and sparse measurements.
 
 This is especially hard in sparse sensor networks: a model may fit sensor
 trajectories accurately yet fail to identify the underlying contributions.  The
 reason is geometric.  After wind transport and sparse observation, two distinct
 source groups can induce nearly identical sensor-time signatures, so a strong
-distant source and a weaker nearby source become observationally equivalent once
-attenuation, travel time, background correction, and noise are accounted for.
+distant source and a weaker nearby one become observationally equivalent after
+attenuation, travel time, background correction, and noise.
 Fine-grained attribution is then not merely uncertain; it is not identifiable
 from the sensing system.
 
-We study this in the inventory-based setting.  Rather than recovering an arbitrary
-source field, we assume a finite set of known or proxy source maps, which restrict
-attribution to a low-dimensional, interpretable model, and we represent each
-source's time variation as a nonnegative combination of a few temporal basis
-functions.  The unknowns are then source--basis coefficients, from which activity
-trajectories and contributions are reconstructed.  These restrictions alone do not
+We study this in the inventory-based setting: rather than recovering an arbitrary
+source field, we assume a finite set of known or proxy source maps that restrict
+attribution to a low-dimensional, interpretable model, and represent each source's
+time variation as a nonnegative combination of a few temporal basis functions.  The
+unknowns are then source--basis coefficients, from which activity trajectories and
+contributions are reconstructed.  These restrictions alone do not
 make the problem identifiable: coefficient fingerprints can still be weakly
 visible, absorbed by background components, or mutually coherent after transport.
 
@@ -34,11 +33,11 @@ background basis \(Q\), the inverse problem is governed by
 \(\widetilde H_\Phi = P_Q^\perp H_{\Phi}^{\mathrm{lag}}\), whose rank, singular
 values, coefficient visibility, background absorption, pairwise coherence, and ray
 distance determine which contributions can be separated and which should be
-reported only after merging or qualification.  The goal is therefore not to return
-the most detailed contribution vector the inventory permits, but a conservative
-resolution defensible under the available sensors, wind, background, and noise,
-conditional on the declared source model, with source estimates reported alongside
-identifiability diagnostics and ambiguity certificates.
+reported only after merging or qualification.  The goal is therefore not the most
+detailed contribution vector the inventory permits, but a conservative resolution
+defensible under the available sensors, wind, background, and noise, conditional on
+the declared source model, with estimates reported alongside identifiability
+diagnostics and ambiguity certificates.
 
 We make the following contributions:
 \begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
@@ -59,9 +58,8 @@ We make the following contributions:
     trajectories, reports uncertainty, flags weakly visible coefficients,
     recommends connected report groups when eligible fingerprints are
     indistinguishable, and adds a per-sensor spatial attribution that back-traces
-    the transport response to upwind regions and source groups while inheriting
-    the global identifiable resolution rather than asserting finer per-sensor
-    separations.
+    the transport response to upwind regions, inheriting the global identifiable
+    resolution rather than asserting finer per-sensor separations.
     \item We instantiate the framework on a New Delhi platform (government
     PM\(_{2.5}\) and wind records, regulatory sensor locations, kernel
     coordinate-query gridded wind imputation, and four normalized proxy source

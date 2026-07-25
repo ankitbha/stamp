@@ -330,7 +330,7 @@ coefficient separately.
 \label{app:transport_response}
 
 This appendix gives the construction, background, and estimation details deferred
-from Section~\ref{sec:wind_conditioned_source_apportionment}.
+from Section~\ref{sec:problem_setup}.
 
 \noindent\textbf{Wind imputer query and unit conversion.}
 The observed station vectors and masks are supplied to a coordinate-query wind
@@ -852,80 +852,112 @@ This mismatch also drives the residual-adequacy test of
 Section~\ref{sec:identifiability_aware_method}, letting us check its power against structural
 transport misspecification and not only against missing sources.
 
-\section{Additional Experiments}
-\label{app:additional_experiments}
+\section{Expanded Results}
+\label{app:expanded_results}
 
-This appendix reports the six controlled experiments deferred from
-Section~\ref{sec:evaluation}: coherence and grouped reporting, transport error,
-inventory robustness, lag-window selection, temporal-basis recovery, and
-per-sensor footprints.
+Full numeric tables backing the Section~\ref{sec:evaluation} figures: the seven
+controlled diagnostics and the baseline comparison of Figure~\ref{fig:controlled},
+and the observed New Delhi weeks of Figure~\ref{fig:observed}.
 
-\subsection{Coherence and Grouped Reporting}
-\label{subsec:results_h2}
-
-We form increasingly coherent source pairs by shifting a copy of one inventory
-map by a controlled spatial offset, so that decreasing the shift drives coherence
-toward one.  Individual-source errors are compared with errors in the summed
-activity and fitted sensor contribution of each recommended connected component.
-Edge reports retain the triggering source--basis pair.
-
-Table~\ref{tab:results_h2} reports the coherence sweep. Shrinking the spatial
-offset drives maximum eligible coherence from $0.05$ to $0.96$ while $\sigma_J$
-falls from $21.8$ to $4.6$. At every tested offset the conservative merge rule
-kept the two sources in separate singleton components and both were recovered
-exactly (individual and grouped relative error $0$), so no grouped reporting was
-required and no cross-source trigger pair fired; the eligible ray distance and
-triggering pair are therefore undefined (null) rather than forced to a number.
-The reporting layer retains \emph{every} trigger edge without deduplication when
-a merge does fire (an A--B--C chain keeps both edges); no merge fired in this
-experiment.
-
+\subsection{Conditioning (Exp 1)}
+Coefficient recovery versus conditioning and noise; the better-conditioned geometry
+recovers more accurately at matched noise.
 \begin{table}[t]
 \centering
 \footnotesize
-\caption{Experiment 2: coherence rises as the source offset shrinks, but the
-conservative rule merged no sources and recovery stayed exact.}
-\label{tab:results_h2}
-\begin{tabular}{rrrll}
+\caption{Experiment 1: coefficient recovery versus conditioning and noise. The
+better-conditioned geometry recovers more accurately at matched noise.}
+\label{tab:results_h1}
+\begin{tabular}{llrrrr}
 \toprule
-offset & max.\ coh. & $\sigma_J$ & merged & indiv./grp.\ err. \\
+geom. & noise & $\sigma_J$ & $\kappa$ & coef.\ err. & resid. \\
 \midrule
-8.0 & 0.048 & 21.77 & no & 0.0 / 0.0 \\
-6.0 & 0.862 & 10.48 & no & 0.0 / 0.0 \\
-4.0 & 0.905 & 8.40  & no & 0.0 / 0.0 \\
-2.0 & 0.945 & 5.43  & no & 0.0 / 0.0 \\
-1.0 & 0.958 & 4.64  & no & 0.0 / 0.0 \\
+separated & 0.00 & 3.27 & 8.89 & 0.000 & 0.00 \\
+separated & 0.05 & 3.27 & 8.89 & 0.066 & 6.37 \\
+separated & 0.10 & 3.27 & 8.89 & 0.132 & 12.73 \\
+separated & 0.20 & 3.27 & 8.89 & 0.264 & 25.46 \\
+close     & 0.00 & 9.60 & 2.26 & 0.000 & 0.00 \\
+close     & 0.05 & 9.60 & 2.26 & 0.028 & 8.42 \\
+close     & 0.10 & 9.60 & 2.26 & 0.057 & 16.84 \\
+close     & 0.20 & 9.60 & 2.26 & 0.113 & 33.68 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Transport Error}
+\subsection{Wind Diversity and Sensor Geometry (Exp 4)}
+$\sigma_J$, maximum eligible coherence, and coefficient error across wind provider
+$\times$ sensor layout, and the wind-window ensemble spread.
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Experiment 4: $\sigma_J$, maximum eligible coherence, and coefficient
+error across wind provider $\times$ sensor layout.}
+\label{tab:results_h4}
+\begin{tabular}{llrrr}
+\toprule
+wind & layout & $\sigma_J$ & max.\ coh. & coef.\ err. \\
+\midrule
+constant & regulatory & 1.53 & 0.975 & 0.000 \\
+constant & random     & 0.00 & 0.028 & 0.000 \\
+constant & downwind   & 0.13 & 0.990 & 0.000 \\
+single   & regulatory & 6.44 & 0.741 & 0.000 \\
+single   & random     & 0.00 & 1.000 & 0.573 \\
+single   & downwind   & 1.36 & 0.990 & 0.000 \\
+diurnal  & regulatory & 6.11 & 0.722 & 0.000 \\
+diurnal  & random     & 0.00 & 0.880 & 0.001 \\
+ar1      & regulatory & 7.35 & 0.641 & 0.000 \\
+ar1      & random     & 0.00 & 0.774 & 0.115 \\
+multi    & regulatory & 5.70 & 0.129 & 0.000 \\
+multi    & random     & 2.79 & 0.322 & 0.000 \\
+real     & regulatory & 2.85 & 0.156 & 0.000 \\
+real     & random     & 2.10 & 0.287 & 0.000 \\
+real     & downwind   & 0.38 & 0.221 & 0.000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Experiment 4: wind-window ensemble distribution ($\sigma_J$ percentiles;
+both ensembles reach full rank with probability 1 and show no ambiguity).}
+\label{tab:results_h4_ens}
+\begin{tabular}{lrrr}
+\toprule
+ensemble & $\sigma_J^{5}$ & $\sigma_J^{50}$ & $\sigma_J^{95}$ \\
+\midrule
+historical (real slices) & 1.45 & 4.51 & 9.96 \\
+simulated (AR(1))        & 3.50 & 5.58 & 6.80 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Background Stress (Exp 3)}
+Redundant $\equiv$ primary (same span); the source-like stress basis collapses
+identifiability ($\sigma_J\!\to\!0$, absorption $\to\!1$).
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Experiment 3: background stress. Redundant $\equiv$ primary (same span);
+the source-like stress basis collapses identifiability ($\sigma_J\!\to\!0$,
+absorption $\to\!1$).}
+\label{tab:results_h3}
+\begin{tabular}{lrrrr}
+\toprule
+background & min.\ vis. & absorp. & $\sigma_J$ & coef.\ err. \\
+\midrule
+none      & 1.000 & 0.000 & 0.080 & 2.36 \\
+primary   & 0.972 & 0.235 & 0.080 & 2.61 \\
+redundant & 0.972 & 0.235 & 0.080 & 2.61 \\
+stress    & 0.000 & 1.000 & 0.000 & 0.78 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Transport Error (Exp 5)}
 \label{subsec:results_h5a}
-
-We use two kinds of transport error.  \emph{Parametric} perturbations vary wind
-speed, wind direction, and dispersion within the puff family; a \emph{structural}
-mismatch instead generates observations with the auxiliary edge-hold
-advection--diffusion PDE while fitting with the open-boundary puff response.  The
-operator error norm, coefficient/activity error, residual, and singular spectrum
-are reported together, and the parametric transport ensembles may support
-transport-uncertainty intervals.  The structural case additionally exercises the
-residual-adequacy test of Section~\ref{sec:identifiability_aware_method}: we report its
-rejection rate to show it has power against forward-model misspecification, not
-only against missing sources.
-
-Table~\ref{tab:results_h5a} reports the parametric family: coefficient error grows
-with the operator error norm along the wind-direction (to $0.86$ at $20^\circ$)
-and dispersion (to $0.89$ at $2\times$) axes, confirming that transport error
-propagates into attribution rather than being absorbed. The wind-speed axis is
-non-monotonic at these magnitudes (error $0.45$ then $0.27$ as the speed factor
-rises from $1.25$ to $1.5$), a reminder that a coarse operator-error norm does not
-fully order attribution error. The structural PDE mismatch (operator mismatch norm
-$0.44$) is the sharper test: it drives the mean coefficient relative error to
-$0.86$, and the refitted-bootstrap adequacy test rejects in $100\%$ of trials,
-confirming its power against forward-model misspecification.
-(Transport-interval coverage is supported by the parametric ensemble but not
-tabulated per row here.)
-
+Parametric perturbations (wind speed, direction, dispersion); a structural PDE
+mismatch generated with the auxiliary edge-hold advection--diffusion solver yields
+adequacy rejection rate $1.0$.
 \begin{table}[t]
 \centering
 \footnotesize
@@ -949,23 +981,10 @@ dispersion ($\times$)& 2.00 & 0.35 & 1.76 & 0.89 \\
 \end{tabular}
 \end{table}
 
-\subsection{Inventory Robustness}
+\subsection{Inventory Robustness (Exp 6)}
 \label{subsec:results_h5b}
-
-We perturb inventory locations, spatial scales, category assignments, and map
-versions while holding transport fixed.  Each alternative inventory is a
-separate robustness scenario.  Its variation is not pooled with the transport
-error of Experiment~5 and is not reported as a confidence interval.
-
-Table~\ref{tab:results_h5b} reports the four scenarios (location shift, spatial
-rescale, alternative map version, category swap) on the real New Delhi brick-kiln
-and industry maps. The known coefficients $[1.0,0.6]$ are recovered
-exactly in every scenario, but the identifiability geometry moves with the inventory
-version: rescaling the map or substituting an alternative version nearly doubles
-$\sigma_J$ (to $47.0$ and $46.0$) relative to baseline ($21.6$), whereas a symmetric
-category swap leaves it unchanged. The attribution \emph{target} thus changes with
-the assumed inventory even when recovery is exact.
-
+Location, scale, category, and map-version perturbations, each a separate scenario
+never pooled with transport error; recovery exact, $\sigma_J$ tracks the version.
 \begin{table}[t]
 \centering
 \footnotesize
@@ -985,23 +1004,10 @@ category swap     & 21.56 & 0.0 \\
 \end{tabular}
 \end{table}
 
-\subsection{Lag-Window Selection}
+\subsection{Lag-Window Selection (Exp 7)}
 \label{subsec:results_lag_selection}
-
-Physical travel and residence times define the candidate grid.  We evaluate
-Equation~\ref{eq:lag_convergence}, choose the smallest lag satisfying
-\(\tau_L=10^{-3}\), and report rank, conditioning, and report-component
-stability across the grid without using fitted source coefficients for selection.
-
-Table~\ref{tab:results_lag} sweeps the physically-motivated candidate grid. As the
-lag window grows the response stabilizes and conditioning improves monotonically
-($\kappa$ falls from $569$ at $L{=}4$ to $5.1$ at $L{=}16$; $\sigma_J$ rises from
-$0.08$ to $9.07$), while the numerical rank ($2$) and the number of report
-components ($2$) stay fixed and recovery is exact throughout. The selection rule
-picks the smallest lag whose relative Frobenius change falls to
-$\tau_L=10^{-3}$ (here $L=16$), using only response-matrix geometry; fitted source
-coefficients are not consulted and the row count is invariant across the grid.
-
+Conditioning improves with lag; the selected $L=16$ is chosen from
+Equation~\ref{eq:lag_convergence} alone, not fitted coefficients.
 \begin{table}[t]
 \centering
 \footnotesize
@@ -1022,26 +1028,10 @@ lag $L$ & $\sigma_J$ & $\kappa$ & \#comp. & coef.\ err. \\
 \end{tabular}
 \end{table}
 
-\subsection{Temporal-Basis Recovery}
+\subsection{Temporal-Basis Recovery (Exp 9)}
 \label{subsec:results_temporal_basis}
-
-Known traffic diurnal, brick-kiln intermittent, industry day/night, and mixed
-source-basis coefficients are reconstructed at increasing noise.  This study
-separates coefficient error from error in the reconstructed source activity
-trajectory.
-
-Table~\ref{tab:results_temporal} reports temporal-basis recovery over the diurnal,
-intermittent-block, and day/night bases at increasing noise (fixed $\sigma_J=0.14$).
-Separating the two error notions is the point: the reconstructed source-activity
-trajectory error is consistently smaller than the raw coefficient error (e.g.\
-$0.58$ versus $0.90$ at $20\%$ noise), because projecting the noisy coefficients
-through the temporal bases averages out part of the coefficient noise in the
-activity domain.  The activity-to-coefficient error ratio is near-constant
-(\(\approx0.57\)) across noise levels, indicating that this damping is a fixed
-geometric property of the temporal-basis map (which amplifies the coherent true
-signal more than the isotropic estimation noise) rather than a noise-dependent
-effect.
-
+Activity-trajectory error stays below coefficient error at every noise level (fixed
+$\sigma_J$), a fixed geometric property of the temporal-basis map.
 \begin{table}[t]
 \centering
 \footnotesize
@@ -1061,26 +1051,165 @@ noise & coef.\ err. & activity err. \\
 \end{tabular}
 \end{table}
 
-\subsection{Per-Sensor Footprints}
+\subsection{Baseline Comparison (Exp 11)}
+IASA against plain NNLS (identifiability layer ablated), chemical mass balance
+(unprojected), and a PMF/NMF receptor factorization, on the wind/geometry collapse
+and source-like background stress. IASA flags both and, under stress, recovers
+apportionment to $<\!0.01$ share error; no baseline flags either case.
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Experiment 11: IASA vs.\ identifiability-blind baselines on two
+non-identifiable scenarios (seed 0). Apportionment share error and whether an
+identifiability flag was raised. IASA flags in both scenarios; no baseline does.}
+\label{tab:results_baselines}
+\begin{tabular}{lllr}
+\toprule
+scenario & method & flag & share err. \\
+\midrule
+collapse    & IASA       & yes & 0.000 \\
+collapse    & plain NNLS & no  & 0.000 \\
+collapse    & CMB        & no  & 1.414 \\
+collapse    & PMF        & no  & 0.085 \\
+\midrule
+bg.\ stress & IASA       & yes & 0.006 \\
+bg.\ stress & plain NNLS & no  & 1.231 \\
+bg.\ stress & CMB        & no  & 0.189 \\
+bg.\ stress & PMF        & no  & 1.152 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Observed New Delhi (weeks 1--4)}
+Per-week identifiability geometry, proxy apportionment (fraction of fitted sensor
+signal, not physical emissions), and sensor-fit/residual diagnostics (PM$_{2.5}$
+never imputed; adequacy uncalibrated).
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Observed New Delhi identifiability, weeks 1--4. All weeks are full rank,
+finite-conditioned, with singleton report groups.}
+\label{tab:results_nd_ident}
+\begin{tabular}{lrrrrl}
+\toprule
+week & $\sigma_1$ & $\sigma_J$ & num.\ rank & max.\ coh. & groups \\
+\midrule
+1 & 50.1 & 3.71  & 7 & 0.316 & 4 singletons \\
+2 & 60.3 & 5.67  & 7 & 0.355 & 4 singletons \\
+3 & 77.0 & 10.15 & 7 & 0.496 & 4 singletons \\
+4 & 81.2 & 7.65  & 7 & 0.475 & 4 singletons \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Observed New Delhi proxy apportionment, weeks 1--4 (fraction of fitted
+sensor signal, not physical emissions). Note the large week-to-week swing.}
+\label{tab:results_nd_appt}
+\begin{tabular}{lrrrr}
+\toprule
+week & brick kilns & industries & population & traffic \\
+\midrule
+1 & 0.00 & 0.00 & 1.00 & 0.00 \\
+2 & 0.00 & 0.16 & 0.81 & 0.04 \\
+3 & 0.06 & 0.00 & 0.94 & 0.00 \\
+4 & 0.93 & 0.07 & 0.00 & 0.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Observed New Delhi sensor fit and residual diagnostics, weeks 1--4.
+PM$_{2.5}$ never imputed; adequacy uncalibrated (no verdict).}
+\label{tab:results_nd_resid}
+\begin{tabular}{lrrrl}
+\toprule
+week & obs.\ rows & mask frac. & resid.\ norm & adequacy \\
+\midrule
+1 & 4561 & 0.848 & 3768 & uncalibrated \\
+2 & 4278 & 0.796 & 5955 & uncalibrated \\
+3 & 4315 & 0.803 & 3050 & uncalibrated \\
+4 & 4236 & 0.788 & 3760 & uncalibrated \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Additional Experiments}
+\label{app:additional_experiments}
+
+Three further controlled experiments not shown in the main-text figures.
+
+\subsection{Coherence and Grouped Reporting (Exp 2)}
+\label{subsec:results_h2}
+We form increasingly coherent source pairs by shifting a copy of one inventory map by
+a controlled spatial offset, so decreasing the shift drives coherence toward one.
+Shrinking the offset drives maximum eligible coherence from $0.05$ to $0.96$ while
+$\sigma_J$ falls from $21.8$ to $4.6$, yet at every offset the conservative rule kept
+the two sources in separate singleton components with exact recovery (individual and
+grouped relative error $0$; Table~\ref{tab:results_h2}): high coherence alone did not
+force a merge here. The reporting layer retains \emph{every} trigger edge without
+deduplication when a merge does fire (an A--B--C chain keeps both edges).
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Experiment 2: coherence rises as the source offset shrinks, but the
+conservative rule merged no sources and recovery stayed exact.}
+\label{tab:results_h2}
+\begin{tabular}{rrrll}
+\toprule
+offset & max.\ coh. & $\sigma_J$ & merged & indiv./grp.\ err. \\
+\midrule
+8.0 & 0.048 & 21.77 & no & 0.0 / 0.0 \\
+6.0 & 0.862 & 10.48 & no & 0.0 / 0.0 \\
+4.0 & 0.905 & 8.40  & no & 0.0 / 0.0 \\
+2.0 & 0.945 & 5.43  & no & 0.0 / 0.0 \\
+1.0 & 0.958 & 4.64  & no & 0.0 / 0.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Missing-Source Adequacy (Exp 8)}
+\label{subsec:results_missing_source}
+On the real New Delhi platform with a non-empty rank-4 primary background, the
+refitted parametric bootstrap ($\alpha=0.05$, $1000$ replicates) is well-calibrated
+(null rejection rate $0.05$) and has full power against a residual-visible omitted
+source whose signature lies largely outside
+$\operatorname{span}[H_\Phi^{\mathrm{lag}},Q]$ (rejection $1.0$); an \emph{aligned}
+omission, a nonnegative combination of the fitted columns and background, is absorbed
+and not detected (rejection $0.05$; Table~\ref{tab:results_missing}). The test is
+therefore one-sided: a rejection is evidence of model inadequacy, whereas a
+non-rejection cannot certify inventory completeness.
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Experiment 8: missing-source adequacy on the platform (non-empty $Q$).
+Calibrated null, full power on a residual-visible omission, and no detection of an
+absorbed in-span omission.}
+\label{tab:results_missing}
+\begin{tabular}{lr}
+\toprule
+omission case & rejection rate \\
+\midrule
+none (null, calibration) & 0.05 \\
+residual-visible (out of span, frac.\ 0.91) & 1.00 \\
+aligned (in span, absorbed) & 0.05 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Per-Sensor Footprints (Exp 10)}
 \label{subsec:results_footprints}
-
-On controlled trials with known source origins, we check that the per-sensor
-footprints of Section~\ref{sec:identifiability_theory} localize the responsible
-upwind cells and that per-sensor contributions sum to the fitted sensor signal.
-On observed New Delhi data we report, per monitor, the fitted source-group
-contributions and their spatial cells of origin, aggregated to the identifiable
-report groups so no per-sensor separation exceeds the network's global
-resolution.
-
-On the controlled trial this localization is accurate: the footprint mass centroid
-lies $0.74$ cells from the true
-source origin, $100\%$ of the footprint mass falls within the $4$-cell localization
-radius, and the footprints are nonnegative. The exact per-sensor decomposition
-holds: per-sensor contributions sum to the fitted sensor signal to machine
-precision (contribution-sum error $0$), and because a non-singleton report
-component is present, footprints are reported at the group granularity. The
-observed New Delhi per-monitor footprints appear with the apportionment results
-in Section~\ref{subsec:results_new_delhi_apportionment}.
+On controlled trials the per-sensor footprints of
+Section~\ref{sec:identifiability_theory} localize the responsible upwind cells (mass
+centroid $0.74$ cells from the true origin, $100\%$ of mass within the $4$-cell
+radius, nonnegative) and per-sensor contributions sum to the fitted sensor signal to
+machine precision; because a non-singleton component is present, footprints are
+reported at group granularity. On observed New Delhi data footprints are reported per
+monitor at the identifiable report groups, accompanying the apportionment of
+Section~\ref{subsec:results_new_delhi_apportionment}
+(Appendix~\ref{app:footprint_details}).
 
 \section{Extended Discussion on Related Work}
 \label{app:extended_related_work}
