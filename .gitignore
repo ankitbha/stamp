@@ -25,3 +25,6 @@ experiments/iasa_pol/runs/
 .vscode/texmf/
 .vscode/texmf-var/
 .vscode/texmf-config/
+
+# Local Python environment (plan D6)
+.venv/

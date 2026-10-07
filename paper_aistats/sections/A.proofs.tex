@@ -1,0 +1,349 @@
+\section{Proofs}
+\label{app:identifiability_proofs}
+
+In this appendix \(A\) denotes the projected operator \(\widetilde A\) of
+Equation~\ref{eq:projected_model}, \(\mathbf a_j\) its columns,
+\(V_g=\operatorname{col}(A_g)\), \(W_g=\operatorname{col}(A_{E\setminus g})\) and
+\(U=\operatorname{col}(A)\).  The unit tests in the code release
+(\texttt{tests/test\_iasa\_grouping.py}) check numerically the exact components against
+brute force (Theorem~\ref{thm:groupings}(b)--(d)), the two-column separation
+\(\sqrt{1-\rho^2}\), Theorem~\ref{thm:group_error}(a), the examples of
+Proposition~\ref{prop:reportable_structure}, and the exhaustive and greedy partition
+searches.
+
+\subsection{Individual Contributions}
+
+\noindent\textbf{Proof of Proposition~\ref{prop:rank_identifiability}.}
+If \(\operatorname{rank}(A)=J\), the rank--nullity theorem gives
+\(\ker(A)=\{\mathbf 0\}\), so \(A\mathbf c_1=A\mathbf c_2\) implies
+\(\mathbf c_1=\mathbf c_2\).  Conversely, if \(\operatorname{rank}(A)<J\) there is a
+nonzero \(\mathbf d\in\ker(A)\).  Choose \(\beta>\|\mathbf d\|_\infty\) and set
+\(\mathbf c=\beta\mathbf 1\).  Then \(\mathbf c\) and \(\mathbf c+\mathbf d\) are
+distinct, both lie in \(\mathbb R_+^J\) because
+\(\beta+d_j\ge\beta-\|\mathbf d\|_\infty>0\), and
+\(A(\mathbf c+\mathbf d)=A\mathbf c\).  \(\square\)
+
+The same interior-point construction is used below whenever a kernel vector must be
+turned into two nonnegative vectors with equal projected observations.
+
+\noindent\textbf{Proof of Proposition~\ref{prop:noise_robust}.}
+For least squares with full column rank,
+\(\widehat{\mathbf c}-\mathbf c=A^\dagger\widetilde{\boldsymbol\epsilon}
+=A^\dagger P_A\widetilde{\boldsymbol\epsilon}\), and
+\(\|A^\dagger\|_2=1/\sigma_J(A)\).  For NNLS, let
+\(C=\{A\mathbf z:\mathbf z\ge0\}\), a closed convex cone contained in \(U\).  For
+\(\mathbf x\in U\),
+\(\|\yt-\mathbf x\|_2^2=\|P_A\yt-\mathbf x\|_2^2+\|(I-P_A)\yt\|_2^2\), so the
+fitted signal is \(A\widehat{\mathbf c}=\Pi_C(\yt)=\Pi_C(P_A\yt)\), where \(\Pi_C\) is
+the Euclidean projection onto \(C\).  Since \(\mathbf c\ge0\), \(A\mathbf c\in C\)
+and \(\Pi_C(A\mathbf c)=A\mathbf c\).  Projection onto a closed convex set is
+nonexpansive, so
+\[
+\|A(\widehat{\mathbf c}-\mathbf c)\|_2
+=\|\Pi_C(P_A\yt)-\Pi_C(A\mathbf c)\|_2
+\le\|P_A\yt-A\mathbf c\|_2
+=\|P_A\widetilde{\boldsymbol\epsilon}\|_2 .
+\]
+Full column rank gives \(\|A\Delta\|_2\ge\sigma_J(A)\|\Delta\|_2\) for
+\(\Delta=\widehat{\mathbf c}-\mathbf c\), which proves the first inequality
+in~\eqref{eq:nnls_noise_bound}; the second holds because \(P_A\) is an orthogonal
+projector.  \(\square\)
+
+\noindent\textbf{Ray distance (Equation~\ref{eq:ray_distance_coherence_relation}).}
+For nonzero \(\mathbf a_i,\mathbf a_j\), the function
+\(\alpha\mapsto\|\mathbf a_i-\alpha\mathbf a_j\|_2^2/\|\mathbf a_i\|_2^2\) is
+strictly convex with minimizer
+\(\alpha^\star=\mathbf a_i^\top\mathbf a_j/\|\mathbf a_j\|_2^2\) and minimum
+\(1-\rho_{ij}^2\).  The minimum is also \(\sin^2\) of the angle between
+\(\mathbf a_i\) and \(\operatorname{span}(\mathbf a_j)\), so for \(J=2\) the ray
+distance equals the sine of the angle between the two columns.  \(\square\)
+
+\noindent\textbf{Proof of Proposition~\ref{prop:operator_perturbation}.}
+Let \(\widehat A\) have full column rank and \(\|\widehat A-A^\star\|_2\le\delta_H\).
+The data obey
+\(\yt=A^\star\mathbf c+\widetilde{\boldsymbol\epsilon}
+=\widehat A\mathbf c+[\widetilde{\boldsymbol\epsilon}+(A^\star-\widehat A)\mathbf c]\),
+and \(\widehat A^\dagger\widehat A=I_J\), so
+\(\widehat{\mathbf c}-\mathbf c=\widehat A^\dagger[\widetilde{\boldsymbol\epsilon}
++(A^\star-\widehat A)\mathbf c]\).  Taking norms gives
+Equation~\ref{eq:operator_error_bound}.  \(\square\)
+
+\subsection{Identifiable Groupings}
+
+\noindent\textbf{Proof of Theorem~\ref{thm:groupings}.}
+\emph{(a)}  Suppose \(U=\bigoplus_gV_g\).  If \(A\mathbf c_1=A\mathbf c_2\), then
+\(\sum_gA_g(\mathbf c_{1,g}-\mathbf c_{2,g})=0\) with each term in \(V_g\), so each
+term is zero.  Conversely, if the sum \(\sum_gV_g\) is not direct, there are
+\(\mathbf u_g\in V_g\), not all zero, with \(\sum_g\mathbf u_g=0\).  Writing
+\(\mathbf u_g=A_g\mathbf d_g\) defines \(\mathbf d\in\ker(A)\) with
+\(A_h\mathbf d_h\ne0\) for some \(h\).  With \(\mathbf c=\beta\mathbf 1\) and
+\(\beta>\|\mathbf d\|_\infty\), the vectors \(\mathbf c\) and \(\mathbf c+\mathbf d\)
+are nonnegative, have equal projected observations, and have different signals in
+block \(h\).  The rank form holds because \(\dim\sum_gV_g=\operatorname{rank}(A)\),
+with equality to \(\sum_g\dim V_g\) exactly when the sum is direct.
+
+\emph{(b, c)}  Let \(B\) index a basis of \(U\) chosen from the columns, write
+\(\mathbf a_e=\sum_{b\in B}T_{be}\mathbf a_b\) for \(e\notin B\), and let
+\(S_1,\dots,S_m\) be the vertex sets of the connected components of the graph that
+joins \(e\notin B\) to every \(b\) with \(T_{be}\ne0\) (isolated vertices are
+components).
+
+\emph{Step 1: \(\mathcal S=\{S_i\}\) is identifiable.}  Let \(B_i=B\cap S_i\).  Every
+\(e\in S_i\setminus B\) has all basis columns with nonzero coefficient in \(S_i\),
+so \(\mathbf a_e\in\operatorname{span}\{\mathbf a_b:b\in B_i\}\) and
+\(\operatorname{rank}(A_{S_i})=|B_i|\).  Hence
+\(\sum_i\operatorname{rank}(A_{S_i})=|B|=\operatorname{rank}(A)\), and (a) applies.
+
+\emph{Step 2: every identifiable \(\mathcal P\) coarsens \(\mathcal S\).}  Suppose
+some \(S_i\) meets two blocks of \(\mathcal P\).  Since \(S_i\) is connected, some
+edge \(\{e,b\}\) with \(T_{be}\ne0\) has \(e\in g\) and \(b\in h\) for distinct blocks
+\(g,h\).  Let \(d_e=1\), \(d_{b'}=-T_{b'e}\) for \(b'\in B\), and \(d_j=0\)
+otherwise; then \(A\mathbf d=0\), and
+\(A_h\mathbf d_h=-\sum_{b'\in B\cap h}T_{b'e}\mathbf a_{b'}\) is a combination of
+linearly independent columns with the nonzero coefficient \(-T_{be}\), so
+\(A_h\mathbf d_h\ne0\).  The interior-point construction contradicts
+identifiability.
+
+\emph{Step 3: coarsening preserves identifiability.}  Grouping the summands of a
+direct sum gives a direct sum, and \(V_{g\cup h}=V_g+V_h\).
+
+Steps 1--3 show that the identifiable partitions are exactly the coarsenings of
+\(\mathcal S\), so \(\mathcal S\) is the unique finest identifiable partition and
+does not depend on \(B\).  This proves (b) and the graph characterization in (c).
+That the components of this graph are the connected components of the column
+matroid is \citet{krogdahl1977dependence}; see also \citet{oxley2011matroid}.
+
+\emph{(d)}  A partition whose blocks are unions of blocks of \(\mathcal D\) is
+identifiable exactly when it is a common coarsening of \(\mathcal P^\star\) and
+\(\mathcal D\).  The finest common coarsening \(\mathcal P^\star\vee\mathcal D\) is
+one, by Step 3.  \(\square\)
+
+\begin{proposition}[Sums of coefficients]
+\label{prop:sum_identifiable}
+Call \(\mathcal P\) \emph{sum-identifiable} if \(A\mathbf c_1=A\mathbf c_2\) with
+\(\mathbf c_1,\mathbf c_2\in\mathbb R_+^J\) implies
+\(\sum_{j\in g}c_{1,j}=\sum_{j\in g}c_{2,j}\) for every block \(g\).  This holds if and
+only if every block indicator lies in \(\operatorname{row}(A)\); minimal
+sum-identifiable partitions need not be unique, and for rational \(A\) deciding whether
+one with at least two blocks exists is NP-complete.
+\end{proposition}
+
+\noindent\textbf{Proof of Proposition~\ref{prop:sum_identifiable}.}
+\(\mathcal P\) is sum-identifiable when \(\mathbf 1_g^\top\mathbf c\) is determined by
+\(A\mathbf c\) for every block, on \(\mathbb R_+^J\).  By the interior-point construction, a linear functional
+\(\boldsymbol\lambda^\top\mathbf c\) is determined exactly when
+\(\boldsymbol\lambda\perp\ker(A)\), that is
+\(\boldsymbol\lambda\in\operatorname{row}(A)\), so \(\mathcal P\) is sum-identifiable
+exactly when every block indicator lies in \(\operatorname{row}(A)\).
+
+\emph{Non-uniqueness.}  Let \(A\) have rows \((1,1,0,0)\), \((0,0,1,1)\) and
+\((1,0,1,0)\).  Its row space contains \((0,1,0,1)\) but no unit vector and not
+\((1,0,0,1)\), so the sum-identifiable partitions are \(\{E\}\),
+\(\{\{1,2\},\{3,4\}\}\) and \(\{\{1,3\},\{2,4\}\}\); the last two are both minimal.
+For the signal target on the same \(A\), \(\ker(A)\) is spanned by
+\((1,-1,-1,1)\), the four columns form one circuit, and
+\(\mathcal P^\star=\{E\}\).
+
+\emph{NP-completeness.}  The problem ``given rational \(A\), is there a
+sum-identifiable partition with at least two blocks?'' is in NP, since
+a partition can be checked with rank computations.  For hardness, take an instance
+\(w_1,\dots,w_n\) of \textsc{Partition} \citep{garey1979computers} with
+\(\sum_iw_i=2T\), let \(\mathbf d=(w_1,\dots,w_n,-T,-T)\in\mathbb Z^{n+2}\), and let
+\(A\) be a rational \((n+1)\times(n+2)\) matrix whose rows span
+\(\mathbf d^\perp\), so that \(\operatorname{row}(A)=\mathbf d^\perp\).  Because
+\(\mathbf 1_E^\top\mathbf d=0\), a partition with at least two blocks exists exactly
+when some nonempty proper \(g\subset E\) has \(\mathbf 1_g^\top\mathbf d=0\) (then
+\(\{g,E\setminus g\}\) qualifies).  If \(g\) contains neither of the last two
+coordinates, \(\mathbf 1_g^\top\mathbf d>0\); if it contains both,
+\(\mathbf 1_g^\top\mathbf d=0\) forces \(g=E\); if it contains exactly one, the
+condition is \(\sum_{i\in g,\,i\le n}w_i=T\), a solution of \textsc{Partition}.
+\(\square\)
+
+\subsection{Structure of Reportable Partitions}
+
+\begin{proposition}[Structure of reportable partitions]
+\label{prop:reportable_structure}
+\leavevmode
+\begin{enumerate}[label=(\alph*),leftmargin=*,itemsep=0pt,topsep=2pt]
+  \item The one-block partition \(\{E\}\) is reportable at every \(\tau_\theta\).
+  \item If \(g\) and \(h\) are blocks of an identifiable partition, then
+  \(1/s_{g\cup h}\le1/s_g+1/s_h\), and reportable partitions are not closed under
+  coarsening.
+  \item Minimal reportable partitions need not be unique.
+\end{enumerate}
+\end{proposition}
+
+\begin{remark}[Implication]
+Proposition~\ref{prop:reportable_structure} needs only Assumption~\ref{ass:model}.  By
+(a) a reportable partition always exists: in the worst case IASA reports the total
+signal of all sources.  By (b), merging two blocks does not always help: the merged
+block can be closer to the remaining sources than either part, so IASA checks every
+union of atoms rather than merging the least separated pair.  By (c), more than one
+partition can have the most blocks; IASA therefore states its tie-break (the largest
+smallest separation) and lists the remaining ties.
+\end{remark}
+
+\subsection{An Oblique Projection Lemma}
+
+\begin{lemma}
+\label{lem:oblique}
+Let \(U=V\oplus W\) with \(V\ne\{0\}\ne W\), let \(\theta\in(0,\pi/2]\) be the smallest
+principal angle between \(V\) and \(W\), and let \(\pi\) be the projection onto
+\(V\) along \(W\), defined on \(U\).  Then \(\|\pi\|_2=1/\sin\theta\).
+\end{lemma}
+
+\begin{proof}
+Write \(\mathbf u=\mathbf x+\mathbf w\) with \(\mathbf x\in V\), \(\mathbf w\in W\).
+By the definition of \(\theta\),
+\(|\mathbf x^\top\mathbf w|\le\cos\theta\,\|\mathbf x\|_2\|\mathbf w\|_2\), so
+\[
+\|\mathbf u\|_2^2\ge\|\mathbf x\|_2^2+\|\mathbf w\|_2^2
+-2\cos\theta\|\mathbf x\|_2\|\mathbf w\|_2
+=(\|\mathbf w\|_2-\cos\theta\|\mathbf x\|_2)^2+\sin^2\theta\|\mathbf x\|_2^2
+\ge\sin^2\theta\|\mathbf x\|_2^2 ,
+\]
+which gives \(\|\pi\mathbf u\|_2\le\|\mathbf u\|_2/\sin\theta\).  For unit principal
+vectors \(\mathbf x_0\in V\), \(\mathbf w_0\in W\) with
+\(\mathbf x_0^\top\mathbf w_0=\cos\theta\), the vector
+\(\mathbf u=\mathbf x_0-\cos\theta\,\mathbf w_0\) has \(\|\mathbf u\|_2=\sin\theta\)
+and \(\pi\mathbf u=\mathbf x_0\), so the bound is attained
+\citep{ipsen1995angle}.
+\end{proof}
+
+If \(V=\{0\}\), then \(\pi=0\); if \(W=\{0\}\), \(\pi\) is the identity on \(U\).  Both
+cases are consistent with the convention \(s_g=1\).
+
+\subsection{Group-Signal Error, Reportable Partitions and Stability}
+
+\noindent\textbf{Proof of Theorem~\ref{thm:group_error}.}
+\emph{(a)}  By Theorem~\ref{thm:groupings}(a), \(U=\bigoplus_{g}V_g\), and
+\(W_g=\bigoplus_{h\ne g}V_h\).  Let \(\pi_g\) be the projection of \(U\) onto
+\(V_g\) along \(W_g\).  For any \(\mathbf z\),
+\(A\mathbf z=\sum_gA_g\mathbf z_g\) with \(A_g\mathbf z_g\in V_g\), so
+\(A_g\mathbf z_g=\pi_g(A\mathbf z)\).  All least-squares solutions have the fitted
+signal \(P_A\yt\), and all NNLS solutions have the fitted signal \(\Pi_C(\yt)\),
+which is unique because \(C\) is closed and convex; hence the group signals do not
+depend on the solution.  Moreover
+\(A_g(\widehat{\mathbf c}_g-\mathbf c_g)=\pi_g\bigl(A(\widehat{\mathbf c}-\mathbf c)\bigr)\),
+where \(A(\widehat{\mathbf c}-\mathbf c)=P_A\widetilde{\boldsymbol\epsilon}\) for
+least squares and \(\|A(\widehat{\mathbf c}-\mathbf c)\|_2\le
+\|P_A\widetilde{\boldsymbol\epsilon}\|_2\) for NNLS (proof of
+Proposition~\ref{prop:noise_robust}).  Lemma~\ref{lem:oblique} with \(V=V_g\),
+\(W=W_g\) gives \(\|\pi_g\|_2\le1/s_g\), with equality when \(V_g\) and \(W_g\) are
+nonzero, which proves~\eqref{eq:group_bound}.
+
+\emph{(b)}  Since \(U\subseteq\operatorname{col}(Q)^\perp\),
+\(P_A\widetilde{\boldsymbol\epsilon}=P_AP_Q^\perp\boldsymbol\epsilon
+=P_A\boldsymbol\epsilon\).  The least-squares error of block \(g\) is
+\(M\boldsymbol\epsilon\) with \(M=\pi_gP_A\), a matrix of rank \(r_g\) with
+\(\|M\|_2=\|\pi_g\|_2=1/s_g\) when \(r_g\ge1\); when \(r_g=0\), \(M=0\) and the
+error is zero.  Hence
+\(\mathbb E\|M\boldsymbol\epsilon\|_2^2=\sigma^2\|M\|_F^2\le\sigma^2r_g\|M\|_2^2
+=\sigma^2r_g/s_g^2\), with equality when \(r_g=1\) because \(M\) then has one nonzero
+singular value.  The map \(\boldsymbol\epsilon\mapsto\|M\boldsymbol\epsilon\|_2\) is
+\(\|M\|_2\)-Lipschitz, so the Gaussian concentration inequality of
+Tsirelson, Ibragimov and Sudakov \citep{boucheron2013concentration} gives
+\(\|M\boldsymbol\epsilon\|_2\le\mathbb E\|M\boldsymbol\epsilon\|_2
++\sigma\|M\|_2\sqrt{2\log(1/\delta)}\) with probability at least \(1-\delta\), and
+\(\mathbb E\|M\boldsymbol\epsilon\|_2\le\sigma\|M\|_F\le\sigma\sqrt{r_g}/s_g\); this gives a
+high-probability least-squares bound with \(\sqrt{r_g}\) in place of
+\(\sqrt{\operatorname{rank}(A)}\), which the theorem does not state.
+
+\emph{(c)}  As in (b), \(P_A\widetilde{\boldsymbol\epsilon}=P_A\boldsymbol\epsilon\).
+Write \(\boldsymbol\epsilon=\Sigma^{1/2}\mathbf z\) with \(\mathbf z\sim N(0,I_N)\)
+(\(\Sigma=\sigma^2I\) under Assumption~\ref{ass:noise}) and
+\(f(\mathbf z)=\|P_A\Sigma^{1/2}\mathbf z\|_2\).  The map \(f\) is Lipschitz with
+constant \(\|P_A\Sigma^{1/2}\|_2\le\|\Sigma\|_2^{1/2}\), and
+\(\mathbb Ef\le(\mathbb Ef^2)^{1/2}=\|P_A\Sigma^{1/2}\|_F
+\le\sqrt{\operatorname{rank}(A)}\,\|\Sigma\|_2^{1/2}\), because
+\(P_A\Sigma^{1/2}\) has rank at most \(\operatorname{rank}(A)\).  The Gaussian
+concentration inequality \citep{boucheron2013concentration} gives, with probability at
+least \(1-\delta\),
+\(\|P_A\widetilde{\boldsymbol\epsilon}\|_2\le\|\Sigma\|_2^{1/2}
+\bigl(\sqrt{\operatorname{rank}(A)}+\sqrt{2\log(1/\delta)}\bigr)\).  On this event,
+part (a), which holds for every noise vector, applies to every block of every
+identifiable partition at once.  \(\square\)
+
+\noindent\textbf{Proof of Proposition~\ref{prop:reportable_structure}.}
+\emph{(a)}  \(\{E\}\) is identifiable and \(s_E=1\) by convention.
+\emph{(b)}  With \(\pi_g\) as above, \(\pi_{g\cup h}=\pi_g+\pi_h\), because both send
+\(\sum_k\mathbf x_k\) (with \(\mathbf x_k\in V_k\)) to \(\mathbf x_g+\mathbf x_h\).  By
+Lemma~\ref{lem:oblique},
+\(1/s_{g\cup h}=\|\pi_g+\pi_h\|_2\le1/s_g+1/s_h\) when \(V_{g\cup h}\ne\{0\}\); when
+\(V_{g\cup h}=\{0\}\), \(s_{g\cup h}=1\) and the inequality holds because
+\(1/s_g,1/s_h\ge1\).  For the \(4\times4\) operator
+\[
+\begin{pmatrix}
+0.248&-0.142&0.165&0.828\\
+0.899&-0.775&-0.917&0.229\\
+-0.356&-0.381&0.243&-0.507\\
+-0.063&-0.484&-0.270&0.069
+\end{pmatrix}
+\]
+the four singletons have separations of at least \(0.3\), while the blocks of
+\(\{\{1,2\},\{3,4\}\}\) have separation below \(0.3\), so at \(\tau_\theta=0.3\) a
+reportable partition has a coarsening that is not reportable.
+\emph{(c)}  Let \(\at_1=(1,0,0)\), \(\at_2=(\cos a,\sin a,0)\) and
+\(\at_3=(\cos a,0,\sin a)\) with \(a=0.3\), and \(\tau_\theta=0.25\).
+\(\operatorname{span}(\at_1,\at_2)\) is the plane \(x_3=0\), at angle
+\(a\) from \(\at_3\), so both blocks of \(\{\{1,2\},\{3\}\}\) have separation
+\(\sin a=0.296\); by symmetry so do those of \(\{\{1,3\},\{2\}\}\).  The angle
+between \(\at_1\) and \(\operatorname{span}(\at_2,\at_3)\) has sine
+\(\sin a/\sqrt{1+\cos^2a}=0.214\), which is \(s_1\) and also the separation of
+\(\{2,3\}\).  At \(\tau_\theta=0.25\) the partitions \(\{\{1,2\},\{3\}\}\) and
+\(\{\{1,3\},\{2\}\}\) are reportable, neither refines the other, and the only finer
+partition, the three singletons, is not reportable because \(s_1=0.214\).  \(\square\)
+
+\noindent\textbf{Minimal reportable partitions.}  Let the atoms partition \(E\).  A
+partition into unions of atoms whose blocks all have \(s_h>0\) is identifiable: \(s_h>0\)
+means \(V_h\cap W_h=\{0\}\) with \(W_h=\sum_{k\ne h}V_k\), and a sum of subspaces is direct
+exactly when each summand meets the sum of the others only in \(\{0\}\).  So a partition
+into unions of atoms is reportable exactly when every block has \(s_h\ge\tau_\theta\).
+Since \(s_h\) depends only on \(h\), a reportable partition has a strictly finer reportable
+partition into unions of atoms exactly when one of its blocks can be split into unions
+of atoms that all have separation at least \(\tau_\theta\).  This gives the
+characterization used in step 5 of Algorithm~\ref{alg:iasa}.
+
+\noindent\textbf{Computing minimal reportable partitions.}  With \(q\) atoms, the
+separations of all nonempty proper unions of atoms take \(2^{q-1}-1\) principal-angle
+computations, because \(s_h=s_{E\setminus h}\) and \(s_E=1\).  From the flags \(s_h\ge\tau_\theta\), dynamic
+programming over subsets that contain their lowest atom decides for every union \(S\)
+whether it can be partitioned into reportable unions, and hence which reportable unions
+cannot be split, in \(O(3^q)\) time.  The same recursion, maximizing first the number
+of blocks and then the smallest separation, returns the reported partition in
+\(O(3^q)\) time, because \(\min(s_h,\cdot)\) preserves the order of the second criterion.
+Listing all minimal reportable partitions, which IASA does to report ties, adds work for
+each listed partition.  The greedy rule merges the least separated block with the
+partner that maximizes the separation of the merged block; merging \(g\) and \(h\)
+leaves every other block's separation unchanged, because \(s_k\) depends only on \(k\),
+and the rule stops within \(q-1\) merges because \(s_E=1\).  It has no optimality
+guarantee.
+
+\noindent\textbf{Proof of Proposition~\ref{prop:grouping_stability}.}
+For unit vectors let \(d(\mathbf x,\mathbf y)=\arccos|\mathbf x^\top\mathbf y|\),
+the angle between the lines they span, which is a metric on lines.  Then
+\(\theta_g=\min\{d(\mathbf x,\mathbf w):\mathbf x\in V_g,\mathbf w\in W_g\}\).
+For a full-column-rank \(M\) and \(\|\Delta\|_2\le\sigma_{\min}(M)/2\), so that the
+arcsine arguments below are at most \(1\): a unit
+\(\mathbf x'=(M+\Delta)\mathbf z/\|(M+\Delta)\mathbf z\|_2\) in
+\(\operatorname{col}(M+\Delta)\) is within distance
+\(\|\Delta\mathbf z\|_2/\|(M+\Delta)\mathbf z\|_2\le
+\|\Delta\|_2/(\sigma_{\min}(M)-\|\Delta\|_2)\) of \(\operatorname{col}(M)\), and a unit
+\(\mathbf x=M\mathbf z/\|M\mathbf z\|_2\) is within distance
+\(\|\Delta\|_2/\sigma_{\min}(M)\) of \(\operatorname{col}(M+\Delta)\).  For a unit
+vector the distance to a subspace is the sine of its angle to that subspace, so in
+both directions the nearest line is within angle
+\(\arcsin(\|\Delta\|_2/(\sigma_{\min}(M)-\|\Delta\|_2))\).  Applied to \(M=A_g\) and
+\(M=A_{E\setminus g}\) this gives the angles \(\beta_g\) and \(\beta_{E\setminus g}\).  If
+\(\mathbf x',\mathbf w'\) attain \(\theta_g(A')\) and \(\mathbf x\in V_g\),
+\(\mathbf w\in W_g\) are their nearest lines, the triangle inequality gives
+\(\theta_g(A)\le d(\mathbf x,\mathbf w)\le\beta_g+\beta_{E\setminus g}+\theta_g(A')\); the same argument
+from \(A\) to \(A'\) gives the reverse inequality.  For the second statement, \(\|\Delta\|_2\le\sigma_J(A)/2\) gives
+\(\sigma_J(A')\ge\sigma_J(A)/2>0\), so both operators have full column rank, every
+partition is identifiable for both, and both have \(\mathcal P^\star\) equal to the
+singletons, so the atoms coincide.  For a nonempty proper union \(g\) of atoms,
+\(\sigma_{\min}(A_g)\ge\sigma_J(A)\ge2\|\Delta\|_2\ge2\|\Delta_g\|_2\), and the same for
+\(E\setminus g\), so the first statement applies and the margin condition keeps
+\(\theta_g\) on the same side of \(\arcsin\tau_\theta\); \(s_E=1\) for both.  By the
+characterization of minimal reportable partitions above, the reportable and the minimal
+reportable partitions coincide.  \(\square\)

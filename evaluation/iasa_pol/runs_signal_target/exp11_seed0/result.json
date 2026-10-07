@@ -1,0 +1,361 @@
+{
+  "experiment": "exp11_baseline_comparison",
+  "hypothesis": "baselines",
+  "rows": [
+    {
+      "coefficient_relative_error": 0.5734641855072048,
+      "grouped_coef_error": 0.4107201586924252,
+      "identifiability_flag": true,
+      "method": "IASA",
+      "reported_coef_error": 0.4107201586924252,
+      "residual_norm": 8.592191557448031e-12,
+      "scenario": "wind_geometry_collapse",
+      "share_l2_error": 4.769586928411037e-09
+    },
+    {
+      "coefficient_relative_error": 0.573464189505,
+      "grouped_coef_error": 0.4107201615629821,
+      "identifiability_flag": null,
+      "method": "plain_nnls_B1",
+      "reported_coef_error": 0.573464189505,
+      "residual_norm": 8.59219155744803e-12,
+      "scenario": "wind_geometry_collapse",
+      "share_l2_error": 4.769586945006803e-09
+    },
+    {
+      "coefficient_relative_error": 2.2327249131177587e+18,
+      "grouped_coef_error": 1.6031694603885955e+18,
+      "identifiability_flag": null,
+      "method": "cmb_B3",
+      "reported_coef_error": 2.2327249131177587e+18,
+      "residual_norm": 3.228939906820955,
+      "scenario": "wind_geometry_collapse",
+      "share_l2_error": 1.4142135576035082
+    },
+    {
+      "coefficient_relative_error": null,
+      "grouped_coef_error": null,
+      "identifiability_flag": null,
+      "method": "pmf_nmf_B2",
+      "reported_coef_error": null,
+      "residual_norm": null,
+      "scenario": "wind_geometry_collapse",
+      "share_l2_error": 1.329713061470357
+    },
+    {
+      "coefficient_relative_error": 0.7753805490192074,
+      "grouped_coef_error": null,
+      "identifiability_flag": true,
+      "method": "IASA",
+      "reported_coef_error": 0.7753805490192074,
+      "residual_norm": 6.851814905312431,
+      "scenario": "background_stress",
+      "share_l2_error": 0.006063056274009016
+    },
+    {
+      "coefficient_relative_error": 0.7753805490665236,
+      "grouped_coef_error": null,
+      "identifiability_flag": null,
+      "method": "plain_nnls_B1",
+      "reported_coef_error": 0.7753805490665236,
+      "residual_norm": 6.851814905312428,
+      "scenario": "background_stress",
+      "share_l2_error": 0.006063056529734606
+    },
+    {
+      "coefficient_relative_error": 2.405465762815345,
+      "grouped_coef_error": null,
+      "identifiability_flag": null,
+      "method": "cmb_B3",
+      "reported_coef_error": 2.405465762815345,
+      "residual_norm": 152.38014348565244,
+      "scenario": "background_stress",
+      "share_l2_error": 0.18851939058826184
+    },
+    {
+      "coefficient_relative_error": null,
+      "grouped_coef_error": null,
+      "identifiability_flag": null,
+      "method": "pmf_nmf_B2",
+      "reported_coef_error": null,
+      "residual_norm": null,
+      "scenario": "background_stress",
+      "share_l2_error": 1.1518242416536844
+    }
+  ],
+  "scenarios": [
+    {
+      "merge_pair": [
+        0,
+        1
+      ],
+      "methods": [
+        {
+          "coefficient_relative_error": 0.5734641855072048,
+          "grouped_coef_error": 0.4107201586924252,
+          "grouped_share_error": 1.1102230246251565e-16,
+          "identifiability_flag": true,
+          "max_absorption": 0.3950746157089561,
+          "max_coherence": 0.995194935596623,
+          "merged": true,
+          "method": "IASA",
+          "min_visibility": 0.9186490341922859,
+          "report_components": [
+            [
+              0,
+              1
+            ]
+          ],
+          "reported_coef_error": 0.4107201586924252,
+          "residual_norm": 8.592191557448031e-12,
+          "share_l2_error": 4.769586928411037e-09,
+          "sigma_J": 2.856329211670016e-20,
+          "weak_set": []
+        },
+        {
+          "coefficient_relative_error": 0.573464189505,
+          "grouped_coef_error": 0.4107201615629821,
+          "grouped_share_error": 1.1102230246251565e-16,
+          "identifiability_flag": null,
+          "mean_reported_coef_std": 0.003453680892174535,
+          "method": "plain_nnls_B1",
+          "reported_coef_error": 0.573464189505,
+          "residual_norm": 8.59219155744803e-12,
+          "share_l2_error": 4.769586945006803e-09
+        },
+        {
+          "coefficient_relative_error": 2.2327249131177587e+18,
+          "grouped_coef_error": 1.6031694603885955e+18,
+          "grouped_share_error": 1.1102230246251565e-16,
+          "identifiability_flag": null,
+          "mean_reported_coef_std": 648971.7087098409,
+          "method": "cmb_B3",
+          "reported_coef_error": 2.2327249131177587e+18,
+          "residual_norm": 3.228939906820955,
+          "share_l2_error": 1.4142135576035082
+        },
+        {
+          "assignment_correlation": {
+            "0": -0.9999999999999917,
+            "1": 0.9999999999999899
+          },
+          "coefficient_relative_error": null,
+          "grouped_coef_error": null,
+          "grouped_share_error": 1.1102230246251565e-16,
+          "identifiability_flag": null,
+          "method": "pmf_nmf_B2",
+          "reconstruction_relative_error": 1.7583526809182316e-06,
+          "reported_coef_error": null,
+          "residual_norm": null,
+          "share_l2_error": 1.329713061470357
+        }
+      ],
+      "scenario": "wind_geometry_collapse",
+      "signal_target": {
+        "H_lag_column_norms": [
+          6.487515837977895e-11,
+          3.171644459929906e-19
+        ],
+        "H_tilde_column_norms": [
+          5.959750158865551e-11,
+          2.9171985434485642e-19
+        ],
+        "estimators": {
+          "IASA": {
+            "projected_share_l2_error": 4.7829262875883594e-09,
+            "projected_shares": [
+              1.0,
+              2.353559651507771e-17
+            ],
+            "reported_group_relative_signal_error": [
+              0.001775721926956137
+            ]
+          },
+          "cmb_B3": {
+            "projected_share_l2_error": 1.4142135575901686,
+            "projected_shares": [
+              0.0,
+              1.0
+            ],
+            "reported_group_relative_signal_error": [
+              13340321163.52899
+            ]
+          },
+          "plain_nnls_B1": {
+            "projected_share_l2_error": 4.782926304230539e-09,
+            "projected_shares": [
+              1.0,
+              0.0
+            ],
+            "reported_group_relative_signal_error": [
+              0.0017757219269558912
+            ]
+          }
+        },
+        "reported_partition_sources": [
+          [
+            0,
+            1
+          ]
+        ],
+        "reported_separations": [
+          1.0
+        ],
+        "source_separations": [
+          0.09791343198374132,
+          0.09791343198374132
+        ],
+        "tau_theta": 0.14106735979665894,
+        "true_projected_shares": [
+          0.9999999966179604,
+          3.3820395989374645e-09
+        ]
+      },
+      "true_shares": {
+        "0": 0.9999999966273927,
+        "1": 3.3726072400048027e-09
+      }
+    },
+    {
+      "merge_pair": null,
+      "methods": [
+        {
+          "coefficient_relative_error": 0.7753805490192074,
+          "grouped_coef_error": null,
+          "grouped_share_error": null,
+          "identifiability_flag": true,
+          "max_absorption": 0.9999999999999988,
+          "max_coherence": 0.1633982519851516,
+          "merged": false,
+          "method": "IASA",
+          "min_visibility": 1.3519349430467827e-15,
+          "report_components": [
+            [
+              0
+            ],
+            [
+              1
+            ]
+          ],
+          "reported_coef_error": 0.7753805490192074,
+          "residual_norm": 6.851814905312431,
+          "share_l2_error": 0.006063056274009016,
+          "sigma_J": 0.0,
+          "weak_set": []
+        },
+        {
+          "coefficient_relative_error": 0.7753805490665236,
+          "grouped_coef_error": null,
+          "grouped_share_error": null,
+          "identifiability_flag": null,
+          "mean_reported_coef_std": 0.015838060575324584,
+          "method": "plain_nnls_B1",
+          "reported_coef_error": 0.7753805490665236,
+          "residual_norm": 6.851814905312428,
+          "share_l2_error": 0.006063056529734606
+        },
+        {
+          "coefficient_relative_error": 2.405465762815345,
+          "grouped_coef_error": null,
+          "grouped_share_error": null,
+          "identifiability_flag": null,
+          "mean_reported_coef_std": 0.015684970621065716,
+          "method": "cmb_B3",
+          "reported_coef_error": 2.405465762815345,
+          "residual_norm": 152.38014348565244,
+          "share_l2_error": 0.18851939058826184
+        },
+        {
+          "assignment_correlation": {
+            "0": 0.06876641951046858,
+            "1": 0.9907339599077977
+          },
+          "coefficient_relative_error": null,
+          "grouped_coef_error": null,
+          "grouped_share_error": null,
+          "identifiability_flag": null,
+          "method": "pmf_nmf_B2",
+          "reconstruction_relative_error": 0.043039802689912525,
+          "reported_coef_error": null,
+          "residual_norm": null,
+          "share_l2_error": 1.1518242416536844
+        }
+      ],
+      "scenario": "background_stress",
+      "signal_target": {
+        "H_lag_column_norms": [
+          0.08097829568678012,
+          6.267555867362111,
+          3.9849800194466303,
+          47.75785170366076
+        ],
+        "H_tilde_column_norms": [
+          1.0947738756733263e-16,
+          6.1547079920930035,
+          3.9705563890049036,
+          46.17178175886995
+        ],
+        "estimators": {
+          "IASA": {
+            "projected_share_l2_error": 0.007360370509925813,
+            "projected_shares": [
+              0.13710133210271802,
+              0.8628986678972821
+            ],
+            "reported_group_relative_signal_error": [
+              0.054098924147481575,
+              0.007985172834527703
+            ]
+          },
+          "cmb_B3": {
+            "projected_share_l2_error": 0.1928951098822851,
+            "projected_shares": [
+              0.2682942044585919,
+              0.731705795541408
+            ],
+            "reported_group_relative_signal_error": [
+              4.625944650151561,
+              1.3323459942777482
+            ]
+          },
+          "plain_nnls_B1": {
+            "projected_share_l2_error": 0.007360370765393889,
+            "projected_shares": [
+              0.13710133228336116,
+              0.8628986677166388
+            ],
+            "reported_group_relative_signal_error": [
+              0.054098925930476,
+              0.007985172993682546
+            ]
+          }
+        },
+        "reported_partition_sources": [
+          [
+            0
+          ],
+          [
+            1
+          ]
+        ],
+        "reported_separations": [
+          0.9999997691186893,
+          0.9999997691186893
+        ],
+        "source_separations": [
+          0.9999997691186893,
+          0.9999997691186893
+        ],
+        "tau_theta": 0.14106735979665894,
+        "true_projected_shares": [
+          0.13189676420310395,
+          0.8681032357968961
+        ]
+      },
+      "true_shares": {
+        "0": 0.12961595874824522,
+        "1": 0.8703840412517547
+      }
+    }
+  ]
+}

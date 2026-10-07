@@ -1,0 +1,204 @@
+\section{Theoretical Guarantees}
+\label{sec:identifiability_theory}
+
+This section gives the guarantees behind steps 2, 4, 5 and 7 of
+Algorithm~\ref{alg:iasa}, and the proofs are in Appendix~\ref{app:identifiability_proofs}.
+Steps 1--3 construct \(\At\) before any reading is fitted, and the analysis treats
+\(\At\) as fixed, which requires the following.
+
+\begin{assumption}[Declared model]
+\label{ass:model}
+\(\mathbf y\) follows~\eqref{eq:general_model} with \(\mathbf c\ge0\), where \(\mathbf y\)
+is the readings minus a declared baseline field, and \(A(\omega)\), \(Q\), the components,
+\(\mathcal F_0\) and the set of observed rows are fixed independently of
+\(\boldsymbol\epsilon\).
+\end{assumption}
+
+In the observed runs the baseline is the transported field of a map interpolated from
+the first hour of readings, and its error enters \(\boldsymbol\epsilon\).  The assumption
+fails if \(Q\) or the components are chosen after looking at estimates, or if the
+transport model is wrong (Section~\ref{subsec:operator_error}).  Step 7 also requires a
+noise model.
+
+\begin{assumption}[Noise]
+\label{ass:noise}
+\(\boldsymbol\epsilon\sim N(0,\sigma^2I_N)\) (or, where stated, \(N(0,\Sigma)\)), and the
+declared level satisfies \(\sigma_e\ge\sigma\) (or \(\sigma_e^2\ge\|\Sigma\|_2\)).
+\end{assumption}
+
+On the observed data the difference of the two co-located monitors has lag-1
+autocorrelation \(0.857\), so independence in time does not hold, and
+\(\sigma_e\ge\sigma\) is not checked (Section~\ref{subsec:observed_results}).
+
+\subsection{Individual Coefficients}
+
+We begin with the individual source--basis coefficients, such as the four time-of-day
+activities of traffic.
+
+\begin{proposition}[Exact identifiability]
+\label{prop:rank_identifiability}
+In the noiseless projected model \(\yt=\At\mathbf c\), \(\At\mathbf c_1=\At\mathbf c_2\)
+implies \(\mathbf c_1=\mathbf c_2\) for all \(\mathbf c_1,\mathbf c_2\in\mathbb R_+^J\)
+if and only if \(\operatorname{rank}(\At)=J\).
+\end{proposition}
+
+\begin{proposition}[Noise robustness]
+\label{prop:noise_robust}
+Assume \(\operatorname{rank}(\At)=J\) and let \(\sigma_J(\At)\) be the smallest
+singular value.  If \(\widehat{\mathbf c}\) is the least-squares estimate, or the
+nonnegative least-squares (NNLS) estimate and \(\mathbf c\ge0\), then
+\begin{equation}
+\|\widehat{\mathbf c}-\mathbf c\|_2\le\|P_{\At}\widetilde{\boldsymbol\epsilon}\|_2/\sigma_J(\At)
+\le\|\widetilde{\boldsymbol\epsilon}\|_2/\sigma_J(\At).
+\label{eq:nnls_noise_bound}
+\end{equation}
+\end{proposition}
+
+\begin{remark}[Implication: coefficients]
+Both propositions require only Assumption~\ref{ass:model}.  In every observed week
+\(\operatorname{rank}(\At)=7=J\).  With noise, \(1/\sigma_J\) is the largest factor by
+which noise enters the coefficients, so an identifiable problem can still have large
+coefficient errors (Experiment 1).  IASA reports \(\sigma_J\) in step 4 and reports coefficients only for
+single-component blocks.
+\end{remark}
+
+\subsection{Identifiable Groupings}
+
+When the coefficients are not determined, the reported quantity is the signal of a
+group of sources.  The following definition states when such signals are determined,
+which is requirement R1.
+
+\begin{definition}[Identifiable grouping]
+\label{def:identifiable_grouping}
+A partition \(\mathcal P\) of \(E\) is \emph{identifiable} if
+\(\At\mathbf c_1=\At\mathbf c_2\) with \(\mathbf c_1,\mathbf c_2\in\mathbb R_+^J\)
+implies \(\At_g\mathbf c_{1,g}=\At_g\mathbf c_{2,g}\) for every block
+\(g\in\mathcal P\).
+\end{definition}
+
+\begin{theorem}[Identifiable groupings]
+\label{thm:groupings}
+\leavevmode
+\begin{enumerate}[label=(\alph*),leftmargin=*,itemsep=0pt,topsep=2pt]
+  \item \(\mathcal P\) is identifiable if and only if
+  \(\operatorname{col}(\At)=\bigoplus_{g\in\mathcal P}\operatorname{col}(\At_g)\),
+  equivalently \(\operatorname{rank}(\At)=\sum_{g\in\mathcal P}\operatorname{rank}(\At_g)\).
+  \item There is a unique finest identifiable partition \(\mathcal P^\star\), and
+  \(\mathcal P\) is identifiable if and only if every block of \(\mathcal P\) is a
+  union of blocks of \(\mathcal P^\star\).
+  \item Let \(B\subseteq E\) index a basis of \(\operatorname{col}(\At)\) chosen from
+  the columns, and join each \(e\notin B\) to every \(b\in B\) whose coefficient is
+  nonzero when \(\at_e\) is written in that basis.  The blocks of \(\mathcal P^\star\)
+  are the connected components of this graph, for any choice of \(B\), and they are the
+  connected components of the column matroid of \(\At\).
+  \item For a declared partition \(\mathcal D\), the finest identifiable partition
+  whose blocks are unions of blocks of \(\mathcal D\) is the finest common coarsening
+  \(\mathcal P^\star\vee\mathcal D\).
+\end{enumerate}
+\end{theorem}
+
+\begin{remark}[Implication: exact resolution]
+The theorem requires only Assumption~\ref{ass:model}.  A partition meets R1 exactly when no
+group's span meets the span of the other groups except at \(0\) (a), and there is one
+finest such partition (b), computed before fitting in \(O(NJ^2)\) arithmetic (c).  A source
+shares its block of \(\mathcal P^\star\vee\mathcal D\) with another source exactly when a
+nonzero combination of its fingerprints equals a combination of the other
+fingerprints.  In every observed week \(\mathcal P^\star\) is the seven single columns,
+so the atoms are the four groups.  Step 5 forms its atoms by (c) and (d), so every
+partition IASA can return meets R1.  For sums of coefficients, which are in different
+proxy units, the minimal groupings can be non-unique and deciding whether one with at
+least two blocks exists is NP-complete (Proposition~\ref{prop:sum_identifiable},
+Appendix~\ref{app:identifiability_proofs}), so IASA reports signals instead.
+\end{remark}
+
+\subsection{Group-Signal Error}
+
+Requirement R2 concerns the effect of noise, which identifiability does not control.
+The error of a group's fitted signal is governed by its separation \(s_g\)
+of~\eqref{eq:separation}, not by \(\sigma_J\).
+
+\begin{theorem}[Group-signal error]
+\label{thm:group_error}
+Let \(\mathcal P\) be identifiable and let \(\widehat{\mathbf c}\) be any
+least-squares solution, or any NNLS solution with \(\mathbf c\ge0\).
+\begin{enumerate}[label=(\alph*),leftmargin=*,itemsep=0pt,topsep=2pt]
+  \item The group signals \(\At_g\widehat{\mathbf c}_g\) do not depend on which
+  solution is chosen, and for every \(g\in\mathcal P\),
+  \begin{equation}
+  \|\At_g(\widehat{\mathbf c}_g-\mathbf c_g)\|_2
+  \le
+  \frac{\|P_{\At}\widetilde{\boldsymbol\epsilon}\|_2}{s_g}.
+  \label{eq:group_bound}
+  \end{equation}
+  \item If \(\boldsymbol\epsilon\sim N(0,\sigma^2I_N)\), for a least-squares solution and
+  \(r_g=\operatorname{rank}(\At_g)\),
+  \(\mathbb E\|\At_g(\widehat{\mathbf c}_g-\mathbf c_g)\|_2^2\le\sigma^2r_g/s_g^2\), with
+  equality when \(r_g=1\).
+  \item If \(\boldsymbol\epsilon\sim N(0,\sigma^2I_N)\), with probability at least
+  \(1-\delta\), simultaneously for every identifiable partition and every block \(g\),
+  \begin{equation}
+  \|\At_g(\widehat{\mathbf c}_g-\mathbf c_g)\|_2
+  \le
+  \frac{\sigma\bigl(\sqrt{\operatorname{rank}(\At)}+\sqrt{2\log(1/\delta)}\bigr)}{s_g},
+  \label{eq:group_bound_gauss}
+  \end{equation}
+  and if \(\boldsymbol\epsilon\sim N(0,\Sigma)\), the same holds with \(\sigma^2\)
+  replaced by \(\|\Sigma\|_2\).
+\end{enumerate}
+\end{theorem}
+
+\begin{remark}[Implication: the error bound IASA reports]
+Part (a) holds for every noise vector under Assumption~\ref{ass:model}, whereas (b) and
+(c) also need the Gaussian noise of Assumption~\ref{ass:noise}.  IASA, which uses NNLS, relies on
+(a) and (c).  The columns inside a group, such as the four time-of-day columns of
+traffic, can be nearly dependent, which makes the bound of
+Proposition~\ref{prop:noise_robust} large while the group's signal error stays at most
+\(\|P_{\At}\widetilde{\boldsymbol\epsilon}\|_2/s_g\).  With \(\sigma\) replaced by the
+declared \(\sigma_e\), the right side of~\eqref{eq:group_bound_gauss} is the bound
+\(b_g\) of step 7, which holds when \(\sigma_e\ge\sigma\) and the operator is exact.  Requiring \(b_g\le\eta\) for a tolerance \(\eta\) gives
+the threshold \(\tau_\theta=\sigma_e(\sqrt{\operatorname{rank}(\At)}+\sqrt{2\log(1/\delta)})/\eta\)
+of step 5, and \(0.141\) corresponds to \(\eta=7.1\,\sigma_e(\sqrt{\operatorname{rank}(\At)}+\sqrt{2\log(1/\delta)})\).
+\end{remark}
+
+\begin{definition}[Reportable partition]
+\label{def:reportable}
+A partition into unions of atoms is \emph{reportable at threshold
+\(\tau_\theta\in(0,1]\)} if every block has \(s_g\ge\tau_\theta\).
+\end{definition}
+
+Reportable partitions are not closed under coarsening, and the minimal ones (with no
+strictly finer reportable partition) need not be unique
+(Proposition~\ref{prop:reportable_structure}), so with up to 12 atoms IASA checks every
+union of atoms and lists ties.  The one-block partition is always reportable.
+
+\subsection{Errors in the Operator}
+\label{subsec:operator_error}
+
+The operator is built from an estimated wind field and assumed dispersion parameters.
+The next result bounds how far an error \(\Delta\) in \(\At\) moves the separations.
+
+\begin{proposition}[Stability under operator error]
+\label{prop:grouping_stability}
+Let \(\At'=\At+\Delta\).  For \(S\subseteq E\) with \(\At_S\) of full column rank and
+\(\|\Delta_S\|_2\le\sigma_{\min}(\At_S)/2\), let
+\(\beta_S=\arcsin\bigl(\|\Delta_S\|_2/(\sigma_{\min}(\At_S)-\|\Delta_S\|_2)\bigr)\).
+If this holds for \(S=g\) and \(S=E\setminus g\), with \(g\) nonempty and proper, then
+\(|\theta_g(\At')-\theta_g(\At)|\le\beta_g+\beta_{E\setminus g}\).  If \(\At\) has full
+column rank, \(\|\Delta\|_2\le\sigma_J(\At)/2\), and
+\(|\theta_g(\At)-\arcsin\tau_\theta|>\beta_g+\beta_{E\setminus g}\) for every nonempty
+proper union \(g\) of atoms, the reportable partitions of \(\At'\) and \(\At\) coincide,
+and so do the minimal reportable partitions.
+\end{proposition}
+
+\begin{remark}[Implication: wind and dispersion error]
+The proposition uses no noise assumption.  Under a wind or dispersion error \(\Delta\) that meets
+the conditions, the set of reportable partitions is unchanged, and so is the reported
+partition when one reportable partition has the most blocks.  In every observed week
+each union of atoms has a separation angle of at least \(45.4^\circ\), against
+\(\arcsin\tau_\theta=8.1^\circ\), but whether the true \(\Delta\) meets the conditions is not
+known.
+The fitted signals do change: for least squares, an operator error acts as additional
+noise of size at most \(\|\Delta\|_2\|\mathbf c\|_2\)
+(Proposition~\ref{prop:operator_perturbation}, Appendix~\ref{app:operator_error_details}),
+which Experiment 5 measures.
+\end{remark}

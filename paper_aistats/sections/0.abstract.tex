@@ -1,0 +1,22 @@
+\begin{abstract}
+\sloppy
+Source attribution of urban PM\(_{2.5}\) from a monitoring network can be posed as a
+nonnegative linear inverse problem: proxy emission maps and a wind-driven transport
+model give the concentration that each source group produces at each monitor and hour,
+and the readings are fitted as a nonnegative combination of these signals plus
+background terms.  A fit with a small residual need not determine the contributions: sources aligned with the wind can leave nearly proportional signals at
+the sensors, and terms for regional background can absorb a source's signal.  We
+present Identifiability-Aware Source Attribution (IASA), which determines from the
+transport operator, before fitting, which groups of sources the readings can separate,
+and reports each group's contribution with an error bound.  A grouping is identifiable
+exactly when the column spaces of its blocks form a direct sum, and the finest such
+grouping is unique and computable in polynomial time.  Moreover, the error of a group's
+fitted signal is at most the noise in the operator's column space divided by the
+group's separation from the other sources.  In controlled experiments on the New Delhi domain,
+IASA flags an absorbed source and a nearly proportional pair that the baselines do not
+flag, with group-signal errors of \(0.4\)--\(6.0\%\) (\(0.4\)--\(6.2\%\) for nonnegative
+least squares after background removal, \(36\)--\(784\%\) for a mass balance without it).
+On four observed weeks, the four source groups are separable in every week, and at the
+estimated instrument noise level the error bound of the largest group's signal is below
+its fitted norm in two of the four weeks.
+\end{abstract}

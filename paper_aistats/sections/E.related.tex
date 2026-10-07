@@ -1,0 +1,100 @@
+\section{Extended Discussion on Related Work}
+\label{app:extended_related_work}
+
+This appendix extends the related work of Section~\ref{sec:related_work}.
+
+\noindent\textbf{Estimability and identification.}
+In the linear model \(\mathbf y=X\boldsymbol\beta+\boldsymbol\epsilon\), a linear
+function \(\boldsymbol\lambda^\top\boldsymbol\beta\) is estimable exactly when
+\(\boldsymbol\lambda\) lies in the row space of \(X\) \citep{searle1971linear}.  In
+general parametric models, local identification holds at a regular point exactly
+when the Fisher information matrix is nonsingular \citep{rothenberg1971identification}.
+Our rank condition is the special case of both for model~\eqref{eq:general_model}
+after nuisance projection, and identifiability of a coefficient sum is estimability of
+an indicator functional.  When point identification fails, partial identification
+reports the set of parameter values consistent with the data
+\citep{manski2003partial}.  Our question is which groupings of declared, nonnegative
+source components can be reported, with a nuisance subspace and an operator that is
+itself estimated.
+
+\noindent\textbf{Collinearity and matroids.}
+Regression diagnostics measure how far each regressor, or block of regressors, is
+from the span of the others: the variance-inflation factor for one column, the
+generalized variance-inflation factor of \citet{fox1992generalized} for a block, which
+combines all canonical correlations between the block and the rest, and the condition
+indices and variance-decomposition proportions of \citet{belsley1980regression},
+which identify the variables involved in each near dependency.  None of them returns a
+partition.  The connected components of a matroid can be read off the fundamental
+circuits of any basis \citep{krogdahl1977dependence,oxley2011matroid}; we use this
+fact to characterize which partitions of declared components have identifiable group
+signals.
+
+\noindent\textbf{Subspace clustering.}
+Sparse subspace clustering groups data points that lie in a union of subspaces; when
+the subspaces are independent, meaning the dimension of their sum equals the sum of
+their dimensions (our direct-sum condition), each point has a sparse representation
+that uses only points from its own subspace \citep{elhamifar2013sparse}, and geometric
+and noisy analyses give recovery conditions in terms of subspace angles and noise
+\citep{soltanolkotabi2012geometric,wang2016noisy}.  Theorem~\ref{thm:groupings}(c) is
+a related statement about the columns of an operator.  It differs in three respects:
+we decompose a given operator and do not assume a union-of-subspaces model with points
+in general position; the decomposition serves a regression target, each group's
+contribution to the projected signal; and the operator is formed after nuisance
+projection and has nonnegative coefficients.
+
+\noindent\textbf{Air-pollution source apportionment.}
+Receptor-oriented methods estimate source contributions from ambient chemical or
+physical measurements, by chemical mass balance or by factor analysis such as positive
+matrix factorization \citep{watson2002receptor,paatero1994positive,hopke2016review};
+source-oriented methods propagate emission inventories through atmospheric transport.
+Reviews and harmonization efforts describe practice for both and document sensitivity
+to source profiles, factor interpretation, chemical resolution and model comparability
+\citep{viana2008source,belis2013critical,belis2019european,mircea2020european,hopke2020global}.
+In India, studies of the same city report divergent source contributions because of
+limited local profiles, collinear tracers and differences in method
+\citep{pant2012critical}, and global reviews compile source categories such as
+traffic, industry, dust and domestic combustion from heterogeneous studies
+\citep{karagulian2015contributions}.  For CMB with nearly collinear profiles,
+\citet{henry1992dealing} defines an eligible space of combinations of contributions
+that can be estimated to a stated precision; for PMF, rotational ambiguity is
+explored with dedicated tools \citep{paatero2002understanding}.  In statistics,
+\citet{park2001multivariate} fit multivariate receptor models with temporally
+correlated data by Markov chain Monte Carlo, and \citet{jin2025identification} give
+identification conditions and consistent estimation in source apportionment.  These
+methods use multi-species chemical measurements.  Our setting has one measured species
+(PM\(_{2.5}\) mass) at a sparse network, and separability comes from wind-conditioned
+transport and timing; we do not propose another receptor model or inventory, but ask
+when proxy source maps can be distinguished at the sensors after transport, lags,
+nuisance removal and noise.
+
+\noindent\textbf{Inverse modelling and physics-constrained learning.}
+Estimating latent states or parameters from partial observations is the subject of
+inverse problems and data assimilation
+\citep{tarantola2005inverse,engl1996regularization}; Kalman filtering, ensemble Kalman
+filters and variational assimilation combine a dynamical model with priors,
+covariances and an observation model \citep{wang2023kalman,carrassi2018data}.
+Atmospheric inversion measures which elements of the state the observations constrain
+through the averaging kernel and the degrees of freedom for signal
+\citep{rodgers2000inverse}, and chooses how far to aggregate state-vector elements by
+balancing aggregation error against smoothing error \citep{turner2015balancing}.
+Physics-informed and operator-learning methods
+\citep{raissi2019physics,li2024physics,li2020fourier,bhardwaj2025fieldformer} add
+governing equations or physical structure to flexible models.  These methods
+regularize or aggregate with a prior; IASA reports the grouping that the projected
+operator supports, with every threshold declared before fitting.
+
+\noindent\textbf{Sensor-space spatio-temporal learning.}
+Graph neural networks, transformers and sequence models predict spatio-temporal
+processes from sensor data, including traffic and air quality
+\citep{li2017diffusion,yu2017spatio,wu2019graph,chen2023group,iyer2022modeling,bhardwaj2025comprehensive,bhardwaj2025fieldformer}.
+Their objective is forecasting, interpolation or representation learning, not
+attribution to declared source inventories; a model can predict the readings well
+while the source groups remain indistinguishable at the deployed sensors.
+
+\noindent\textbf{Observability and system identification.}
+Whether latent quantities can be recovered from outputs is the observability question
+of control theory \citep{chen1984linear} and of system identification and inverse
+problems for nonlinear systems and PDEs
+\citep{ljung1987theory,banks2012estimation,colton1990inverse}.  We ask it for declared
+source components after wind-conditioned transport, finite lags, nuisance removal and
+noise, and report the answer with the estimates.

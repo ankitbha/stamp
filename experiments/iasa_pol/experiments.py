@@ -1396,6 +1396,59 @@ def _grouped_coef_error(c_hat, c_true, column_index, merge_pair) -> float | None
     return float(abs(got - want) / max(abs(want), 1e-12))
 
 
+def _signal_target_scores(bundle, estimates: dict[str, np.ndarray]) -> dict[str, Any]:
+    """Signal-target scoring on the projected operator.
+
+    Shares are L1 fractions of the projected group signals H_tilde_k c_k, the
+    quantity the signal target identifies.  The grouping is the separation rule
+    of model.iasa.grouping with one declared block per source.  For each
+    estimator and each reported group, the relative signal error is
+    ||H_tilde_G (c_hat_G - c_G)|| / ||H_tilde_G c_G||.
+    """
+    from model.iasa.grouping import GroupingConfig, group_report, separation
+
+    proj = bundle["_projection"]
+    H_tilde = to_numpy(proj.H_tilde).astype(np.float64)
+    H_lag = np.asarray(bundle["_H_lag"], dtype=np.float64)
+    column_index = bundle["_response"].column_index
+    c_true = np.asarray(bundle["c_true"], dtype=np.float64)
+    sources = sorted({int(ci["source_index"]) for ci in column_index})
+    declared = [[j for j, ci in enumerate(column_index) if int(ci["source_index"]) == k] for k in sources]
+    report = group_report(H_tilde, GroupingConfig(), declared=declared)
+    reported_sources = [sorted({int(column_index[j]["source_index"]) for j in g}) for g in report.reported]
+
+    def shares(c):
+        mags = [float(np.abs(H_tilde[:, g] @ c[g]).sum()) for g in declared]
+        tot = sum(mags) or 1.0
+        return [m / tot for m in mags]
+
+    true_shares = shares(c_true)
+    scores = {}
+    for name, c_hat in estimates.items():
+        c_hat = np.asarray(c_hat, dtype=np.float64).reshape(-1)
+        sh = shares(c_hat)
+        group_err = []
+        for g in report.reported:
+            ref = float(np.linalg.norm(H_tilde[:, g] @ c_true[g]))
+            err = float(np.linalg.norm(H_tilde[:, g] @ (c_hat[g] - c_true[g])))
+            group_err.append(err / ref if ref > 0 else None)
+        scores[name] = {
+            "projected_shares": sh,
+            "projected_share_l2_error": float(np.linalg.norm(np.subtract(sh, true_shares))),
+            "reported_group_relative_signal_error": group_err,
+        }
+    return {
+        "H_lag_column_norms": np.linalg.norm(H_lag, axis=0).tolist(),
+        "H_tilde_column_norms": np.linalg.norm(H_tilde, axis=0).tolist(),
+        "true_projected_shares": true_shares,
+        "reported_partition_sources": reported_sources,
+        "reported_separations": report.separations,
+        "source_separations": [separation(H_tilde, g) for g in declared],
+        "tau_theta": report.tau_theta,
+        "estimators": scores,
+    }
+
+
 def _baseline_scenario(bundle, *, merge_pair, scenario: str, seed: int) -> dict[str, Any]:
     """Run IASA + B1/B2/B3 on one already-built forward bundle and score them on a
     common footing (coefficient error, apportionment-share error, residual, and
@@ -1519,6 +1572,8 @@ def _baseline_scenario(bundle, *, merge_pair, scenario: str, seed: int) -> dict[
         "true_shares": {str(g): true_shares[g] for g in groups},
         "merge_pair": None if merge_pair is None else list(merge_pair),
         "methods": methods,
+        "signal_target": _signal_target_scores(
+            bundle, {"IASA": iasa_c, b1["method"]: b1["c_hat"], b3["method"]: b3["c_hat"]}),
     }
 
 

@@ -1,0 +1,1138 @@
+{
+ "noise_full_record": {
+  "monitors": [
+   "Pusa_DPCC",
+   "Pusa_IMD"
+  ],
+  "hours": 17949,
+  "sd_difference": 43.38268054516626,
+  "sigma_e": 30.676187599536767,
+  "lag1_autocorrelation": 0.8573114547713623,
+  "ar1_inflation": 13.016542090293862
+ },
+ "noise_may_2018": {
+  "monitors": [
+   "Pusa_DPCC",
+   "Pusa_IMD"
+  ],
+  "hours": 0,
+  "sd_difference": NaN,
+  "sigma_e": NaN,
+  "lag1_autocorrelation": NaN,
+  "ar1_inflation": Infinity
+ },
+ "sigmas_used": {
+  "iid": 30.676187599536767,
+  "ar1_inflated": 110.67491536714287
+ },
+ "tau_theta": 0.14106735979665894,
+ "delta": 0.05,
+ "n_boot": 1000,
+ "seed": 0,
+ "weeks": [
+  {
+   "week": 1,
+   "N": 4561,
+   "J": 7,
+   "singular_values": [
+    50.06615808426068,
+    30.939335076525815,
+    25.46479634484544,
+    22.677671510519396,
+    21.73373612282409,
+    19.760188780671857,
+    3.7146551750335997
+   ],
+   "exact_components": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ]
+   ],
+   "declared_partition": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3,
+     4,
+     5,
+     6
+    ]
+   ],
+   "reported": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3,
+     4,
+     5,
+     6
+    ]
+   ],
+   "reported_separations": [
+    0.8856140004775339,
+    0.94587973694646,
+    0.8690582329616364,
+    0.8222309367830034
+   ],
+   "minimal_partitions": [
+    [
+     [
+      0
+     ],
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3,
+      4,
+      5,
+      6
+     ]
+    ]
+   ],
+   "groups": {
+    "brick_kilns": {
+     "columns": [
+      4
+     ],
+     "rank": 1,
+     "separation": 0.8856140004775339,
+     "signal_norm": 0.0,
+     "signal_rms_per_reading": 0.0,
+     "share": 0.0,
+     "bounds": {
+      "iid_ls": {
+       "error_norm_bound": 119.42418312791347,
+       "rms_per_reading_bound": 1.7683256366020685,
+       "bound_over_signal_norm": Infinity
+      },
+      "iid_nnls": {
+       "error_norm_bound": 176.43025567552294,
+       "rms_per_reading_bound": 2.612420164926907,
+       "bound_over_signal_norm": Infinity
+      },
+      "ar1_inflated_ls": {
+       "error_norm_bound": 430.86388481571237,
+       "rms_per_reading_bound": 6.379843959991897,
+       "bound_over_signal_norm": Infinity
+      },
+      "ar1_inflated_nnls": {
+       "error_norm_bound": 636.5329313407493,
+       "rms_per_reading_bound": 9.42520577951704,
+       "bound_over_signal_norm": Infinity
+      }
+     }
+    },
+    "industries": {
+     "columns": [
+      12
+     ],
+     "rank": 1,
+     "separation": 0.94587973694646,
+     "signal_norm": 0.0,
+     "signal_rms_per_reading": 0.0,
+     "share": 0.0,
+     "bounds": {
+      "iid_ls": {
+       "error_norm_bound": 111.81519641715259,
+       "rms_per_reading_bound": 1.655658621289171,
+       "bound_over_signal_norm": Infinity
+      },
+      "iid_nnls": {
+       "error_norm_bound": 165.189186775991,
+       "rms_per_reading_bound": 2.445972551075015,
+       "bound_over_signal_norm": Infinity
+      },
+      "ar1_inflated_ls": {
+       "error_norm_bound": 403.411843798207,
+       "rms_per_reading_bound": 5.973358886057488,
+       "bound_over_signal_norm": Infinity
+      },
+      "ar1_inflated_nnls": {
+       "error_norm_bound": 595.9769024973637,
+       "rms_per_reading_bound": 8.824688667788358,
+       "bound_over_signal_norm": Infinity
+      }
+     }
+    },
+    "population_density": {
+     "columns": [
+      20
+     ],
+     "rank": 1,
+     "separation": 0.8690582329616364,
+     "signal_norm": 364.5608334075807,
+     "signal_rms_per_reading": 5.3980881504138285,
+     "share": 1.0,
+     "bounds": {
+      "iid_ls": {
+       "error_norm_bound": 121.699242423887,
+       "rms_per_reading_bound": 1.8020126635717304,
+       "bound_over_signal_norm": 0.3338242380190817
+      },
+      "iid_nnls": {
+       "error_norm_bound": 179.79129430901028,
+       "rms_per_reading_bound": 2.662187394859221,
+       "bound_over_signal_norm": 0.49317227149303444
+      },
+      "ar1_inflated_ls": {
+       "error_norm_bound": 439.07194503245535,
+       "rms_per_reading_bound": 6.501381515685234,
+       "bound_over_signal_norm": 1.2043859482336956
+      },
+      "ar1_inflated_nnls": {
+       "error_norm_bound": 648.6590361606496,
+       "rms_per_reading_bound": 9.604758207371509,
+       "bound_over_signal_norm": 1.779288877791888
+      }
+     }
+    },
+    "traffic": {
+     "columns": [
+      21,
+      22,
+      23,
+      24
+     ],
+     "rank": 4,
+     "separation": 0.8222309367830034,
+     "signal_norm": 0.0,
+     "signal_rms_per_reading": 0.0,
+     "share": 0.0,
+     "bounds": {
+      "iid_ls": {
+       "error_norm_bound": 165.93867983979538,
+       "rms_per_reading_bound": 2.457070368656578,
+       "bound_over_signal_norm": Infinity
+      },
+      "iid_nnls": {
+       "error_norm_bound": 190.03068060829972,
+       "rms_per_reading_bound": 2.81380299583605,
+       "bound_over_signal_norm": Infinity
+      },
+      "ar1_inflated_ls": {
+       "error_norm_bound": 598.6809569414062,
+       "rms_per_reading_bound": 8.86472786814903,
+       "bound_over_signal_norm": Infinity
+      },
+      "ar1_inflated_nnls": {
+       "error_norm_bound": 685.6011499226105,
+       "rms_per_reading_bound": 10.151763722708182,
+       "bound_over_signal_norm": Infinity
+      }
+     }
+    }
+   },
+   "share_bootstrap": {
+    "iid": {
+     "brick_kilns": {
+      "p2.5": 0.0,
+      "p50": 0.0,
+      "p97.5": 0.09032541976148233
+     },
+     "industries": {
+      "p2.5": 0.0,
+      "p50": 0.0010020181140933983,
+      "p97.5": 0.1374116530542152
+     },
+     "population_density": {
+      "p2.5": 0.7469211409637853,
+      "p50": 0.8937091500080819,
+      "p97.5": 1.0
+     },
+     "traffic": {
+      "p2.5": 0.0,
+      "p50": 0.061423759009075506,
+      "p97.5": 0.17065742085079602
+     }
+    },
+    "ar1_inflated": {
+     "brick_kilns": {
+      "p2.5": 0.0,
+      "p50": 0.0,
+      "p97.5": 0.2599440041634396
+     },
+     "industries": {
+      "p2.5": 0.0,
+      "p50": 0.017977761920011746,
+      "p97.5": 0.44586930308657496
+     },
+     "population_density": {
+      "p2.5": 0.2620052368900263,
+      "p50": 0.6765020441897976,
+      "p97.5": 0.9900275020480536
+     },
+     "traffic": {
+      "p2.5": 0.0,
+      "p50": 0.1871205806582506,
+      "p97.5": 0.5116743803479604
+     }
+    }
+   },
+   "residual_norm": 3768.200619160978
+  },
+  {
+   "week": 2,
+   "N": 4278,
+   "J": 7,
+   "singular_values": [
+    60.253054628336976,
+    30.84399238456195,
+    25.251762136251262,
+    23.42344865147691,
+    22.175700093289407,
+    20.187349701729246,
+    5.670983616381199
+   ],
+   "exact_components": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ]
+   ],
+   "declared_partition": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3,
+     4,
+     5,
+     6
+    ]
+   ],
+   "reported": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3,
+     4,
+     5,
+     6
+    ]
+   ],
+   "reported_separations": [
+    0.9434801880511542,
+    0.9320037191523469,
+    0.8274830054322797,
+    0.8407257325720205
+   ],
+   "minimal_partitions": [
+    [
+     [
+      0
+     ],
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3,
+      4,
+      5,
+      6
+     ]
+    ]
+   ],
+   "groups": {
+    "brick_kilns": {
+     "columns": [
+      4
+     ],
+     "rank": 1,
+     "separation": 0.9434801880511542,
+     "signal_norm": 0.0,
+     "signal_rms_per_reading": 0.0,
+     "share": 0.0,
+     "bounds": {
+      "iid_ls": {
+       "error_norm_bound": 112.09957550050716,
+       "rms_per_reading_bound": 1.713892498345361,
+       "bound_over_signal_norm": Infinity
+      },
+      "iid_nnls": {
+       "error_norm_bound": 165.60931168763705,
+       "rms_per_reading_bound": 2.5320038518459485,
+       "bound_over_signal_norm": Infinity
+      },
+      "ar1_inflated_ls": {
+       "error_norm_bound": 404.4378393160766,
+       "rms_per_reading_bound": 6.183457660352104,
+       "bound_over_signal_norm": Infinity
+      },
+      "ar1_inflated_nnls": {
+       "error_norm_bound": 597.4926478581319,
+       "rms_per_reading_bound": 9.135076224940082,
+       "bound_over_signal_norm": Infinity
+      }
+     }
+    },
+    "industries": {
+     "columns": [
+      12
+     ],
+     "rank": 1,
+     "separation": 0.9320037191523469,
+     "signal_norm": 164.36250320112262,
+     "signal_rms_per_reading": 2.5129413736664414,
+     "share": 0.15713435364824888,
+     "bounds": {
+      "iid_ls": {
+       "error_norm_bound": 113.47994262283059,
+       "rms_per_reading_bound": 1.734996956996072,
+       "bound_over_signal_norm": 0.690424764850232
+      },
+      "iid_nnls": {
+       "error_norm_bound": 167.64858478910563,
+       "rms_per_reading_bound": 2.5631823362878334,
+       "bound_over_signal_norm": 1.01999289086004
+      },
+      "ar1_inflated_ls": {
+       "error_norm_bound": 409.4179892758141,
+       "rms_per_reading_bound": 6.2595992658713016,
+       "bound_over_signal_norm": 2.4909452052748833
+      },
+      "ar1_inflated_nnls": {
+       "error_norm_bound": 604.8500281448183,
+       "rms_per_reading_bound": 9.247563349217987,
+       "bound_over_signal_norm": 3.6799757631136343
+      }
+     }
+    },
+    "population_density": {
+     "columns": [
+      20
+     ],
+     "rank": 1,
+     "separation": 0.8274830054322797,
+     "signal_norm": 775.6707551268927,
+     "signal_rms_per_reading": 11.859244626594043,
+     "share": 0.8053654963776241,
+     "bounds": {
+      "iid_ls": {
+       "error_norm_bound": 127.81377729736184,
+       "rms_per_reading_bound": 1.9541472223874923,
+       "bound_over_signal_norm": 0.1647783888364499
+      },
+      "iid_nnls": {
+       "error_norm_bound": 188.82454806724277,
+       "rms_per_reading_bound": 2.886942033374928,
+       "bound_over_signal_norm": 0.24343388843679273
+      },
+      "ar1_inflated_ls": {
+       "error_norm_bound": 461.13223617637476,
+       "rms_per_reading_bound": 7.050259350217917,
+       "bound_over_signal_norm": 0.594494807401805
+      },
+      "ar1_inflated_nnls": {
+       "error_norm_bound": 681.2496112423264,
+       "rms_per_reading_bound": 10.41563799859023,
+       "bound_over_signal_norm": 0.8782716207095885
+      }
+     }
+    },
+    "traffic": {
+     "columns": [
+      21,
+      22,
+      23,
+      24
+     ],
+     "rank": 4,
+     "separation": 0.8407257325720205,
+     "signal_norm": 62.90129410308645,
+     "signal_rms_per_reading": 0.9616990574510018,
+     "share": 0.03750014997412701,
+     "bounds": {
+      "iid_ls": {
+       "error_norm_bound": 162.28825987733373,
+       "rms_per_reading_bound": 2.4812282288439738,
+       "bound_over_signal_norm": 2.5800464392889264
+      },
+      "iid_nnls": {
+       "error_norm_bound": 185.85027016606628,
+       "rms_per_reading_bound": 2.84146824313031,
+       "bound_over_signal_norm": 2.954633490711393
+      },
+      "ar1_inflated_ls": {
+       "error_norm_bound": 585.5108092791826,
+       "rms_per_reading_bound": 8.951885671673862,
+       "bound_over_signal_norm": 9.308406410838098
+      },
+      "ar1_inflated_nnls": {
+       "error_norm_bound": 670.5188790115702,
+       "rms_per_reading_bound": 10.251575633590795,
+       "bound_over_signal_norm": 10.65985825208434
+      }
+     }
+    }
+   },
+   "share_bootstrap": {
+    "iid": {
+     "brick_kilns": {
+      "p2.5": 0.0,
+      "p50": 0.0,
+      "p97.5": 0.03580938865025283
+     },
+     "industries": {
+      "p2.5": 0.09788524517703087,
+      "p50": 0.15544399505738538,
+      "p97.5": 0.20798414770261206
+     },
+     "population_density": {
+      "p2.5": 0.7106759088143139,
+      "p50": 0.7858679367121939,
+      "p97.5": 0.8519554344158872
+     },
+     "traffic": {
+      "p2.5": 0.011679768217678722,
+      "p50": 0.05272731727250739,
+      "p97.5": 0.10108362702566949
+     }
+    },
+    "ar1_inflated": {
+     "brick_kilns": {
+      "p2.5": 0.0,
+      "p50": 0.0,
+      "p97.5": 0.11017796093121301
+     },
+     "industries": {
+      "p2.5": 0.0,
+      "p50": 0.15548428521058694,
+      "p97.5": 0.32813085551863397
+     },
+     "population_density": {
+      "p2.5": 0.4899166952100094,
+      "p50": 0.713335571619014,
+      "p97.5": 0.9333679157399752
+     },
+     "traffic": {
+      "p2.5": 0.0,
+      "p50": 0.10950511195434565,
+      "p97.5": 0.2722171625456786
+     }
+    }
+   },
+   "residual_norm": 5955.26547977827
+  },
+  {
+   "week": 3,
+   "N": 4315,
+   "J": 7,
+   "singular_values": [
+    77.00457642402486,
+    33.514377970580064,
+    25.645420524320947,
+    24.005046966354843,
+    22.53344135836648,
+    19.92502699987851,
+    10.154152431861787
+   ],
+   "exact_components": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ]
+   ],
+   "declared_partition": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3,
+     4,
+     5,
+     6
+    ]
+   ],
+   "reported": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3,
+     4,
+     5,
+     6
+    ]
+   ],
+   "reported_separations": [
+    0.9594129026403803,
+    0.8555978185952842,
+    0.7825129857155879,
+    0.871310029314952
+   ],
+   "minimal_partitions": [
+    [
+     [
+      0
+     ],
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3,
+      4,
+      5,
+      6
+     ]
+    ]
+   ],
+   "groups": {
+    "brick_kilns": {
+     "columns": [
+      4
+     ],
+     "rank": 1,
+     "separation": 0.9594129026403803,
+     "signal_norm": 6.238351173822003,
+     "signal_rms_per_reading": 0.09496846505685579,
+     "share": 0.055870160781834086,
+     "bounds": {
+      "iid_ls": {
+       "error_norm_bound": 110.23796770150047,
+       "rms_per_reading_bound": 1.6781887219703764,
+       "bound_over_signal_norm": 17.671010276576304
+      },
+      "iid_nnls": {
+       "error_norm_bound": 162.8590819490379,
+       "rms_per_reading_bound": 2.479257195101617,
+       "bound_over_signal_norm": 26.10610999785385
+      },
+      "ar1_inflated_ls": {
+       "error_norm_bound": 397.72144781751274,
+       "rms_per_reading_bound": 6.0546439863658215,
+       "bound_over_signal_norm": 63.754257613209006
+      },
+      "ar1_inflated_nnls": {
+       "error_norm_bound": 587.5702465632509,
+       "rms_per_reading_bound": 8.94477448838509,
+       "bound_over_signal_norm": 94.18678592972968
+      }
+     }
+    },
+    "industries": {
+     "columns": [
+      12
+     ],
+     "rank": 1,
+     "separation": 0.8555978185952842,
+     "signal_norm": 0.0,
+     "signal_rms_per_reading": 0.0,
+     "share": 0.0,
+     "bounds": {
+      "iid_ls": {
+       "error_norm_bound": 123.6138361681606,
+       "rms_per_reading_bound": 1.8818139526902522,
+       "bound_over_signal_norm": Infinity
+      },
+      "iid_nnls": {
+       "error_norm_bound": 182.61980236298749,
+       "rms_per_reading_bound": 2.7800811201806406,
+       "bound_over_signal_norm": Infinity
+      },
+      "ar1_inflated_ls": {
+       "error_norm_bound": 445.9795015833594,
+       "rms_per_reading_bound": 6.789292159428809,
+       "bound_over_signal_norm": Infinity
+      },
+      "ar1_inflated_nnls": {
+       "error_norm_bound": 658.8638534468085,
+       "rms_per_reading_bound": 10.030100438374893,
+       "bound_over_signal_norm": Infinity
+      }
+     }
+    },
+    "population_density": {
+     "columns": [
+      20
+     ],
+     "rank": 1,
+     "separation": 0.7825129857155879,
+     "signal_norm": 67.50334015837234,
+     "signal_rms_per_reading": 1.0276254770575615,
+     "share": 0.9441298392181658,
+     "bounds": {
+      "iid_ls": {
+       "error_norm_bound": 135.1590714842321,
+       "rms_per_reading_bound": 2.057570854816647,
+       "bound_over_signal_norm": 2.0022575352142558
+      },
+      "iid_nnls": {
+       "error_norm_bound": 199.6760531599207,
+       "rms_per_reading_bound": 3.03973401766527,
+       "bound_over_signal_norm": 2.958017376495038
+      },
+      "ar1_inflated_ls": {
+       "error_norm_bound": 487.6329155662384,
+       "rms_per_reading_bound": 7.4233957358564,
+       "bound_over_signal_norm": 7.223833878770783
+      },
+      "ar1_inflated_nnls": {
+       "error_norm_bound": 720.4001544394343,
+       "rms_per_reading_bound": 10.966887722019576,
+       "bound_over_signal_norm": 10.672066785869768
+      }
+     }
+    },
+    "traffic": {
+     "columns": [
+      21,
+      22,
+      23,
+      24
+     ],
+     "rank": 4,
+     "separation": 0.871310029314952,
+     "signal_norm": 0.0,
+     "signal_rms_per_reading": 0.0,
+     "share": 0.0,
+     "bounds": {
+      "iid_ls": {
+       "error_norm_bound": 156.5916970799506,
+       "rms_per_reading_bound": 2.3838467405835324,
+       "bound_over_signal_norm": Infinity
+      },
+      "iid_nnls": {
+       "error_norm_bound": 179.32664525498618,
+       "rms_per_reading_bound": 2.7299483099197603,
+       "bound_over_signal_norm": Infinity
+      },
+      "ar1_inflated_ls": {
+       "error_norm_bound": 564.9584964000713,
+       "rms_per_reading_bound": 8.600548402771729,
+       "bound_over_signal_norm": Infinity
+      },
+      "ar1_inflated_nnls": {
+       "error_norm_bound": 646.9826546167344,
+       "rms_per_reading_bound": 9.849229053534888,
+       "bound_over_signal_norm": Infinity
+      }
+     }
+    }
+   },
+   "share_bootstrap": {
+    "iid": {
+     "brick_kilns": {
+      "p2.5": 0.0,
+      "p50": 0.012521865037560902,
+      "p97.5": 0.4471921833859425
+     },
+     "industries": {
+      "p2.5": 0.0,
+      "p50": 0.0,
+      "p97.5": 0.5826439520558158
+     },
+     "population_density": {
+      "p2.5": 0.0,
+      "p50": 0.46840711921266687,
+      "p97.5": 0.9426588611106517
+     },
+     "traffic": {
+      "p2.5": 0.0,
+      "p50": 0.30984015026902245,
+      "p97.5": 0.8834339849486186
+     }
+    },
+    "ar1_inflated": {
+     "brick_kilns": {
+      "p2.5": 0.0,
+      "p50": 0.0,
+      "p97.5": 0.6742443747710033
+     },
+     "industries": {
+      "p2.5": 0.0,
+      "p50": 0.0,
+      "p97.5": 0.8604495410967288
+     },
+     "population_density": {
+      "p2.5": 0.0,
+      "p50": 0.0,
+      "p97.5": 0.9222103190700022
+     },
+     "traffic": {
+      "p2.5": 0.0,
+      "p50": 0.527759721300888,
+      "p97.5": 1.0
+     }
+    }
+   },
+   "residual_norm": 3049.8739327133726
+  },
+  {
+   "week": 4,
+   "N": 4236,
+   "J": 7,
+   "singular_values": [
+    81.20062248039241,
+    31.357056897006967,
+    26.41910168580218,
+    23.930031890570106,
+    23.37816689506467,
+    21.04585441871765,
+    7.646498275755053
+   ],
+   "exact_components": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ]
+   ],
+   "declared_partition": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3,
+     4,
+     5,
+     6
+    ]
+   ],
+   "reported": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3,
+     4,
+     5,
+     6
+    ]
+   ],
+   "reported_separations": [
+    0.9646790732417917,
+    0.8739631085392119,
+    0.7213236247064115,
+    0.7693252847278562
+   ],
+   "minimal_partitions": [
+    [
+     [
+      0
+     ],
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3,
+      4,
+      5,
+      6
+     ]
+    ]
+   ],
+   "groups": {
+    "brick_kilns": {
+     "columns": [
+      4
+     ],
+     "rank": 1,
+     "separation": 0.9646790732417917,
+     "signal_norm": 121.53557002588516,
+     "signal_rms_per_reading": 1.86734871241741,
+     "share": 0.934902838150873,
+     "bounds": {
+      "iid_ls": {
+       "error_norm_bound": 109.63618005960821,
+       "rms_per_reading_bound": 1.6845190229088376,
+       "bound_over_signal_norm": 0.9020912975210256
+      },
+      "iid_nnls": {
+       "error_norm_bound": 161.97003632410195,
+       "rms_per_reading_bound": 2.4886092089385423,
+       "bound_over_signal_norm": 1.3326965619168518
+      },
+      "ar1_inflated_ls": {
+       "error_norm_bound": 395.5502915706907,
+       "rms_per_reading_bound": 6.077482727925197,
+       "bound_over_signal_norm": 3.254605145526077
+      },
+      "ar1_inflated_nnls": {
+       "error_norm_bound": 584.3627081760883,
+       "rms_per_reading_bound": 8.978515100270306,
+       "bound_over_signal_norm": 4.808161989544528
+      }
+     }
+    },
+    "industries": {
+     "columns": [
+      12
+     ],
+     "rank": 1,
+     "separation": 0.8739631085392119,
+     "signal_norm": 4.960371809934895,
+     "signal_rms_per_reading": 0.07621426312001271,
+     "share": 0.06509716184912687,
+     "bounds": {
+      "iid_ls": {
+       "error_norm_bound": 121.01623917564682,
+       "rms_per_reading_bound": 1.8593693875637505,
+       "bound_over_signal_norm": 24.396606507050357
+      },
+      "iid_nnls": {
+       "error_norm_bound": 178.78226552976247,
+       "rms_per_reading_bound": 2.7469228413456643,
+       "bound_over_signal_norm": 36.04210982162424
+      },
+      "ar1_inflated_ls": {
+       "error_norm_bound": 436.60777550522226,
+       "rms_per_reading_bound": 6.7083156581028955,
+       "bound_over_signal_norm": 88.0191631261917
+      },
+      "ar1_inflated_nnls": {
+       "error_norm_bound": 645.0186172075477,
+       "rms_per_reading_bound": 9.910470523742458,
+       "bound_over_signal_norm": 130.034328458135
+      }
+     }
+    },
+    "population_density": {
+     "columns": [
+      20
+     ],
+     "rank": 1,
+     "separation": 0.7213236247064115,
+     "signal_norm": 0.0,
+     "signal_rms_per_reading": 0.0,
+     "share": 0.0,
+     "bounds": {
+      "iid_ls": {
+       "error_norm_bound": 146.62451769373325,
+       "rms_per_reading_bound": 2.2528310375793823,
+       "bound_over_signal_norm": Infinity
+      },
+      "iid_nnls": {
+       "error_norm_bound": 216.61442822931178,
+       "rms_per_reading_bound": 3.3281999134811957,
+       "bound_over_signal_norm": Infinity
+      },
+      "ar1_inflated_ls": {
+       "error_norm_bound": 528.9984628581135,
+       "rms_per_reading_bound": 8.127864116476323,
+       "bound_over_signal_norm": Infinity
+      },
+      "ar1_inflated_nnls": {
+       "error_norm_bound": 781.5111781342459,
+       "rms_per_reading_bound": 12.007627823837728,
+       "bound_over_signal_norm": Infinity
+      }
+     }
+    },
+    "traffic": {
+     "columns": [
+      21,
+      22,
+      23,
+      24
+     ],
+     "rank": 4,
+     "separation": 0.7693252847278562,
+     "signal_norm": 0.0,
+     "signal_rms_per_reading": 0.0,
+     "share": 0.0,
+     "bounds": {
+      "iid_ls": {
+       "error_norm_bound": 177.35009999245582,
+       "rms_per_reading_bound": 2.7249181519243817,
+       "bound_over_signal_norm": Infinity
+      },
+      "iid_nnls": {
+       "error_norm_bound": 203.0988811050791,
+       "rms_per_reading_bound": 3.1205385719111733,
+       "bound_over_signal_norm": Infinity
+      },
+      "ar1_inflated_ls": {
+       "error_norm_bound": 639.8515866200979,
+       "rms_per_reading_bound": 9.831081025569695,
+       "bound_over_signal_norm": Infinity
+      },
+      "ar1_inflated_nnls": {
+       "error_norm_bound": 732.7491854889256,
+       "rms_per_reading_bound": 11.258417990356445,
+       "bound_over_signal_norm": Infinity
+      }
+     }
+    }
+   },
+   "share_bootstrap": {
+    "iid": {
+     "brick_kilns": {
+      "p2.5": 0.33070760635613905,
+      "p50": 0.6686996518040689,
+      "p97.5": 1.0
+     },
+     "industries": {
+      "p2.5": 0.0,
+      "p50": 0.0,
+      "p97.5": 0.4098343095394577
+     },
+     "population_density": {
+      "p2.5": 0.0,
+      "p50": 0.0,
+      "p97.5": 0.32134530035984654
+     },
+     "traffic": {
+      "p2.5": 0.0,
+      "p50": 0.19715133535770052,
+      "p97.5": 0.5479347984393975
+     }
+    },
+    "ar1_inflated": {
+     "brick_kilns": {
+      "p2.5": 0.0,
+      "p50": 0.2898800969172982,
+      "p97.5": 1.0
+     },
+     "industries": {
+      "p2.5": 0.0,
+      "p50": 0.0,
+      "p97.5": 0.7402069402149118
+     },
+     "population_density": {
+      "p2.5": 0.0,
+      "p50": 0.0,
+      "p97.5": 0.6114534915674065
+     },
+     "traffic": {
+      "p2.5": 0.0,
+      "p50": 0.43204844817163535,
+      "p97.5": 1.0
+     }
+    }
+   },
+   "residual_norm": 3760.1682650668026
+  }
+ ]
+}

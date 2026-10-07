@@ -1,0 +1,100 @@
+%%%%%%%% AISTATS 2027 SUBMISSION %%%%%%%%%%%%%%%%%
+%% Ported from the AAAI-27 version in ../paper (commit 4b43655) following
+%% ../execution_plans/aistats_revision_2026-10-04.md (work items W1--W3).
+%% Boxes marked "TODO (plan ...)" stand for plan items that are not yet done.
+
+\documentclass[twoside]{article}
+
+\usepackage{aistats2027}
+% Submission mode: the style prints "Anonymous Author" in place of the names below.
+% For the camera-ready version use \usepackage[accepted]{aistats2027}.
+
+\usepackage[round]{natbib}
+\renewcommand{\bibname}{References}
+\renewcommand{\bibsection}{\subsubsection*{\bibname}}
+\bibliographystyle{apalike}
+
+\usepackage[hyphens]{url}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{xcolor}
+
+% Ruled "Algorithm N" float built from the float package, with a compact step list.
+\usepackage{float}
+\floatstyle{ruled}
+\newfloat{algorithm}{t}{loa}
+\floatname{algorithm}{Algorithm}
+\newlist{algsteps}{enumerate}{1}
+\setlist[algsteps]{label=\footnotesize\arabic*:,wide=0pt,labelsep=0.4em,
+  itemsep=1pt,topsep=1pt,parsep=0pt}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% Projected operator, projected observations and projected fingerprints in the general model.
+\newcommand{\At}{\widetilde A}
+\newcommand{\yt}{\widetilde{\mathbf y}}
+\newcommand{\at}{\widetilde{\mathbf a}}
+
+% Visible marker for plan items that are not yet implemented.
+\newcommand{\planitem}[2]{\par\smallskip\noindent\fcolorbox{red!60!black}{red!4}{%
+  \parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\footnotesize
+  \textbf{TODO (plan #1).} #2}}\par\smallskip}
+
+\begin{document}
+
+\twocolumn[
+
+\aistatstitle{Identifiability-Aware Source Attribution of Air Pollution}
+
+\aistatsauthor{ Ankit Bhardwaj \And Lakshminarayanan Subramanian }
+
+\aistatsaddress{ New York University \And New York University } ]
+
+\input{sections/0.abstract}
+\input{sections/1.intro}
+\input{sections/2.related}
+\input{sections/3.setup}
+\input{sections/4.method}
+\input{sections/4.identifiability}
+\input{sections/6.application}
+\input{sections/7.conclusion}
+
+\input{sections/ai_statement}
+
+% Acknowledgements are included only in the camera-ready version (anonymous review).
+
+\bibliography{refs}
+
+\input{sections/checklist}
+
+\clearpage
+\appendix
+\thispagestyle{empty}
+\onecolumn
+\aistatstitle{Identifiability-Aware Source Attribution of Air Pollution:\\
+Supplementary Materials}
+
+\input{sections/A.proofs}
+\input{sections/B.diagnostics}
+\input{sections/C.application}
+\input{sections/D.experiments}
+\input{sections/E.related}
+\input{sections/F.implementation}
+
+\end{document}

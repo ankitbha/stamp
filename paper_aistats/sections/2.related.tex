@@ -1,0 +1,38 @@
+\section{Related Work}
+\label{sec:related_work}
+
+\noindent\textbf{Receptor models.}
+Chemical mass balance (CMB) and positive matrix factorization (PMF) estimate source
+contributions from the measured chemical composition of particulate samples
+\citep{watson2002receptor,paatero1994positive,hopke2016review}, and reviews document
+their sensitivity to source profiles and collinear tracers
+\citep{viana2008source,belis2013critical,belis2019european,mircea2020european,hopke2020global}.
+Studies of Indian cities report divergent contributions for the same city
+\citep{pant2012critical,karagulian2015contributions}.  \citet{henry1992dealing} defines
+an eligible space of estimable combinations for CMB with nearly collinear profiles,
+PMF rotational ambiguity is explored with dedicated tools
+\citep{paatero2002understanding}, and statistical treatments address temporal
+correlation \citep{park2001multivariate} and identification
+\citep{jin2025identification}.  Our analysis uses the PM\(_{2.5}\) and wind records of
+the New Delhi network, so the sources are separated by transport and timing rather than
+by particle composition, and the network's gas measurements are not used.
+
+\noindent\textbf{Source-oriented models and inversion.}
+Inverse modelling and data assimilation estimate emissions from concentrations with a
+prior \citep{tarantola2005inverse,carrassi2018data}, and atmospheric inversion measures what
+the observations constrain through the averaging kernel \citep{rodgers2000inverse} and
+chooses how far to aggregate the state by balancing aggregation and smoothing error
+\citep{turner2015balancing}.  IASA also aggregates, but without a prior: it reports the
+reportable grouping of declared sources with the most groups.
+Spatio-temporal models for sensor networks
+\citep{li2017diffusion,yu2017spatio,iyer2022modeling,bhardwaj2025comprehensive} target
+forecasting and interpolation rather than attribution.
+
+\noindent\textbf{Estimability and collinearity.}
+Estimability \citep{searle1971linear}, identification
+\citep{rothenberg1971identification,manski2003partial} and collinearity diagnostics
+\citep{fox1992generalized,belsley1980regression} do not return a partition.  The
+partition of Theorem~\ref{thm:groupings} is the component decomposition of the column
+matroid \citep{krogdahl1977dependence,oxley2011matroid}, and the separation is the
+sine of a principal angle \citep{bjorck1973numerical}.  Appendix~\ref{app:extended_related_work}
+gives a longer discussion.

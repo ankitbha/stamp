@@ -1,0 +1,79 @@
+\section*{Checklist}
+
+% AUTHORS: confirm each answer before submission; the anonymized code archive is the
+% one item that still has to be produced.
+\begin{enumerate}
+
+  \item For all models and algorithms presented, check if you include:
+  \begin{enumerate}
+    \item A clear description of the mathematical setting, assumptions, algorithm,
+    and/or model. [Yes; Sections~\ref{sec:problem_setup}
+    and~\ref{sec:identifiability_theory}, Algorithm~\ref{alg:iasa},
+    Appendix~\ref{app:reporting_details}.]
+    \item An analysis of the properties and complexity (time, space, sample size) of
+    any algorithm. [Yes; Theorem~\ref{thm:groupings} and the text after it
+    (\(O(NJ^2)\) for the exact components).]
+    \item (Optional) Anonymized source code, with specification of all dependencies,
+    including external libraries. [Yes; supplementary archive with
+    \texttt{model/iasa}, \texttt{experiments/} and the dependency list (Python 3.12,
+    PyTorch, NumPy, SciPy, pandas, scikit-learn, einops, Matplotlib).]
+  \end{enumerate}
+
+  \item For any theoretical claim, check if you include:
+  \begin{enumerate}
+    \item Statements of the full set of assumptions of all theoretical results. [Yes;
+    each statement in Section~\ref{sec:identifiability_theory} and
+    Appendix~\ref{app:identifiability_proofs} lists its assumptions.]
+    \item Complete proofs of all theoretical results. [Yes;
+    Appendix~\ref{app:identifiability_proofs}.]
+    \item Clear explanations of any assumptions. [Yes.]
+  \end{enumerate}
+
+  \item For all figures and tables that present empirical results, check if you
+  include:
+  \begin{enumerate}
+    \item The code, data, and instructions needed to reproduce the main experimental
+    results (either in the supplemental material or as a URL). [Yes; supplementary
+    code and configurations; the PM\(_{2.5}\) and wind records are public CPCB data
+    \citep{cpcb,cpcb_portal}.]
+    \item All the training details (e.g., data splits, hyperparameters, how they were
+    chosen). [Yes; thresholds in Table~\ref{tab:thresholds}, solver settings in
+    Appendix~\ref{app:pytorch_solver}.]
+    \item A clear definition of the specific measure or statistics and error bars
+    (e.g., with respect to the random seed after running experiments multiple times).
+    [Yes; metrics are defined where reported; Experiment 11 is over three seeds, and
+    the observed shares carry 95\% parametric-bootstrap intervals.]
+    \item A description of the computing infrastructure used. (e.g., type of GPUs,
+    internal cluster, or cloud provider). [Yes; Appendix~\ref{app:reproducibility}: Experiment 11 and the observed
+    re-analysis ran on one laptop CPU (Apple M5); the other controlled
+    experiments and the observed fits ran on an NVIDIA GPU with CUDA 11.8, and the
+    controlled experiments reproduce on CPU.]
+  \end{enumerate}
+
+  \item If you are using existing assets (e.g., code, data, models) or
+  curating/releasing new assets, check if you include:
+  \begin{enumerate}
+    \item Citations of the creator If your work uses existing assets. [Yes; CPCB data,
+    emission inventories and the population grid are cited.]
+    \item The license information of the assets, if applicable. [Yes;
+    Appendix~\ref{app:reproducibility}.]
+    \item New assets either in the supplemental material or as a URL, if applicable.
+    [Yes; code in the supplementary archive.]
+    \item Information about consent from data providers/curators. [Not Applicable;
+    public government records.]
+    \item Discussion of sensible content if applicable, e.g., personally identifiable
+    information or offensive content. [Not Applicable.]
+  \end{enumerate}
+
+  \item If you used crowdsourcing or conducted research with human subjects, check if
+  you include:
+  \begin{enumerate}
+    \item The full text of instructions given to participants and screenshots. [Not
+    Applicable.]
+    \item Descriptions of potential participant risks, with links to Institutional
+    Review Board (IRB) approvals if applicable. [Not Applicable.]
+    \item The estimated hourly wage paid to participants and the total amount spent on
+    participant compensation. [Not Applicable.]
+  \end{enumerate}
+
+\end{enumerate}

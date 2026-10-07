@@ -1,0 +1,87 @@
+\section{Method: Identifiability-Aware Source Attribution}
+\label{sec:method}
+\label{sec:iasa_procedure}
+
+IASA computes from \(\At\), before fitting, diagnostics and the partition to report,
+then fits once (Algorithm~\ref{alg:iasa}, with thresholds in Table~\ref{tab:thresholds}).
+Contributions are estimated by nonnegative least squares (NNLS),
+\begin{equation}
+\widehat{\mathbf c}=\arg\min_{\mathbf c\ge 0}\;\|\yt-\At\mathbf c\|_2^2,
+\label{eq:nnls_estimator}
+\end{equation}
+solved by projected FISTA \citep{beck2009fast} (Appendix~\ref{app:pytorch_solver}), and
+it is the same estimator in every experiment.
+
+\noindent\textbf{Diagnostics.}
+IASA reports the rank of \(\At\), its smallest singular value \(\sigma_J\) (zero if rank
+deficient), \(\kappa=\sigma_1/\sigma_J\), the visibility \(\|\at_j\|_2\), the weak set of
+columns with visibility at most \(\tau_v\) (\(\tau_v=0\) in every run), the absorption
+\(\|P_Q\mathbf a_j\|_2/\|\mathbf a_j\|_2\), which is the fraction of a column that the
+projection removes, and the coherence
+\(\rho_{ij}=|\at_i^\top\at_j|/(\|\at_i\|_2\|\at_j\|_2)\).  The
+central diagnostic is the \emph{separation} of a group \(g\subseteq E\),
+\begin{equation}
+s_g=\sin\theta_g ,
+\label{eq:separation}
+\end{equation}
+where \(\theta_g\) is the smallest principal angle \citep{bjorck1973numerical} between
+\(\operatorname{col}(\At_g)\) and \(\operatorname{col}(\At_{E\setminus g})\), with
+\(s_g=1\) when either space is \(\{0\}\).  In words, \(s_g\) near \(0\) means that some signal of group \(g\) is nearly reproduced
+by the other sources.  For an operator with two columns \(s=\sqrt{1-\rho^2}\), and for one
+column \(1/s_j^2\) is the uncentered variance-inflation factor.  IASA raises an identifiability
+\emph{flag} on a merge, a weak column, an absorption at least \(0.9\),
+\(\sigma_J\le10^{-6}\) or a coherence at least \(0.99\).
+
+\noindent\textbf{Grouping.}
+The partition is chosen in two steps.  First, IASA computes the finest exactly
+identifiable partition \(\mathcal P^\star\) of the columns
+(Theorem~\ref{thm:groupings}(c)), and the blocks of \(\mathcal P^\star\vee\mathcal D\), the
+finest partition coarser than both, are the \emph{atoms}.  Second, a partition into
+unions of atoms is \emph{reportable} if every block has \(s_g\ge\tau_\theta\).  IASA
+returns the reportable partition with the most blocks, breaks ties by the largest
+smallest separation, and lists any remaining ties.  With \(q\le12\) atoms this search is
+exact by dynamic programming in \(O(3^q)\) time, whereas with more atoms it merges greedily
+(Appendix~\ref{app:identifiability_proofs}).  We use \(\tau_\theta=\sqrt{1-0.99^2}=0.141\),
+so for an operator with two columns the rule merges exactly when their coherence
+exceeds \(0.99\).  The recorded runs used either this rule or a pairwise rule that
+merges declared blocks with a cross-source coherence above \(0.99\), and on every saved
+operator and observed week the two rules give the same partition.
+
+\begin{algorithm}[t]
+\caption{Identifiability-Aware Source Attribution (IASA)}
+\label{alg:iasa}
+\footnotesize
+\begin{algsteps}
+  \item \textbf{Declare} \(Q\), components, \(\mathcal D\), \(\mathcal F_0\), \(L\),
+  \(\sigma_e\), \(\delta\) and thresholds.
+  \item \textbf{Operator:} build \(A(\omega)\) by~\eqref{eq:transport_column}.
+  \item \textbf{Project:} drop rows with a missing reading and form \(\yt\),
+  \(\At\)~\eqref{eq:projected_model}.
+  \item \textbf{Diagnose:} singular values, rank, visibility, absorption, coherence,
+  weak set.
+  \item \textbf{Group:} \(\mathcal P^\star\), then atoms \(\mathcal P^\star\vee\mathcal D\),
+  then the reportable partition at \(\tau_\theta\) with the most blocks.
+  \item \textbf{Fit:} solve~\eqref{eq:nnls_estimator} and form group signals
+  \(\At_g\widehat{\mathbf c}_g\) and shares.
+  \item \textbf{Uncertainty:} error bound \(b_g\) of each block at \(\sigma_e\), bootstrap
+  intervals of the shares, and a residual adequacy test if a calibrated noise model
+  exists.
+  \item \textbf{Report} group signals, shares, \(b_g\), intervals, coefficients of
+  single-component blocks, diagnostics and flags.
+\end{algsteps}
+\end{algorithm}
+
+\noindent\textbf{Uncertainty and adequacy.}
+With a declared noise standard deviation \(\sigma_e\) per reading, IASA gives for each
+reported block the bound
+\(b_g=\sigma_e\bigl(\sqrt{\operatorname{rank}(\At)}+\sqrt{2\log(1/\delta)}\bigr)/s_g\) on
+the error of its fitted signal, which holds with probability at least \(1-\delta\)
+under the conditions of Theorem~\ref{thm:group_error}(c) (\(\delta=0.05\) here).  We
+call a group's signal \emph{resolved} when \(b_g\) is below the norm of its fitted
+signal.  It also gives percentile intervals
+of the shares from a parametric bootstrap: since the NNLS estimate depends on the
+readings only through \(P_{\At}\yt\), with \(P_{\At}\) the orthogonal projector onto
+\(\operatorname{col}(\At)\), the bootstrap adds Gaussian noise of standard
+deviation \(\sigma_e\) in \(\operatorname{col}(\At)\) to \(\At\widehat{\mathbf c}\) and
+refits.  A residual adequacy test is run when a calibrated noise model exists,
+and otherwise the residual is labelled uncalibrated (Appendix~\ref{app:reporting_details}).
