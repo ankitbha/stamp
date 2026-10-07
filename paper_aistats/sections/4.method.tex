@@ -9,8 +9,7 @@ Contributions are estimated by nonnegative least squares (NNLS),
 \widehat{\mathbf c}=\arg\min_{\mathbf c\ge 0}\;\|\yt-\At\mathbf c\|_2^2,
 \label{eq:nnls_estimator}
 \end{equation}
-solved by projected FISTA \citep{beck2009fast} (Appendix~\ref{app:pytorch_solver}), and
-it is the same estimator in every experiment.
+solved by projected FISTA \citep{beck2009fast} (Appendix~\ref{app:pytorch_solver}).
 
 \noindent\textbf{Diagnostics.}
 IASA reports the rank of \(\At\), its smallest singular value \(\sigma_J\) (zero if rank
@@ -43,9 +42,8 @@ smallest separation, and lists any remaining ties.  With \(q\le12\) atoms this s
 exact by dynamic programming in \(O(3^q)\) time, whereas with more atoms it merges greedily
 (Appendix~\ref{app:identifiability_proofs}).  We use \(\tau_\theta=\sqrt{1-0.99^2}=0.141\),
 so for an operator with two columns the rule merges exactly when their coherence
-exceeds \(0.99\).  The recorded runs used either this rule or a pairwise rule that
-merges declared blocks with a cross-source coherence above \(0.99\), and on every saved
-operator and observed week the two rules give the same partition.
+exceeds \(0.99\).  The recorded runs used this rule or a pairwise coherence rule, which gives the same
+partition on every saved operator and observed week (Appendix~\ref{app:reporting_details}).
 
 \begin{algorithm}[t]
 \caption{Identifiability-Aware Source Attribution (IASA)}

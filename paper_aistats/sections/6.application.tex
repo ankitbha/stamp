@@ -10,8 +10,7 @@ truth (Section~\ref{subsec:observed_results}).
 
 The controlled experiments generate PM\(_{2.5}\) readings from known nonnegative
 contributions with the puff model of Section~\ref{sec:problem_setup} on the
-\(40\times40\) grid, so that the error of every reported quantity can be measured.  Each
-run covers 72 hours, mostly with two source groups, and varies one factor at a time:
+\(40\times40\) grid.  Each run covers 72 hours, mostly with two source groups, and varies one factor at a time:
 wind, sensor layout, nuisance basis, noise, operator error, lag, temporal basis or
 inventory.  Unless the factor is varied, the sensors are the 32 regulatory locations,
 with three downwind sensors in Experiment 10 and six random ones in the steady-wind
@@ -52,25 +51,25 @@ IASA is compared over three seeds with plain NNLS on the projected system (the s
 estimator without grouping and diagnostics), a transport-based mass balance (CMB: NNLS
 on the unprojected response, with transport columns in place of chemical profiles) and
 a nonnegative matrix factorization of the sensor-by-hour readings (PMF/NMF)
-(Figure~\ref{fig:controlled}(a), Table~\ref{tab:results_baselines}).  Every method is
-scored on IASA's reported blocks, errors range over those blocks, and share error is
-the \(L_2\) distance between share vectors.  \emph{Source-like background} (32 regulatory
+(Figure~\ref{fig:controlled}(a), Table~\ref{tab:results_baselines}).  Each method is
+scored on the blocks it reports, IASA on its partition and the baselines on the
+individual sources, errors range over those blocks, and share error is the \(L_2\)
+distance between share vectors.  \emph{Source-like background} (32 regulatory
 sensors, two sources with two columns each): a declared nuisance column is
 proportional to one basis column of source A, whose norm falls from \(0.081\) to
 \(10^{-16}\) under projection.  IASA flags it (absorption \(1\)), the two sources
-have separation above \(0.9999\), and IASA's group-signal errors are
-\(0.4\)--\(6.0\%\), with share errors \(0.003\)--\(0.007\).  Plain
-NNLS gives group-signal errors within \(0.003\) of IASA's and raises no flag.  CMB,
+have separation above \(0.9999\), so IASA reports them separately, and its group-signal
+errors are \(0.4\)--\(6.0\%\), with share errors \(0.003\)--\(0.007\).  Plain NNLS reports
+the same two sources, with errors within \(0.003\) of IASA's, and raises no flag.  CMB,
 without nuisance removal, has group-signal errors of \(36\)--\(463\%\) and share errors
 \(0.12\)--\(0.19\).  \emph{Steady wind}
 (one wind direction, six random sensors): in two seeds neither plume reaches the
 sensors (column norms below \(10^{-10}\), against \(0.062\) and \(0.067\) in the third), and
 IASA flags \(\sigma_J\approx0\).  In the third seed the two columns have coherence
 \(0.99966\) and separation \(0.026<\tau_\theta\), so no reportable partition has two
-blocks.  IASA therefore merges them, and the merged signal has error \(0.44\%\), against
-\(784\%\) for CMB.
-Reported separately, as plain NNLS reports them, the two sources' signals have errors of
-\(3.8\%\) and \(6.9\%\).  PMF/NMF has share errors on the unprojected response of
+blocks.  IASA therefore merges them, and the merged signal has error \(0.44\%\).  Plain
+NNLS reports the two sources separately, with signal errors of \(3.8\%\) and \(6.9\%\), and
+CMB has error \(784\%\) on the merged block.  PMF/NMF has share errors on the unprojected response of
 \(1.15\)--\(1.19\) (background stress) and \(0.30\) (steady wind), and no baseline raises
 a flag in either scenario.
 
@@ -78,9 +77,10 @@ a flag in either scenario.
 \centering
 \footnotesize
 \setlength{\tabcolsep}{3pt}
-\caption{Experiment 11: largest relative group-signal error of the reported blocks
-(background stress in seeds \(0\), \(1\) and \(2\), and steady wind in seed \(2\), the only
-seed with signal at the sensors).  Share errors: Table~\ref{tab:results_baselines_full}.}
+\caption{Experiment 11: largest relative group-signal error over the blocks each method
+reports (background stress in seeds \(0\), \(1\) and \(2\), and steady wind in seed \(2\),
+the only seed with signal at the sensors).  CMB's steady-wind error is on the merged
+block.  Share errors: Table~\ref{tab:results_baselines_full}.}
 \label{tab:results_baselines}
 \vspace{3pt}
 \begin{tabular}{llcc}
@@ -88,7 +88,7 @@ seed with signal at the sensors).  Share errors: Table~\ref{tab:results_baseline
 method & flag & background stress & steady wind \\
 \midrule
 IASA & yes & \(0.054,\,0.028,\,0.060\) & \(0.004\) (merged) \\
-plain NNLS & no & \(0.054,\,0.028,\,0.062\) & \(0.004\) \\
+plain NNLS & no & \(0.054,\,0.028,\,0.062\) & \(0.069\) \\
 CMB & no & \(4.63,\,2.10,\,4.32\) & \(7.84\) \\
 \bottomrule
 \end{tabular}
@@ -109,7 +109,7 @@ Table~\ref{tab:results_h4}).  With eight randomly placed sensors and four of the
 winds, source B's operator column has norm \(5.2\times10^{-7}\) to \(1.7\times10^{-4}\),
 against \(7.6\)--\(18.6\) with the regulatory layout, so \(\sigma_J\approx0\) and the
 largest coefficient error of the sweep (\(0.573\)) is that source's poorly determined
-coefficient (\(\sigma_J\approx10^{-6}\)).  The layouts also differ in sensor count.
+coefficient (\(\sigma_J\approx10^{-6}\)).
 
 \noindent\textbf{Nuisance absorption and missing sources (Experiments 3 and 8).}
 A source-like nuisance basis drives the absorption of one column to \(1\) and
@@ -125,9 +125,8 @@ combination of the fitted columns plus nuisance columns is absorbed and rejected
 (Table~\ref{tab:results_missing}).  A non-rejection therefore does not show that the inventory is complete.
 
 \noindent\textbf{Transport error (Experiment 5).}
-This experiment measures the operator error of
-Proposition~\ref{prop:operator_perturbation}.  Fitting with a perturbed operator
-(Figure~\ref{fig:controlled}(e), Table~\ref{tab:results_h5a}), the coefficient error reaches \(0.62\) at a \(5^\circ\) error in wind
+With a perturbed operator (Proposition~\ref{prop:operator_perturbation},
+Figure~\ref{fig:controlled}(e), Table~\ref{tab:results_h5a}), the coefficient error reaches \(0.62\) at a \(5^\circ\) error in wind
 direction, \(0.86\) at \(20^\circ\) and \(0.89\) at twice the dispersion, while along the
 speed axis it is not monotonic (\(0.45\) at \(1.25\times\), \(0.27\) at
 \(1.5\times\)).  A structural mismatch (advection--diffusion data, puff operator) is rejected in

@@ -1,15 +1,141 @@
-# stamp
+# Identifiability-Aware Source Attribution (IASA): supplementary code
 
-STAMP is a container-first research codebase. The active workflow is
-**IASA** (identifiability-aware source apportionment) for city-scale
-advection--diffusion systems, instantiated on a New Delhi PM\(_{2.5}\) platform.
-The scientific Python stack lives in the repository's Singularity/Apptainer image,
-not in the host Python environment.
+Code for the submission *Identifiability-Aware Source Attribution of Air Pollution*.
+It contains the IASA procedure (Algorithm 1 of the paper), the New Delhi experimental
+platform, the controlled experiments and the observed-week analysis, the scripts that
+produce the paper's tables and figures, and the unit tests.  Data files and result
+files are not included (see **Data**).
 
-For the full step-by-step pipeline, command reference, and artifact/provenance
-schema, see [`docs/iasa_workflow.md`](docs/iasa_workflow.md).
+## Installation
 
-## Runtime environment
+Python 3.12 and the packages in `requirements.txt`:
+
+```bash
+pip install -r requirements.txt
+```
+
+All inverse computation uses PyTorch.  The transport operator is built in `float32`;
+projection, diagnostics and fitting use `float64`.  Every script runs on CPU; pass
+`--device cuda` to the experiment runner to use a GPU for the controlled experiments.
+
+## Layout
+
+| Path | Contents |
+|---|---|
+| `model/iasa/response.py` | Wind-driven Gaussian-puff transport operator \(A(\omega)\) (paper Section 3) |
+| `model/iasa/background.py`, `projection.py` | Nuisance basis \(Q\) and the projection \(P_Q^\perp\) |
+| `model/iasa/diagnostics.py` | Rank, \(\sigma_J\), visibility, weak set, absorption, coherence |
+| `model/iasa/grouping.py` | Exact components \(\mathcal P^\star\), separation \(s_g\), reportable partitions at \(\tau_\theta\) |
+| `model/iasa/merge.py` | Pairwise coherence merge of declared source blocks |
+| `model/iasa/fit.py` | Nonnegative least squares by projected FISTA, residual adequacy test |
+| `model/iasa/activity.py`, `wind.py` | Temporal basis functions; wind conversion and kernel interpolation onto the grid |
+| `model/iasa/footprints.py`, `reporting.py` | Per-sensor contributions and footprints; report tables |
+| `model/iasa/refine.py`, `fieldformer_adapter.py` | Optional refinement and learned wind imputer (not used in the reported runs) |
+| `experiments/iasa_pol/` | New Delhi platform (`nd_platform.py`), Experiments 1--11 and the observed mode (`experiments.py`), runner (`run_experiment.py`), observed-week bounds and bootstrap (`signal_target_weeks.py`), summaries, configs |
+| `experiments/iasa_synthetic/` | A synthetic study (not reported in the paper) |
+| `baselines/` | Baselines of Experiment 11 (`receptor.py`: plain NNLS, transport-based mass balance, PMF/NMF) and a vendored inference-only FieldFormer wind model |
+| `data/pol_weather.py` | Loader for the hourly station records |
+| `sim/` | Proxy-inventory loader (`pol_sources.py`) and advection--diffusion utilities (`polsim.py`, used for the structural-mismatch case of Experiment 5) |
+| `evaluation/` | `eval_pol_iasa.py` (report tables) and `iasa_pol/configs/` |
+| `scripts/` | Sanity gates, runtime smoke check, wind imputation, and `figures/` (figure scripts) |
+| `tests/` | Unit tests |
+| `docs/iasa_workflow.md` | Pipeline steps and the artifact schema |
+
+## Data
+
+The data files are not part of this archive.  Place them in `sim/`:
+
+- `govdata_1H_current.csv`: hourly regulatory records for New Delhi, 1 May 2018 to
+  31 October 2020, with columns `monitor_id, timestamp_round, AT, RH, WD, WS, pm10,
+  pm25`, from the public Central Pollution Control Board portal.
+- `govdata_locations.csv`: station coordinates, with columns `Monitor ID, Latitude,
+  Longitude, Location`.
+- `brick_kilns_intensity_80x80.npy`, `industries_intensity_80x80.npy`,
+  `population_density_intensity_80x80.npy` and
+  `traffic_{00,06,12,18}_intensity_80x80.npy`: the proxy maps on an \(80\times80\)
+  grid, built from the regional emissions inventory, the gridded population product
+  and the road-network map cited in the paper.  `sim/pol_sources.py` crops each map
+  to the \(40\times40\) study window and divides it by its own 99th percentile.
+
+## Settings used in the paper
+
+Lag \(L=12\) hours (except the lag sweep of Experiment 7); nuisance basis of rank 4
+(constant, linear trend, one daily sine--cosine pair) except in the nuisance-basis
+variations of Experiments 3 and 11; visibility threshold \(\tau_v=0\); separation
+threshold \(\tau_\theta=\sqrt{1-0.99^2}=0.141\), which equals coherence \(0.99\) for an
+operator with two columns; ridge weight \(\lambda=0\); \(\delta=0.05\); 1,000 bootstrap
+refits.  These are set in the configs and the code defaults; nothing is tuned on
+recovery error.
+
+## Reproducing the results
+
+Run from the repository root.
+
+1. Tests and sanity gates:
+
+   ```bash
+   python -m pytest -p no:cacheprovider tests
+   python scripts/run_iasa_sanity.py --gate all
+   ```
+
+2. Controlled Experiments 1--10 (one run per config, seed 0):
+
+   ```bash
+   for c in evaluation/iasa_pol/configs/exp*.json; do
+     python experiments/iasa_pol/run_experiment.py --config "$c" --seed 0 \
+       --out evaluation/iasa_pol/runs
+   done
+   ```
+
+3. Experiment 11 (baselines, seeds 0--2; the result includes the group-signal scores
+   of Table 1):
+
+   ```bash
+   for s in 0 1 2; do
+     python experiments/iasa_pol/run_experiment.py \
+       --config experiments/iasa_pol/configs/exp11.json --seed $s \
+       --out evaluation/iasa_pol/runs_signal_target
+   done
+   ```
+
+4. Observed weeks 1--4 (1--28 May 2018), then the error bounds of Theorem 5.9(c) and
+   the parametric bootstrap of the shares:
+
+   ```bash
+   for k in 1 2 3 4; do
+     python experiments/iasa_pol/run_experiment.py \
+       --config evaluation/iasa_pol/configs/observed_week$k.json --seed 0 \
+       --out evaluation/iasa_pol/runs/week$k
+   done
+   python experiments/iasa_pol/signal_target_weeks.py
+   ```
+
+   `signal_target_weeks.py` also estimates the noise level from the two co-located
+   monitors and writes `evaluation/iasa_pol/signal_target/weeks.json`.
+
+5. Tables and figures:
+
+   ```bash
+   python experiments/iasa_pol/summarize_results.py \
+     --runs evaluation/iasa_pol/runs --summaries evaluation/iasa_pol/summaries
+   python evaluation/eval_pol_iasa.py --runs evaluation/iasa_pol/runs \
+     --out evaluation/iasa_pol/reports
+   cd scripts/figures && python make_figures.py && python make_platform_figure.py
+   ```
+
+Each run writes `config.resolved.json` (configuration, seed, device, dtype and
+library versions), `result.json` and `arrays.npz`; `docs/iasa_workflow.md` describes
+the fields.
+
+## Scope
+
+The results are conditional on the declared wind field, transport model, proxy
+inventories, temporal basis, lag and nuisance basis.  Reported shares are fractions
+of the fitted projected concentration signal, not emission shares.
+
+## Internal: cluster runtime (not in the supplementary archive)
+
+### Container and SLURM commands
 
 - Image: `cuda11.8.86-cudnn8.7-devel-ubuntu22.04.2.sif`
 - Overlay: `overlay-25GB-500K.ext3` (provides torch via `source /ext3/env.sh`)
@@ -38,110 +164,5 @@ sbatch --account=torch_pr_633_general --partition=l40s_public \
 
 Host Python is not a supported runtime; it lacks the required scientific stack.
 
-## Quickstart: minimal IASA run
-
-Runtime smoke check (imports, source maps, 40x40 grid, sensor metadata; no simulation):
-
-```bash
-... /bin/bash -lc "source /ext3/env.sh && cd /scratch/ab9738/stamp && python3 scripts/smoke_iasa_runtime.py"
-```
-
-Minimal end-to-end sanity gate (response -> projection -> diagnostics -> fit ->
-merge on a tiny synthetic platform):
-
-```bash
-... python3 scripts/run_iasa_sanity.py --gate end_to_end
-```
-
-Run one controlled experiment and one observed window at paper resolution
-(GPU; see `docs/iasa_workflow.md` for the full sweep and SLURM arrays):
-
-```bash
-... python3 experiments/iasa_pol/run_experiment.py \
-      --config evaluation/iasa_pol/configs/exp01.json --device cuda \
-      --out evaluation/iasa_pol/runs
-```
-
-## Sanity gates
-
-`scripts/run_iasa_sanity.py --gate <name>` runs deterministic gates from public
-APIs. Gates: `task3a`, `response`, `projection`, `parity`, `diagnostics`, `fit`,
-`merge`, `end_to_end`, `wind_field`, `footprints`, `refine`, `fieldformer_train`,
-`calibration` (S7), `experiments` (Task 10 sweep), `reporting` (Task 11), and
-`all`. `--gate all` runs the light regression set; `--gate all --strict-all` adds
-the heavier calibration, experiment-sweep, and reporting gates.
-
-## Evaluation and reporting
-
-- Controlled sweep + observed windows: `experiments/iasa_pol/run_experiment.py`
-  over `evaluation/iasa_pol/configs/*.json` (controlled `expNN`, observed
-  `observed_weekK`).
-- Roll-ups: `experiments/iasa_pol/summarize_results.py` (controlled) and
-  `summarize_weeks.py` (observed weeks, Tier 0).
-- Paper tables: `evaluation/eval_pol_iasa.py --runs evaluation/iasa_pol/runs
-  --out evaluation/iasa_pol/reports` emits `report.{json,md}` and per-table CSVs.
-
-## New Delhi wind imputation
-
-Observed `WD/WS` are converted to transport vectors and completed on the response
-grid by a **kernel coordinate-query imputer** (`model/iasa/wind.py`,
-`KernelCoordinateQueryImputer`), the adopted default. A learned FieldFormer
-coordinate-query model was trained and evaluated
-(`scripts/train_fieldformer_wind.py`) but **not adopted**: on held-out station
-vectors it beat the kernel interpolator (RMSE 1.12 vs 1.55) but lost to a
-non-spatial city-mean baseline (1.06), so the spatially resolved kernel field is
-used. Saved wind products keep valid/observed `*_mask` fields and explicit
-`*_missing_mask`, `vector_mask`, and `mask_convention` metadata so downstream code
-never guesses mask polarity.
-
-## Interpretation caveats
-
-- Identifiability certificates are conditional on the declared inventory,
-  transport, temporal basis, lag, background basis, observation mask, and noise
-  assumptions.
-- A calibrated residual rejection shows model inadequacy but **not its cause**;
-  non-rejection does **not** establish inventory completeness.
-- Report groups (connected components) are conservative, deterministic merges,
-  not a guaranteed finest partition.
-- Inventory-scenario rows are robustness comparisons, never confidence-interval
-  draws; transport uncertainty and inventory robustness occupy separate fields.
-- Reported percentages are fractions of fitted inventory-attributed sensor signal,
-  not physical-emission shares.
-
-## Paper
-
-Sources are in `paper/` (AAAI 2027 format; the `aaai2027.sty`/`aaai2027.bst` style
-files are vendored in `paper/`). The compiled `paper/main.pdf` is committed.
-
-The container's minimal TeX Live lacks the AAAI-required `newtx` fonts, so a
-project-local font tree is plugged in via `.vscode/`. Populate it once (inside the
-container; it copies the `newtx`/`mweights` tree from the sibling `dsrc` checkout,
-or falls back to the TeX Live 2022 archive if network is available):
-
-```bash
-/share/apps/apptainer/bin/singularity exec \
-  --overlay overlay-25GB-500K.ext3:ro cuda11.8.86-cudnn8.7-devel-ubuntu22.04.2.sif \
-  bash .vscode/texmf-setup.sh
-```
-
-Then build with the LaTeX Workshop extension (the recipe in `.vscode/settings.json`
-runs pdflatex/bibtex in the container with the right `TEXMF*` paths), or manually:
-
-```bash
-/share/apps/apptainer/bin/singularity exec \
-  --overlay overlay-25GB-500K.ext3:ro cuda11.8.86-cudnn8.7-devel-ubuntu22.04.2.sif \
-  /bin/bash -lc "cd paper && \
-    export TEXMFHOME=$PWD/../.vscode/texmf TEXMFVAR=$PWD/../.vscode/texmf-var \
-      TEXMFCONFIG=$PWD/../.vscode/texmf-config \
-      TEXMFDBS='$PWD/../.vscode/texmf:{!!/usr/share/texlive/texmf-dist}' && \
-    pdflatex main.tex && bibtex main && pdflatex main.tex && pdflatex main.tex"
-```
-
-The `.vscode/texmf*` font tree is git-ignored and regenerated by the setup script.
-
-## Legacy code
-
-Archived legacy files live only in the git-ignored `archive/` directory if kept
-locally. They are **out of the active repository contract**: active code must not
-depend on them, and they are not present in clean checkouts. No heat/SWE, SimGrad,
-free-field recovery, or old pollution-calibration workflow is maintained.
+The supplementary archive is `paper_aistats/iasa_supplementary_code.zip` (code only,
+anonymized; built from the tracked code directories with this README).

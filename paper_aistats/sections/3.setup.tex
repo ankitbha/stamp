@@ -19,8 +19,7 @@ kilns and industries from a
 regional emissions inventory \citep{GUTTIKUNDA2013101}, population density from a
 gridded population product \citep{ColumbiaUniversity2018}, and traffic from a
 road-network map \citep{google_maps}.  Each inventory map is cropped to a fixed \(40\times40\)
-window of its \(80\times80\) grid, whose alignment with the sensor bounding box is not
-verified (Appendix~\ref{app:platform_details}), and divided by its own 99th percentile,
+window of its \(80\times80\) grid and divided by its own 99th percentile,
 and the traffic map is the mean of four time-of-day road maps normalized this way (the
 06:00 map in the inventory is zero).  The activity of group \(k\) is
 \(\theta_k(t)=\sum_b c_{kb}\phi_b(t)\) with \(c_{kb}\ge0\) and declared nonnegative
@@ -66,8 +65,8 @@ hours gives column \(\mathbf a_{kb}(\omega)\) of the operator \(A(\omega)\).  Th
 sweep of Experiment 7.
 
 \noindent\textbf{Model, nuisance and projection.}
-Let \(\mathbf y\in\mathbb R^N\) stack the observed hourly readings; rows with a missing
-reading are removed from \(\mathbf y\), \(A(\omega)\) and \(Q\) alike.  The model is
+Let \(\mathbf y\in\mathbb R^N\) stack the readings of the sensor-hours with a valid
+reading, and let \(A(\omega)\) and \(Q\) keep only the same rows.  The model is
 \begin{equation}
 \mathbf y = A(\omega)\,\mathbf c + Q\boldsymbol\gamma + \boldsymbol\epsilon,
 \qquad \mathbf c\ge 0,
@@ -95,7 +94,7 @@ Let \(E=\{1,\dots,J\}\) index the components and let \(\mathcal D\) be the decla
 partition of \(E\) into source groups.  For \(g\subseteq E\), \(\At_g\) is the submatrix
 of the columns in \(g\), and the \emph{signal} of \(g\) is \(\At_g\mathbf c_g\), its
 contribution to the projected readings.  It is in \(\mu\mathrm g/\mathrm m^3\) and does
-not change when a proxy map is rescaled; a sum of coefficients \(\sum_{j\in g}c_j\) has
+not change when a proxy map is rescaled, whereas a sum of coefficients \(\sum_{j\in g}c_j\) has
 neither property.  The task is to choose a partition \(\mathcal P\) of \(E\) whose blocks
 are unions of blocks of \(\mathcal D\), using only \(\At\), \(\mathcal D\) and a declared
 noise level, before the readings are fitted, and then to report for each block \(g\) its

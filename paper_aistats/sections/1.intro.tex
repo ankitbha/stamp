@@ -9,9 +9,7 @@ models estimate contributions from the chemical composition of particulate sampl
 PM\(_{2.5}\) and wind records of the New Delhi regulatory network
 \citep{cpcb,cpcb_portal} with proxy emission maps for a few declared source groups
 (brick kilns, industries, population-related activity, traffic) and a transport model
-driven by the observed wind.
-
-The readings then follow
+driven by the observed wind.  The readings then follow
 a nonnegative linear model whose columns are the PM\(_{2.5}\) that one unit of a source
 group's activity produces at every sensor and hour, plus a low-rank nuisance term for
 regional background and smooth trends (Section~\ref{sec:problem_setup}).
@@ -22,9 +20,7 @@ proportional signals at the sensors, the nuisance term can absorb a source's sig
 and a sparse network may not see a source at all.  Very different splits then fit the
 readings equally well, and a least-squares fit reports one regardless.  In our
 controlled experiments, a fit without background removal reports group contributions
-with errors of \(36\)--\(784\%\) (Section~\ref{sec:application}).
-
-We therefore compute, before fitting, which groups of sources the network can
+with errors of \(36\)--\(784\%\) (Section~\ref{sec:application}).  We therefore compute, before fitting, which groups of sources the network can
 separate, and report each group's contribution and share only at that resolution.
 
 \noindent\textbf{Contributions.}
@@ -44,8 +40,9 @@ separate, and report each group's contribution and share only at that resolution
   (Proposition~\ref{prop:grouping_stability}, Section~\ref{sec:identifiability_theory}).
   \item In controlled experiments with known contributions on the New Delhi domain,
   IASA flags an absorbed source and a pair of nearly proportional sources that no
-  baseline flags, with group-signal errors of \(0.4\)--\(6.0\%\) (plain NNLS after
-  background removal: \(0.4\)--\(6.2\%\), no flag)
+  baseline flags, with group-signal errors of \(0.4\)--\(6.0\%\), and merging the nearly
+  proportional pair gives an error of \(0.4\%\), against up to \(6.9\%\) for the separate
+  plain NNLS estimates
   (Section~\ref{subsec:pollution_controlled}).  On four observed weeks from the
   32-sensor network the four source groups are separable in every week, but at the
   instrument noise level the error bound of the largest group's signal is below its

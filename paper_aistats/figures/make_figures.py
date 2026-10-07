@@ -172,6 +172,13 @@ def panel_baselines(ax):  # Exp 11 on the signal target (evaluation/iasa_pol/run
                     stress[m].append(err)
                 elif max(st["H_tilde_column_norms"]) > 1e-6:
                     collapse[m] = err
+    # Plain NNLS reports the two steady-wind sources separately, so it is scored per
+    # source (largest of the two) rather than on IASA's merged block.  The saved seed-2
+    # arrays hold the projected NNLS solution; c_true = (1.0, 0.7) as in the experiment.
+    a = np.load(os.path.join(HERE, "..", "..", "evaluation/iasa_pol/runs_signal_target/exp11_seed2/arrays.npz"))
+    H, c_hat, c_true = a["H_tilde"].astype(float), a["c_hat"].astype(float), np.array([1.0, 0.7])
+    collapse["plain_nnls_B1"] = max(np.linalg.norm(H[:, k] * (c_hat[k] - c_true[k])) / np.linalg.norm(H[:, k] * c_true[k])
+                                    for k in range(2))
     x = np.arange(len(methods)); w = 0.36
     for i, (m, _) in enumerate(methods):
         ax.scatter(np.full(3, x[i] + w / 2), stress[m], s=7, color="#e67e22", zorder=3,
